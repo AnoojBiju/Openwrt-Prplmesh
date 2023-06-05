@@ -5,29 +5,40 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+
 #include "ambiorix_impl.h"
 #include "tlvf/tlvftypes.h"
+
+#include <functional>
+#include <event2/event.h>
 
 namespace beerocks {
 namespace nbapi {
 
 amxd_dm_t *g_data_model = nullptr;
+static struct event* signal_alarm = NULL;
 
 AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
                            const std::vector<sActionsCallback> &on_action,
                            const std::vector<sEvents> &events,
                            const std::vector<sFunctions> &funcs_list)
-    : m_event_loop(event_loop), m_on_action_handlers(on_action), m_events_list(events),
-      m_func_list(funcs_list)
+    :AmbiorixOdlManager(),m_event_loop(event_loop), m_on_action_handlers(on_action), m_events_list(events), m_func_list(funcs_list)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
-    amxo_parser_init(&m_parser);
-    amxd_dm_init(&m_datamodel);
+}
+
+
+static void el_signal_timers(evutil_socket_t fd,
+                             short event,
+                             void* arg) {
+    amxp_timers_calculate();
+    amxp_timers_check();
 }
 
 bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_uri,
                         const std::string &datamodel_path)
 {
+    LOG(INFO) << "AmbiorixImpl::init ";
     LOG(DEBUG) << "Initializing the bus connection.";
     int status = 0;
 
@@ -44,12 +55,14 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
         return false;
     }
 
-    if (!load_datamodel(datamodel_path)) {
+    if (!load_datamodel()) {
         LOG(ERROR) << "Failed to load data model.";
         return false;
     }
+    AmbiorixOdlManager::loadRootDM(datamodel_path);
+    AmbiorixOdlManager::populateDataModel();
 
-    status = amxb_register(m_bus_ctx, &m_datamodel);
+    status = amxb_register(m_bus_ctx, AMXOParser::getDatamodel());
     if (status != 0) {
         LOG(ERROR) << "Failed to register the data model.";
         return false;
@@ -66,21 +79,101 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
         return false;
     }
     LOG(DEBUG) << "The bus connection initialized successfully.";
-    g_data_model = &m_datamodel;
+
+
+    struct event_base* base = event_base_new();
+
+    signal_alarm = evsignal_new(base ,
+                                SIGALRM,
+                                el_signal_timers,
+                                NULL);
+
+    event_add(signal_alarm, NULL);
+
+    g_data_model = AMXOParser::getDatamodel();
     return true;
 }
 
-bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
+static bool pcm_svc_flags_contains_upc_params(const amxc_llist_t* flags, pcm_type_t type) {
+    LOG(INFO) << ">>>>> pcm_svc_flags_contains_upc_params : ";
+
+    AMXCListContainer flags_c(flags);
+
+    for(auto it : flags_c) {
+        amxc_var_t* flag = amxc_var_from_llist_it(it);
+        std::string flag_str = GET_CHAR(flag, NULL);
+        LOG(INFO) << ">>>>> pcm_svc_flags_contains_upc_params flag_str : "<<flag_str;
+
+        if((type == pcm_type_upc) && (strcmp(GET_CHAR(flag, NULL), "upc") == 0)) {
+            return true;
+        } else if((type == pcm_type_usersetting) && (strcmp(GET_CHAR(flag, NULL), "usersetting") == 0)) {
+            return true;
+        }
+    }
+
+    amxc_llist_for_each(it, flags) {
+
+    }
+    return false;
+}
+bool AmbiorixImpl::pcm_svc_has_upc_params(amxd_object_t* object, pcm_type_t type) {
+    bool retval = false;
+    amxc_var_t params;
+    const amxc_htable_t* ht_params = NULL;
+
+    amxc_var_init(&params);
+
+    amxd_object_describe_params(object, &params, amxd_dm_access_public);
+
+    ht_params = amxc_var_constcast(amxc_htable_t, &params);
+    amxc_htable_for_each(it, ht_params) {
+        amxc_var_t* param = amxc_var_from_htable_it(it);
+        const amxc_llist_t* flags = amxc_var_constcast(amxc_llist_t,
+                                                       GET_ARG(param, "flags"));
+        if(pcm_svc_flags_contains_upc_params(flags, type)) {
+            retval = true;
+            break;
+        }
+    }
+
+    amxc_var_clean(&params);
+    return retval;
+}
+
+
+
+
+void AmbiorixImpl::pcm_svc_param_changed(const char* const sig_name,
+                                         const amxc_var_t* const data,
+                                         void* const priv) {
+    (void) sig_name;
+    amxd_object_t* object = amxd_dm_signal_get_object(AMXOParser::getDatamodel(), data);
+    amxd_param_t* param_def = NULL;
+    amxc_var_t* params = GET_ARG(data, "parameters");
+
+    LOG(INFO) << "Received SIGNAL "<< sig_name;
+
+    amxc_var_for_each(param, params) {
+        const char* param_name = amxc_var_key(param);
+        param_def = amxd_object_get_param_def(object, param_name);
+        if(amxd_param_has_flag(param_def, "upc") || amxd_param_has_flag(param_def, "usersetting")) {
+            LOG(INFO) << "Set flag upc_changed - param_name: "<<param_name;
+            amxd_param_set_flag(param_def, "upc_changed");
+        }
+    }
+}
+
+bool AmbiorixImpl::load_datamodel()
 {
     LOG(DEBUG) << "Loading the data model.";
-    auto *root_obj = amxd_dm_get_root(&m_datamodel);
+    auto *root_obj = amxd_dm_get_root(AMXOParser::getDatamodel());
     if (!root_obj) {
         LOG(ERROR) << "Failed to get datamodel root object.";
         return false;
     }
 
     for (const auto &action : m_on_action_handlers) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, action.action_name.c_str(),
+        auto ret = amxo_resolver_ftab_add(AMXOParser::getParser(), action.action_name.c_str(),
                                           reinterpret_cast<amxo_fn_ptr_t>(action.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << action.action_name;
@@ -89,7 +182,7 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         LOG(DEBUG) << "Added " << action.action_name << " to the functions table.";
     }
     for (const auto &event : m_events_list) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, event.name.c_str(),
+        auto ret = amxo_resolver_ftab_add(AMXOParser::getParser(), event.name.c_str(),
                                           reinterpret_cast<amxo_fn_ptr_t>(event.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << event.name;
@@ -98,7 +191,7 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         LOG(DEBUG) << "Added " << event.name << " to the functions table.";
     }
     for (const auto &func : m_func_list) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, func.path.c_str(), AMXO_FUNC(func.callback));
+        auto ret = amxo_resolver_ftab_add(AMXOParser::getParser(), func.path.c_str(), AMXO_FUNC(func.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << func.name;
             continue;
@@ -106,14 +199,6 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         LOG(DEBUG) << "Added " << func.name << " to the functions table.";
     }
 
-    // Disable eventing while loading odls
-    amxp_sigmngr_enable(&m_datamodel.sigmngr, false);
-
-    amxo_parser_parse_file(&m_parser, datamodel_path.c_str(), root_obj);
-
-    amxp_sigmngr_enable(&m_datamodel.sigmngr, true);
-
-    LOG(DEBUG) << "The data model loaded successfully.";
     return true;
 }
 
@@ -130,10 +215,10 @@ bool AmbiorixImpl::init_event_loop()
     EventLoop::EventHandlers handlers = {
         .name = "ambiorix_events",
         .on_read =
-            [&](int fd, EventLoop &loop) {
-                amxb_read(m_bus_ctx);
-                return true;
-            },
+        [&](int fd, EventLoop &loop) {
+            amxb_read(m_bus_ctx);
+            return true;
+        },
 
         // Not implemented
         .on_write      = nullptr,
@@ -141,10 +226,10 @@ bool AmbiorixImpl::init_event_loop()
 
         // Handle interface errors
         .on_error =
-            [&](int fd, EventLoop &loop) {
-                LOG(ERROR) << "Error on ambiorix fd.";
-                return true;
-            },
+        [&](int fd, EventLoop &loop) {
+            LOG(ERROR) << "Error on ambiorix fd.";
+            return true;
+        },
     };
 
     if (!m_event_loop->register_handlers(ambiorix_fd, handlers)) {
@@ -171,20 +256,20 @@ bool AmbiorixImpl::init_signal_loop()
     EventLoop::EventHandlers handlers = {
         .name = "ambiorix_signal",
         .on_read =
-            [&](int fd, EventLoop &loop) {
-                amxp_signal_read();
-                return true;
-            },
+        [&](int fd, EventLoop &loop) {
+            amxp_signal_read();
+            return true;
+        },
         // Not implemented
         .on_write      = nullptr,
         .on_disconnect = nullptr,
 
         // Handle interface errors
         .on_error =
-            [&](int fd, EventLoop &loop) {
-                LOG(ERROR) << "Error on ambiorix fd.";
-                return true;
-            },
+        [&](int fd, EventLoop &loop) {
+            LOG(ERROR) << "Error on ambiorix fd.";
+            return true;
+        },
     };
 
     if (!m_event_loop->register_handlers(ambiorix_fd, handlers)) {
@@ -244,7 +329,7 @@ bool AmbiorixImpl::remove_signal_loop()
 amxd_object_t *AmbiorixImpl::find_object(const std::string &relative_path)
 {
 
-    auto object = amxd_dm_findf(&m_datamodel, "%s", relative_path.c_str());
+    auto object = amxd_dm_findf(AMXOParser::getDatamodel(), "%s", relative_path.c_str());
     if (!object) {
         LOG(ERROR) << "Failed to get object from data model when searching for: " << relative_path;
         return nullptr;
@@ -338,7 +423,7 @@ amxd_object_t *AmbiorixImpl::prepare_transaction(const std::string &relative_pat
 bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
 {
     auto ret    = true;
-    auto status = amxd_trans_apply(&transaction, &m_datamodel);
+    auto status = amxd_trans_apply(&transaction, AMXOParser::getDatamodel());
     if (status != amxd_status_ok) {
         LOG(ERROR) << "Couldn't apply transaction object, status: " << amxd_status_string(status);
         ret = false;
@@ -675,7 +760,7 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
 {
     uint32_t index = 0;
 
-    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    auto object = amxd_dm_findf(AMXOParser::getDatamodel(), specific_path.c_str(), key.c_str());
     if (!object) {
         return index;
     }
@@ -818,8 +903,6 @@ AmbiorixImpl::~AmbiorixImpl()
     remove_event_loop();
     remove_signal_loop();
     amxb_free(&m_bus_ctx);
-    amxd_dm_clean(&m_datamodel);
-    amxo_parser_clean(&m_parser);
 }
 
 } // namespace nbapi

@@ -14,7 +14,7 @@ set(bpl_common_sources
 # Common prplmesh_db values
 set(BEEROCKS_MANAGEMENT_MODE  "Multi-AP-Controller-and-Agent" CACHE STRING "Set management mode")
 set(BEEROCKS_OPERATING_MODE  "Gateway" CACHE STRING "Set operating mode")
-set(BEEROCKS_STOP_ON_FAILURE_ATTEMPTS  0 CACHE INT "In common config stop on failure disabled")
+set(BEEROCKS_STOP_ON_FAILURE_ATTEMPTS  0 CACHE STRING "In common config stop on failure disabled")
 set(BEEROCKS_CERTIFICATION_MODE  1 CACHE INT "In certification, agent must retry onboarding indefinitely")
 
 set(BEEROCKS_HOSTAP_WLAN1_CTRL_IFACE "/var/run/hostapd/${BEEROCKS_WLAN1_IFACE}" CACHE PATH "hostapd ctrl iface path for 1st WLAN")

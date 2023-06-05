@@ -12,11 +12,12 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
+option (ENABLE_NBAPI "Build the northbound (high-level) API" ON)
+
 # Common Sources
 set(nbapi_sources ${MODULE_PATH}/ambiorix_dummy.cpp)
-if (ENABLE_NBAPI)
-    list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
-endif()
+list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
+list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_wrappers.cpp)
 
 # Add several imports from tlfv for sMacAddr support
 set(TLVF_PATH ${CMAKE_CURRENT_LIST_DIR}/../../tlvf)
@@ -35,13 +36,14 @@ if (ENABLE_NBAPI)
 endif()
 
 # Build the library
-add_library(${PROJECT_NAME} ${nbapi_sources} ${tlvf_sources})
+add_library(${PROJECT_NAME} ${nbapi_sources} ${tlvf_sources}
+    ambiorixstorage.h ambiorixstorage.cpp)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
 if (ENABLE_NBAPI)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp bcl)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp bcl event)
 else ()
     target_link_libraries(${PROJECT_NAME} PRIVATE mapfcommon elpp bcl)
 endif()

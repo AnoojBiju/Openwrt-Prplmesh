@@ -16,8 +16,8 @@
 %define {
     select @CONTROLLER_ROOT_DM@ {
         // The events generated when a STA disassociates from a BSS.
-        object DisassociationEvent {
-            object DisassociationEventData[] {
+        %persistent object DisassociationEvent {
+            %persistent object DisassociationEventData[] {
                 counted with DisassociationEventDataNumberOfEntries;
                 %read-only string BSSID = "00:00:00:00:00:00";
                 %read-only string MACAddress = "00:00:00:00:00:00";

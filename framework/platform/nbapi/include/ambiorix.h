@@ -12,6 +12,7 @@
 #include "tlvf/common/sMacAddr.h"
 #include <easylogging++.h>
 
+
 namespace beerocks {
 namespace nbapi {
 

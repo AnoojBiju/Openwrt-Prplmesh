@@ -13,24 +13,10 @@
 #include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
 
-// Ambiorix
-#include <amxc/amxc.h>
-#include <amxp/amxp.h>
-
-#include <amxc/amxc.h>
-#include <amxd/amxd_action.h>
-#include <amxd/amxd_dm.h>
-#include <amxd/amxd_object.h>
-#include <amxd/amxd_object_event.h>
-#include <amxd/amxd_transaction.h>
-
-#include <amxb/amxb.h>
-#include <amxb/amxb_register.h>
-
-#include <amxo/amxo.h>
-#include <amxo/amxo_save.h>
-
 #include "ambiorix.h"
+#include "ambiorix_amxc.h"
+#include "ambiorix_config.h"
+#include "../ambiorixstorage.h"
 
 namespace beerocks {
 namespace nbapi {
@@ -63,11 +49,34 @@ typedef struct sFunctions {
 
 extern amxd_dm_t *g_data_model;
 
+
+/**
+ * TYPE
+ */
+typedef enum _pcm_type {
+    pcm_type_upc = 0,                                       /**< UPC type */
+    pcm_type_usersetting                                    /**< UserSetting type */
+} pcm_type_t;
+// Enum AutoPrint generated code snippet begining- DON'T EDIT!
+// clang-format off
+static const char *_pcm_type_str(_pcm_type enum_value) {
+    switch (enum_value) {
+    case pcm_type_upc:         return "pcm_type_upc";
+    case pcm_type_usersetting: return "pcm_type_usersetting";
+    }
+    static std::string out_str = std::to_string(int(enum_value));
+    return out_str.c_str();
+}
+inline std::ostream &operator<<(std::ostream &out, _pcm_type value) { return out << _pcm_type_str(value); }
+// clang-format on
+// Enum AutoPrint generated code snippet end
+#define pcm_type_max            (pcm_type_usersetting + 1)  /**< Number of types */
+
 /**
  * @class AmbiorixImpl
  * @brief This class manages the ambiorixImpl instance.
  */
-class AmbiorixImpl : public Ambiorix {
+class AmbiorixImpl : public Ambiorix, AmbiorixOdlManager{
 
 public:
     explicit AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
@@ -170,6 +179,13 @@ public:
 private:
     // Methods
 
+    void pcm_svc_param_changed(const char* const sig_name,
+                                             const amxc_var_t* const data,
+                                             void* const priv);
+    bool pcm_svc_has_upc_params(amxd_object_t* object, pcm_type_t type);
+
+    //runtime handlers
+
     /**
      * @brief Prepare transaction to the ubus
      *
@@ -195,7 +211,7 @@ private:
      * @param datamodel_path Path to the data model definition ODL file.
      * @return True on success and false otherwise.
      */
-    bool load_datamodel(const std::string &datamodel_path);
+    bool load_datamodel();
 
     /**
      * @brief Initialize event handlers for Ambiorix fd in the event loop.
@@ -235,13 +251,12 @@ private:
 
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
-    amxd_dm_t m_datamodel;
-    amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
     //std::unordered_map<std::string, actions_callback> m_on_action_handlers;
     std::vector<sActionsCallback> m_on_action_handlers;
     std::vector<sEvents> m_events_list;
     std::vector<sFunctions> m_func_list;
+
 };
 
 } // namespace nbapi

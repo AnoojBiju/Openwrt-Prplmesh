@@ -35,7 +35,7 @@ AmbiorixConnectionManager::get_connection(const std::string &amxb_backend,
         LOG(ERROR) << "Fail to create shared connection to " << bus_uri << " via" << amxb_backend;
         return cnx;
     }
-    LOG(INFO) << "New connection to " << bus_uri << " via" << amxb_backend;
+    LOG(INFO) << "New connection to " << bus_uri << " via : " << amxb_backend;
     it = connections.insert(connections.end(), std::move(cnx));
     return *it;
 }

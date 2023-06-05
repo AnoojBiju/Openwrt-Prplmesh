@@ -11,37 +11,40 @@
 %config {
     name = "prplmesh";
     prplmesh = {
-        mod-dir = "${prefix}${plugin-dir}/${name}/modules",
-        external-mod-dir = "${prefix}${plugin-dir}/modules"
+        mod-dir = "$@@{prefix}$@@{plugin-dir}/$@@{name}/modules",
+        external-mod-dir = "$@@{prefix}$@@{plugin-dir}/modules"
     };
-    import-dbg = false;
+    silent = false;
+    import-dbg = true;
     dm-eventing-enabled = true;
-    storage-path = "/opt/${name}/share";
+    storage-path = "/opt/$@@{name}/share";
     storage-type = "odl";
     odl = {
         dm-load = true,
         dm-save = true,
         dm-save-on-changed = true,
         dm-save-delay = 1000,
-        dm-defaults = "${name}_defaults/",
-        directory = "${rw_data_path}/config/odl"
+        dm-defaults = "$@@{name}_defaults/",
+        directory = "$@@{storage-path}/odl",
+        dm-objects = "X_PRPL-ORG_WiFiController"
+
     };
     cfg-dir = "/etc/amx";
     include-dirs = [
         ".",
-        "${cfg-dir}/${name}",
-        "${cfg-dir}/modules",
+        "$@@{cfg-dir}/$@@{name}",
+        "$@@{cfg-dir}/modules",
         "/opt/prplmesh/config/odl"
     ];
     import-dirs = [
         ".",
-        "${prefix}${plugin-dir}/${name}",
-        "${prefix}${plugin-dir}/modules",
-        "${prefix}/usr/lib/amx/${name}",
-        "${prefix}/usr/lib/amx/modules"
+        "$@@{prefix}$@@{plugin-dir}/$@@{name}",
+        "$@@{prefix}$@@{plugin-dir}/modules",
+        "$@@{prefix}/usr/lib/amx/$@@{name}",
+        "$@@{prefix}/usr/lib/amx/modules"
     ];
     //main files
-    definition_file = "${name}_definitions.odl";
+    definition_file = "$@@{name}_definitions.odl";
 
     //persistent storage
     pcm_svc_config = {
@@ -49,8 +52,7 @@
     };
 }
 
-#include "mod_sahtrace.odl";
 #include "mod_pcm_svc.odl";
 
-include "${definition_file}";
+include "$@@{definition_file}";
 
