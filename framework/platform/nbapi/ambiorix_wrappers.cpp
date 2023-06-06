@@ -72,7 +72,7 @@ static void config_option_changed(amxo_parser_t* parser, const char* option, amx
     (void)cmds;
     for (auto cmd : cmds){
         //TODO Solve this loop
-//        const char* path = amxc_var_key(cmd);
+        //        const char* path = amxc_var_key(cmd);
         (void)cmd;
 
         LOG(INFO) << "const char* path = amxc_var_key(cmd) : ";
@@ -136,14 +136,16 @@ void AMXOConfig::configInit() {
     container.addNewKeyCString(AMXOParser::OdlConfig_str(AMXOParser::COPT_STORAGE_DIR), "${rw_data_path}/${name}/");
     container.addNewKeyAmxcLlist(AMXOParser::OdlConfig_str(AMXOParser::COPT_REQUIRES), nullptr);
     container.addNewKeyBool(AMXOParser::OdlConfig_str(AMXOParser::CVAL_LOAD), true);
-    (void)amxrt_hooks;
+    //default values for upc handler
+    container.addNewKeyBool(AMXOParser::OdlConfig_str(AMXOParser::CVAL_PCM_UPC), true);
+    container.addNewKeyCString(AMXOParser::OdlConfig_str(AMXOParser::CVAL_PCM_UPC_PATH), "/cfg/${name}/");
     context_dm = getDatamodel();
     context_cmds =  getCmdOptions().get();
     // set hooks to monitor config option changes
     //todo :  FIX HOOKS
-amxo_parser_set_hooks(AMXOParser::getParser(), &amxrt_hooks);
-//    // command line options given with -F are stored here and can not be overwritten
-//    // by odl config section options
+    amxo_parser_set_hooks(AMXOParser::getParser(), &amxrt_hooks);
+    //    // command line options given with -F are stored here and can not be overwritten
+    //    // by odl config section options
     amxc_var_init(cmd_options.get());
     amxc_var_set_type(cmd_options.get(), AMXC_VAR_ID_HTABLE);
 }

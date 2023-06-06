@@ -60,6 +60,7 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
         return false;
     }
     AmbiorixOdlManager::loadRootDM(datamodel_path);
+
     AmbiorixOdlManager::populateDataModel();
 
     status = amxb_register(m_bus_ctx, AMXOParser::getDatamodel());

@@ -64,6 +64,8 @@ public:
         COPT_REQUIRES,
         COPT_HANDLE_EVENTS,
         COPT_SUSPEND,
+        CVAL_PCM_UPC,
+        CVAL_PCM_UPC_PATH,
         CVAL_PLUGIN_DIR,
         CVAL_CFG_DIR,
         CVAL_BACKENDS_DIR,
@@ -109,6 +111,8 @@ public:
         case COPT_REQUIRES:return "requires";
         case COPT_HANDLE_EVENTS:return "dm-events-before-start";
         case COPT_SUSPEND:return "dm-events-suspend-when-requires";
+        case CVAL_PCM_UPC:return "upc.enable";
+        case CVAL_PCM_UPC_PATH:return "upc.directory";
         case CVAL_PLUGIN_DIR:return "/usr/lib/amx";
         case CVAL_CFG_DIR:return "/etc/amx";
         case CVAL_BACKENDS_DIR:return "/usr/bin/mods/amxb";
