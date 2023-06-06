@@ -741,6 +741,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                 LOG(WARNING) << "wan_mon.initialize() failed, skip wired link establishment";
             }
         }
+        LOG(DEBUG) << "wired link state " << static_cast<int>(wired_link_state)
+                   << " m_selected_backhaul " << m_selected_backhaul;
         if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
             (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
 
@@ -768,7 +770,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
                     tlvf::mac_from_string(m_selected_backhaul), AgentDB::eMacType::RADIO);
 
                 if (!selected_ruid) {
-                    LOG(ERROR) << "UCC configured backhaul RUID which is not enabled";
+                    LOG(ERROR) << "UCC configured backhaul RUID which is not enabled "
+                               << selected_ruid->back.iface_name;
                     // Restart state will update the onboarding status to failure.
                     FSM_MOVE_STATE(RESTART);
                     break;
@@ -2939,6 +2942,7 @@ std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wl
 void BackhaulManager::handle_dev_reset_default(
     int fd, const std::unordered_map<std::string, std::string> &params)
 {
+    LOG(INFO) << "handle_dev_reset_default";
     // Certification tests will do "dev_reset_default" multiple times without "dev_set_config" in
     // between. In that case, do nothing but reply.
     if (m_is_in_reset_state) {
@@ -3084,6 +3088,7 @@ bool BackhaulManager::handle_dev_set_config(
             LOG(INFO) << "Interface '" << eth_iface << "' not found in bridge '" << bridge << "' !";
         }
 
+        LOG(INFO) << "setting m_selected_backhaul " << m_selected_backhaul;
         // Disable wired interface for wireless backhaul connection.
         // It will be enabled back if in case we want to establish wired bh connection.
         beerocks::net::network_utils::set_interface_state(eth_iface, false);
