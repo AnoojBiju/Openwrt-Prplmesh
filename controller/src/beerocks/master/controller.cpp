@@ -1181,7 +1181,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
     uint8_t num_bsss     = 0;
 
     // Update BSSes in the Agent
-    if (!database.has_node(ruid)) {
+    if (agent->radios.find(ruid) == agent->radios.end()) {
         database.add_node_radio(ruid, al_mac);
     }
     auto radio = agent->radios.get(ruid);
