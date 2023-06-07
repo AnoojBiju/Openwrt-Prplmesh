@@ -17,10 +17,10 @@ namespace {
 TEST(BeerocksWifiChannel, check_24ghz_getters_and_setters_are_valid)
 {
     unsigned int channel        = 1;
-    unsigned int center_freq    = 2422;
+    unsigned int center_freq    = 2412;
     beerocks::eWiFiBandwidth bw = beerocks::BANDWIDTH_20;
 
-    beerocks::WifiChannel wc(channel, center_freq, bw);
+    beerocks::WifiChannel wc(channel, beerocks::eFreqType::FREQ_24G, bw);
 
     // check getter work properly after a object was constructed
     ASSERT_EQ(wc.get_channel(), channel);
@@ -52,7 +52,7 @@ TEST(BeerocksWifiChannel, check_5ghz_getters_and_setters_are_valid)
     unsigned int center_freq    = 5180;
     beerocks::eWiFiBandwidth bw = beerocks::BANDWIDTH_20;
 
-    beerocks::WifiChannel wc(channel, center_freq, bw);
+    beerocks::WifiChannel wc(channel, beerocks::eFreqType::FREQ_5G, bw);
 
     // check getter work properly after a object was constructed
     ASSERT_EQ(wc.get_channel(), channel);
@@ -84,8 +84,9 @@ TEST(BeerocksWifiChannel, check_5ghz_getters_and_setters_are_valid)
     channel     = 116;
     center_freq = 5590;
     bw          = beerocks::BANDWIDTH_40;
-    wc          = beerocks::WifiChannel(channel, center_freq, bw, true);
+    wc          = beerocks::WifiChannel(channel, beerocks::eFreqType::FREQ_5G, bw, true);
     ASSERT_EQ(wc.get_channel(), channel);
+    ASSERT_EQ(wc.get_center_frequency(), center_freq);
     ASSERT_EQ(wc.get_bandwidth(), bw);
     ASSERT_EQ(wc.get_center_frequency(),
               son::wireless_utils::channel_to_freq(channel + 2, beerocks::eFreqType::FREQ_5G));
@@ -100,14 +101,14 @@ TEST(BeerocksWifiChannel, check_6ghz_getters_and_setters_are_valid)
     unsigned int center_freq    = 6185;
     beerocks::eWiFiBandwidth bw = beerocks::BANDWIDTH_160;
 
-    beerocks::WifiChannel wc(channel, center_freq, bw);
+    beerocks::WifiChannel wc(channel, beerocks::eFreqType::FREQ_6G, bw);
 
     // check getter work properly after a object was constructed
     ASSERT_EQ(wc.get_channel(), channel);
     ASSERT_EQ(wc.get_center_frequency(), center_freq - 40);
     ASSERT_EQ(wc.get_center_frequency_2(), center_freq);
     ASSERT_EQ(wc.get_bandwidth(), bw);
-    ASSERT_EQ(wc.get_freq_type(), beerocks::FREQ_6G);
+    ASSERT_EQ(wc.get_freq_type(), beerocks::eFreqType::FREQ_6G);
     ASSERT_EQ(wc.is_dfs_channel(), false);
 }
 
