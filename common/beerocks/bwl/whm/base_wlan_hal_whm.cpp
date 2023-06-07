@@ -531,6 +531,13 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
             vap_element.bss = ifname;
             vap_element.mac = mac;
             ssid_obj->read_child(vap_element.ssid, "SSID");
+            // This is to be aligned with NL80211 backend implementation, if ACCESSPOINT is disabled, SSID shall be null
+            // in practice, setting SSID to null is not accepted by whm/hostapd.
+            bool ap_enabled(false);
+            ap_obj.read_child(ap_enabled, "Enable");
+            if (ap_enabled == false) {
+                vap_element.ssid.clear();
+            }
             vap_element.fronthaul = false;
             vap_element.backhaul  = false;
             std::string multi_ap_type;
