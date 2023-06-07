@@ -306,16 +306,18 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
         }
 
         backhaul_sta_radio_cap_tlv->ruid() = radio->front.iface_mac;
-        backhaul_sta_radio_cap_tlv->sta_mac_included() =
-            wfa_map::tlvBackhaulStaRadioCapabilities::eStaMacIncluded::FIELD_PRESENT;
 
         sMacAddr backhaul_mac;
         if (radio->back.iface_mac == net::network_utils::ZERO_MAC) {
-            // TODO: This case occurs in case of wired backhaul (PPM-2016)
+            // This case occurs in case of wired backhaul
             LOG(INFO) << "Radio STA Interface HAL is not initialized, iface="
                       << radio->back.iface_name;
+            backhaul_sta_radio_cap_tlv->sta_mac_included() =
+                wfa_map::tlvBackhaulStaRadioCapabilities::eStaMacIncluded::FIELD_NOT_PRESENT;
             backhaul_mac = net::network_utils::ZERO_MAC;
         } else {
+            backhaul_sta_radio_cap_tlv->sta_mac_included() =
+                wfa_map::tlvBackhaulStaRadioCapabilities::eStaMacIncluded::FIELD_PRESENT;
             backhaul_mac = radio->back.iface_mac;
         }
 
