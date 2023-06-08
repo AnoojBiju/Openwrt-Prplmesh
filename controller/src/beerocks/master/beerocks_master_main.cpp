@@ -570,7 +570,7 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
     ret_val &= ambiorix_datamodel->set(configuration_path, "BandSteeringEnabled",
                                        master_conf.load_client_band_steering);
 
-    ret_val &= ambiorix_datamodel->set(configuration_path, "OptimalPathEnabled",
+    ret_val &= ambiorix_datamodel->set(configuration_path, "ClientRoamingEnabled",
                                        master_conf.load_client_optimal_path_roaming);
 
     ret_val &= ambiorix_datamodel->set(configuration_path, "SteeringCurrentBonus",
