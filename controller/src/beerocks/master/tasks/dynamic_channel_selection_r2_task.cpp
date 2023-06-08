@@ -1822,6 +1822,7 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
            << ", seconds: " << int(non_occupancy_channel.duration) << "]" << std::endl;
     }
 
+    uint32_t channelCountdown = 0;
     for (size_t i = 0; i < cac_status_report_tlv->number_of_active_cac_pairs(); i++) {
 
         if (!std::get<0>(cac_status_report_tlv->active_cac_pairs(i))) {
@@ -1831,9 +1832,10 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
 
         const auto &active_channel = std::get<1>(cac_status_report_tlv->active_cac_pairs(i));
         active_channels.push_back(active_channel);
+        memcpy(&channelCountdown, active_channel.countdown, sizeof(active_channel.countdown));
         ss << "Active: [OC: " << int(active_channel.operating_class_active_cac)
-           << ", channel: " << int(active_channel.channel_active_cac) << "]" << std::endl;
-        // TODO: Add debug print for duration parameter (need value conversion - PPM-2302)
+           << ", channel: " << int(active_channel.channel_active_cac)
+           << ", countdown: " << channelCountdown << "]" << std::endl;
     }
 
     if (!database.dm_add_cac_status_report(agent, available_channels, non_occupancy_channels,
