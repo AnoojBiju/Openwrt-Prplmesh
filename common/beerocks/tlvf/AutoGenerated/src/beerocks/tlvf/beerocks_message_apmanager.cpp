@@ -2660,8 +2660,48 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::~cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST() {
 }
-sMacAddr& cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::mac() {
-    return (sMacAddr&)(*m_mac);
+uint8_t& cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::sta_list_size() {
+    return (uint8_t&)(*m_sta_list_size);
+}
+
+std::tuple<bool, sStaAssociationControl&> cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::sta(size_t idx) {
+    bool ret_success = ( (m_sta_idx__ > 0) && (m_sta_idx__ > idx) );
+    size_t ret_idx = ret_success ? idx : 0;
+    if (!ret_success) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+    }
+    return std::forward_as_tuple(ret_success, m_sta[ret_idx]);
+}
+
+bool cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::alloc_sta(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list sta, abort!";
+        return false;
+    }
+    size_t len = sizeof(sStaAssociationControl) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_sta[*m_sta_list_size];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_bssid = (sMacAddr *)((uint8_t *)(m_bssid) + len);
+    m_validity_period_sec = (uint16_t *)((uint8_t *)(m_validity_period_sec) + len);
+    m_sta_idx__ += count;
+    *m_sta_list_size += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { 
+        for (size_t i = m_sta_idx__ - count; i < m_sta_idx__; i++) { m_sta[i].struct_init(); }
+    }
+    return true;
 }
 
 sMacAddr& cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::bssid() {
@@ -2675,7 +2715,9 @@ uint16_t& cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::validity_period_sec() {
 void cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
-    m_mac->struct_swap();
+    for (size_t i = 0; i < m_sta_idx__; i++){
+        m_sta[i].struct_swap();
+    }
     m_bssid->struct_swap();
     tlvf_swap(16, reinterpret_cast<uint8_t*>(m_validity_period_sec));
 }
@@ -2710,7 +2752,7 @@ bool cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::finalize()
 size_t cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(sMacAddr); // mac
+    class_size += sizeof(uint8_t); // sta_list_size
     class_size += sizeof(sMacAddr); // bssid
     class_size += sizeof(uint16_t); // validity_period_sec
     return class_size;
@@ -2722,12 +2764,19 @@ bool cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+    m_sta_list_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_sta_list_size = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    if (!m_parse__) { m_mac->struct_init(); }
+    m_sta = reinterpret_cast<sStaAssociationControl*>(m_buff_ptr__);
+    uint8_t sta_list_size = *m_sta_list_size;
+    m_sta_idx__ = sta_list_size;
+    if (!buffPtrIncrementSafe(sizeof(sStaAssociationControl) * (sta_list_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sStaAssociationControl) * (sta_list_size) << ") Failed!";
+        return false;
+    }
     m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
@@ -2753,8 +2802,47 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::~cACTION_APMANAGER_CLIENT_ALLOW_REQUEST() {
 }
-sMacAddr& cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::mac() {
-    return (sMacAddr&)(*m_mac);
+uint8_t& cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::mac_list_size() {
+    return (uint8_t&)(*m_mac_list_size);
+}
+
+std::tuple<bool, sMacAddr&> cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::mac(size_t idx) {
+    bool ret_success = ( (m_mac_idx__ > 0) && (m_mac_idx__ > idx) );
+    size_t ret_idx = ret_success ? idx : 0;
+    if (!ret_success) {
+        TLVF_LOG(ERROR) << "Requested index is greater than the number of available entries";
+    }
+    return std::forward_as_tuple(ret_success, m_mac[ret_idx]);
+}
+
+bool cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::alloc_mac(size_t count) {
+    if (m_lock_order_counter__ > 0) {;
+        TLVF_LOG(ERROR) << "Out of order allocation for variable length list mac, abort!";
+        return false;
+    }
+    size_t len = sizeof(sMacAddr) * count;
+    if(getBuffRemainingBytes() < len )  {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer - can't allocate";
+        return false;
+    }
+    m_lock_order_counter__ = 0;
+    uint8_t *src = (uint8_t *)&m_mac[*m_mac_list_size];
+    uint8_t *dst = src + len;
+    if (!m_parse__) {
+        size_t move_length = getBuffRemainingBytes(src) - len;
+        std::copy_n(src, move_length, dst);
+    }
+    m_bssid = (sMacAddr *)((uint8_t *)(m_bssid) + len);
+    m_mac_idx__ += count;
+    *m_mac_list_size += count;
+    if (!buffPtrIncrementSafe(len)) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { 
+        for (size_t i = m_mac_idx__ - count; i < m_mac_idx__; i++) { m_mac[i].struct_init(); }
+    }
+    return true;
 }
 
 sMacAddr& cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::bssid() {
@@ -2764,7 +2852,9 @@ sMacAddr& cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::bssid() {
 void cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
-    m_mac->struct_swap();
+    for (size_t i = 0; i < m_mac_idx__; i++){
+        m_mac[i].struct_swap();
+    }
     m_bssid->struct_swap();
 }
 
@@ -2798,7 +2888,7 @@ bool cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::finalize()
 size_t cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(sMacAddr); // mac
+    class_size += sizeof(uint8_t); // mac_list_size
     class_size += sizeof(sMacAddr); // bssid
     return class_size;
 }
@@ -2809,12 +2899,19 @@ bool cACTION_APMANAGER_CLIENT_ALLOW_REQUEST::init()
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
         return false;
     }
-    m_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
+    m_mac_list_size = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!m_parse__) *m_mac_list_size = 0;
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
-    if (!m_parse__) { m_mac->struct_init(); }
+    m_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
+    uint8_t mac_list_size = *m_mac_list_size;
+    m_mac_idx__ = mac_list_size;
+    if (!buffPtrIncrementSafe(sizeof(sMacAddr) * (mac_list_size))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) * (mac_list_size) << ") Failed!";
+        return false;
+    }
     m_bssid = reinterpret_cast<sMacAddr*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(sMacAddr))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sMacAddr) << ") Failed!";
