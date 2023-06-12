@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
 #include <algorithm>
@@ -2367,6 +2368,8 @@ public:
     bool dm_add_radio_cac_capabilities(
         const Agent::sRadio &radio, const wfa_map::eCacMethod &method, const uint8_t &duration,
         const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
+
+    bool dm_save_radio_cac_completion_report(wfa_map::cCacCompletionReportRadio &radioReport);
 
     /**
      * @brief Adds instances for AKMFrontHaul and AKMBackhaul objects and fullfills them.

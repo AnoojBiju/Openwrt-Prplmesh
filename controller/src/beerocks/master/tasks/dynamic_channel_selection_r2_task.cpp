@@ -1744,9 +1744,12 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_repor
         }
 
         auto &cac_radio = std::get<1>(cac_completion_report_tlv->cac_radios(i));
-        // TODO: PPM-2197
         ss << "Radio " << cac_radio.radio_uid() << " with status "
            << cac_radio.cac_completion_status() << std::endl;
+
+        // Store report to database
+        if (!database.dm_save_radio_cac_completion_report(cac_radio))
+            LOG(ERROR) << "tlvProfile2CacCompletionReport storing error";
 
         if (cac_radio.cac_completion_status() !=
             wfa_map::cCacCompletionReportRadio::eCompletionStatus::NOT_PERFORMED) {
