@@ -1705,6 +1705,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         std::string bridge_name = request->bridge_ifname_str();
 
+        LOG(DEBUG) << "handle ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST";
         std::list<son::wireless_utils::sBssInfoConf> bss_info_conf_list;
         auto wifi_credentials_size = request->wifi_credentials_size();
 
@@ -1796,6 +1797,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             const auto &radio_vaps              = ap_wlan_hal->get_radio_info().available_vaps;
             response->number_of_bss_available() = radio_vaps.size();
             send_cmdu(cmdu_tx);
+        } else {
+            LOG(ERROR) << "discard new configuration because "
+                       << (perform_update ? "configuration is empty" : "radio not enabled");
         }
         break;
     }
@@ -1895,6 +1899,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         break;
     }
     case beerocks_message::ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST: {
+        LOG(INFO) << "handle ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST";
         if (!handle_aps_update_list()) {
             LOG(ERROR) << "Failed notifying vaps list update!";
             return;

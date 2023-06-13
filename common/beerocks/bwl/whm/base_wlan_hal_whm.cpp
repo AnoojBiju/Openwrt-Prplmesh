@@ -293,6 +293,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
 {
     auto radio = m_ambiorix_cl->get_object(m_radio_path);
     if (!radio) {
+        LOG(ERROR) << " cannot refresh radio info, radio object missing ";
         return false;
     }
     std::string s_val;
@@ -413,8 +414,17 @@ bool base_wlan_hal_whm::refresh_radio_info()
         m_radio_info.channel_ext_above);
 
     radio->read_child(m_radio_info.tx_power, "TransmitPower");
-    if (radio->read_child(s_val, "Status")) {
-        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_string(s_val);
+    bool enable_flag = false;
+    // because of the async nature of pwhm calls, and because of the strict Radio.Status
+    // implementation, Radio.Status follows a path that goes through the Status=Down / Disabled
+    // when certain operations, like enable(), are performed on AccessPoint instances above it;
+    // reading the Radio.Status() during onboarding (system in transient state) returns various
+    // values that would be long to enumerate; and some of these transient values forbid enabling
+    // AccessPoints when they are non-transient
+    // moreover, Radio.Enable constitutes a "promise" that
+    // upon activating an AccessPoint, Radio.Status will go to Enable eventually (in a matter of seconds)
+    if (radio->read_child(enable_flag, "Enable")) {
+        m_radio_info.radio_state = utils_wlan_hal_whm::radio_state_from_bool(enable_flag);
         if (m_radio_info.radio_state == eRadioState::ENABLED) {
             m_radio_info.wifi_ctrl_enabled = 2; // Assume Operational
             m_radio_info.tx_enabled        = 1;
@@ -423,7 +433,9 @@ bool base_wlan_hal_whm::refresh_radio_info()
     m_ambiorix_cl->get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
     if (!m_radio_info.available_vaps.size()) {
+        LOG(INFO) << " calling refresh_vaps_info because local info struct is empty ";
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
+            LOG(ERROR) << " could not refresh vaps info for radio " << beerocks::IFACE_RADIO_ID;
             return false;
         }
     }
@@ -437,6 +449,7 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
     auto result =
         m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
     if (!result) {
+        LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
         return false;
     }
     std::string radio_path;
@@ -445,6 +458,8 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
         if ((ap.empty()) ||
             (!m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path)) ||
             (radio_path != m_radio_path)) {
+            LOG(ERROR) << "iteration on ap " << it.first << " problem with radio reference ? ";
+            LOG(ERROR) << "radio path " << radio_path << " m_radio_path " << m_radio_path;
             continue;
         }
         aps.emplace_back(std::move(ap));
@@ -471,7 +486,7 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
 {
     bool ret   = false;
     int vap_id = -1;
-
+    LOG(DEBUG) << "refresh vaps info id: " << id;
     AmbiorixVariantList curr_vaps;
     get_radio_vaps(curr_vaps);
 
@@ -553,6 +568,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
                                         vap_extInfo.path);
             m_ambiorix_cl->resolve_path(wifi_ssid_path, vap_extInfo.ssid_path);
             vap_extInfo.status = wbapi_utils::get_ap_status(ap_obj);
+            LOG(INFO) << "status for " << ifname << " " << vap_extInfo.status;
         }
     }
 
@@ -564,6 +580,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
             m_vapsExtInfo.erase(m_radio_info.available_vaps[id].bss);
             m_radio_info.available_vaps.erase(id);
         }
+        LOG(ERROR) << "VAP MAC empty return early";
         return true;
     }
 
