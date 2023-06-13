@@ -216,6 +216,10 @@ void association_handling_task::work()
         TASK_LOG(DEBUG) << "new_delay=" << new_delay << "ms";
         max_attempts = REQUEST_RSSI_MEASUREMENT_MAX_ATTEMPTS;
         attempts     = 0;
+#ifdef ENABLE_VBSS
+        // VBSS does not use ARPs for RSSI, no need to delay.
+        new_delay = 0;
+#endif
         wait_for(new_delay);
         break;
     }
