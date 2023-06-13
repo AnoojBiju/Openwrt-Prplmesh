@@ -80,7 +80,7 @@ public:
     bool dpp_onboarding_support;
 
     // 802.1Q C-TAG Traffic Separation support
-    bool traffic_separation_support;
+    bool traffic_separation_support = false;
 
     /**
      * @brief Max Total Number of unique VLAN identifiers the Multi-AP Agent supports.
