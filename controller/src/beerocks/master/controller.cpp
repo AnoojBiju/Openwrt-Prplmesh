@@ -4831,13 +4831,22 @@ bool Controller::send_unassociated_sta_link_metrics_query_message(
             unassociated_sta_query->operating_class_of_channel_list() = operating_class.first;
             unassociated_sta_query->channel_list_length() =
                 operating_class.second.size(); //number of channels
-            son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database);
+            if (!son_actions::send_cmdu_to_agent(agent.first, cmdu_tx, database)) {
+                LOG(DEBUG) << "Failed to send CMDU to " << agent.first;
+                return false;
+            }
+            if (!cmdu_tx.create(
+                    0, ieee1905_1::eMessageType::UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE)) {
+                LOG(ERROR)
+                    << "Failed building message UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE!";
+                return false;
+            }
         }
     }
 #ifdef ENABLE_VBSS
     m_vbss_manager->set_last_sent_mid_unassoc(cmdu_tx.getMessageId());
 
-#endif // DEBUG
+#endif // ENABLE_VBSS
     return true;
 }
 
