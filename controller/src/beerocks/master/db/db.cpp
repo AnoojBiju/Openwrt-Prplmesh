@@ -5420,6 +5420,11 @@ void db::add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info
     bss_infos_global.push_back(bss_info);
 }
 
+void db::add_configured_bss_info(const sMacAddr &ruid, const wireless_utils::sBssInfoConf &bss_info)
+{
+    configured_bss_infos[ruid].push_back(bss_info);
+}
+
 std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
 {
     // If al_mac not exist, it will be added, and return empty list
@@ -5435,6 +5440,11 @@ std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration()
     return bss_infos_global;
 }
 
+std::list<wireless_utils::sBssInfoConf> &db::get_configured_bss_info(const sMacAddr &ruid)
+{
+    return configured_bss_infos[ruid];
+}
+
 void db::clear_bss_info_configuration()
 {
     bss_infos.clear();
@@ -5442,6 +5452,8 @@ void db::clear_bss_info_configuration()
 }
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
+
+void db::clear_configured_bss_info(const sMacAddr &ruid) { configured_bss_infos[ruid].clear(); }
 
 void db::add_traffic_separation_configuration(const sMacAddr &al_mac,
                                               const wireless_utils::sTrafficSeparationSsid &config)

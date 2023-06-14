@@ -1190,6 +1190,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         return false;
     }
 
+    database.clear_configured_bss_info(ruid);
+
     for (auto &bss_info_conf : bss_info_confs) {
         // Check if the radio supports it
         if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
@@ -1243,6 +1245,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
         }
+        database.add_configured_bss_info(ruid, bss_info_conf);
         num_bsss++;
     }
 
