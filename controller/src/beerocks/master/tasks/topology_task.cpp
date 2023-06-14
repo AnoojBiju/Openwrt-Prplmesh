@@ -726,8 +726,10 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                 &new_event);
         }
 #endif /* FEATURE_PRE_ASSOCIATION_STEERING */
-
-        son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
+        if (!client->get_vsta_status() ||
+            !tasks.is_task_running(client->association_handling_task_id)) {
+            son_actions::handle_completed_connection(database, cmdu_tx, tasks, client_mac_str);
+        }
 
     } else {
         // client disconnected
@@ -788,6 +790,8 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
             station_disconnect_event.from_topology_notification         = true;
             tasks.push_event(database.get_vbss_task_id(), vbss_task::eEventType::STATION_DISCONNECT,
                              &station_disconnect_event);
+            // Set this to false so clean up occurs else where
+            client->set_vsta_status(false);
         }
 #endif
         bool reported_by_parent = bssid == bss->bssid;

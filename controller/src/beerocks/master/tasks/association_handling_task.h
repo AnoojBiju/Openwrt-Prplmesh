@@ -38,6 +38,7 @@ private:
     task_pool &tasks;
     const std::string sta_mac;
     std::string original_parent_mac;
+    bool m_is_vbss_connected;
 
     enum states {
         START = 0,

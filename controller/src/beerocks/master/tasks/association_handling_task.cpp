@@ -59,7 +59,7 @@ void association_handling_task::work()
         // instance of it.
         int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
-            if (station->get_vsta_status()) {
+            if (!station->get_vsta_status()) {
                 // Kill old make new
                 tasks.kill_task(prev_task_id);
             } else {
@@ -67,22 +67,26 @@ void association_handling_task::work()
                 return;
             }
         }
+
         station->association_handling_task_id = id;
-
-        original_parent_mac = database.get_node_parent(sta_mac);
-
+        if (!station->get_vsta_status()) {
+            original_parent_mac = database.get_node_parent(sta_mac);
+            if (database.settings_monitor_on_vaps() == false) {
+                TASK_LOG(DEBUG) << "started association_handling_task, non main vap connected sta "
+                                << sta_mac;
+                state = FINISH;
+                break;
+            }
+            max_attempts = START_MONITORING_MAX_ATTEMPTS;
+        } else {
+            original_parent_mac = tlvf::mac_to_string(station->get_bss()->bssid);
+            max_attempts        = INT16_MAX;
+        }
+        m_is_vbss_connected    = station->get_vsta_status();
         task_started_timestamp = std::chrono::steady_clock::now();
 
-        if (database.settings_monitor_on_vaps() == false) {
-            TASK_LOG(DEBUG) << "started association_handling_task, non main vap connected sta "
-                            << sta_mac;
-            state = FINISH;
-            break;
-        }
-
         TASK_LOG(DEBUG) << "started association_handling_task, rssi measurement on " << sta_mac;
-        state        = START_RSSI_MONITORING;
-        max_attempts = START_MONITORING_MAX_ATTEMPTS;
+        state = START_RSSI_MONITORING;
         break;
     }
 
@@ -95,8 +99,9 @@ void association_handling_task::work()
         std::string new_hostap_mac;
         // parent == bssid
         new_hostap_mac = database.get_node_parent(sta_mac);
-        if (new_hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+        if ((new_hostap_mac != original_parent_mac ||
+             database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) &&
+            !m_is_vbss_connected) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -229,12 +234,13 @@ void association_handling_task::work()
         /*
          * send measurement request to get a valid RSSI reading
          */
-        TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
+        //TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
         std::string hostap_mac = database.get_node_parent(sta_mac);
         //auto agent_mac         = database.get_node_parent_ire(hostap_mac);
 
-        if (hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+        if ((hostap_mac != original_parent_mac ||
+             database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) &&
+            !m_is_vbss_connected) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -275,8 +281,8 @@ void association_handling_task::work()
         son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
                                         tlvf::mac_to_string(station->get_bss()->radio.radio_uid));
 
-        TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
-                        << sta_mac;
+        //TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
+        //                << sta_mac;
 
         add_pending_mac(tlvf::mac_to_string(station->get_bss()->radio.radio_uid),
                         beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE);
@@ -415,6 +421,9 @@ void association_handling_task::handle_response(std::string mac,
         }
         break;
     }
+    // Handled by controller, just break
+    case beerocks_message::ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_CMD_RESPONSE:
+        break;
     default: {
         LOG(ERROR) << "Unsupported action_op:" << int(beerocks_header->action_op());
         break;

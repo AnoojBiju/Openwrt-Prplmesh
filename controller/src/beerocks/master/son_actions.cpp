@@ -264,53 +264,56 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             return;
         }
         // If there is running association handleing task already, terminate it.
-        int prev_task_id = station->association_handling_task_id;
-        if (tasks.is_task_running(prev_task_id)) {
-            tasks.kill_task(prev_task_id);
+        if (!station->get_vsta_status()) {
+            int prev_task_id = station->association_handling_task_id;
+            if (tasks.is_task_running(prev_task_id)) {
+                tasks.kill_task(prev_task_id);
+            }
         }
     }
 
     if (reported_by_parent) {
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
-            database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
 
             auto station = database.get_station(tlvf::mac_from_string(mac));
             if (!station) {
                 LOG(ERROR) << "Station " << mac << " not found";
                 return;
             }
+            if (!station->get_vsta_status()) {
+                database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+                // Clear node ipv4
+                database.set_node_ipv4(mac);
 
-            // Clear node ipv4
-            database.set_node_ipv4(mac);
+                // Notify steering task, if any, of disconnect.
+                int steering_task = station->steering_task_id;
+                if (tasks.is_task_running(steering_task))
+                    tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
 
-            // Notify steering task, if any, of disconnect.
-            int steering_task = station->steering_task_id;
-            if (tasks.is_task_running(steering_task))
-                tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
+                // Notify btm_request task, if any, of disconnect.
+                int btm_request_task = station->btm_request_task_id;
+                if (tasks.is_task_running(btm_request_task))
+                    tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
 
-            // Notify btm_request task, if any, of disconnect.
-            int btm_request_task = station->btm_request_task_id;
-            if (tasks.is_task_running(btm_request_task))
-                tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
+                if (database.get_node_handoff_flag(*station)) {
+                    LOG(DEBUG) << "handoff_flag == true, mac " << mac;
+                    // We're in the middle of steering, don't mark as disconnected (yet).
+                    return;
+                } else {
+                    LOG(DEBUG) << "handoff_flag == false, mac " << mac;
 
-            if (database.get_node_handoff_flag(*station)) {
-                LOG(DEBUG) << "handoff_flag == true, mac " << mac;
-                // We're in the middle of steering, don't mark as disconnected (yet).
-                return;
-            } else {
-                LOG(DEBUG) << "handoff_flag == false, mac " << mac;
-
-                // If we're not in the middle of steering, kill roaming task
-                int prev_task_id = station->roaming_task_id;
-                if (tasks.is_task_running(prev_task_id)) {
-                    tasks.kill_task(prev_task_id);
+                    // If we're not in the middle of steering, kill roaming task
+                    int prev_task_id = station->roaming_task_id;
+                    if (tasks.is_task_running(prev_task_id)) {
+                        tasks.kill_task(prev_task_id);
+                    }
                 }
-            }
 
-            // If there is an instance of association handling task, kill it
-            int association_handling_task_id = station->association_handling_task_id;
-            if (tasks.is_task_running(association_handling_task_id)) {
-                tasks.kill_task(association_handling_task_id);
+                // If there is an instance of association handling task, kill it
+                int association_handling_task_id = station->association_handling_task_id;
+                if (tasks.is_task_running(association_handling_task_id)) {
+                    tasks.kill_task(association_handling_task_id);
+                }
             }
         }
 
