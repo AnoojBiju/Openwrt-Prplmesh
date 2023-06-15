@@ -179,17 +179,19 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     sMacAddr local_receiving_iface_mac = tlvf::mac_from_string(local_receiving_iface_mac_str);
 
     // Check if it is a new device so if it does, we will send a Topology Notification.
-    bool new_device = false;
+    bool new_device = true;
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
         auto &neighbors_on_local_iface = neighbors_on_local_iface_entry.second;
         auto &local_iface_mac          = neighbors_on_local_iface_entry.first;
+
+        new_device &=
+            neighbors_on_local_iface.find(tlvAlMac->mac()) == neighbors_on_local_iface.end();
+
         // Remove old device from other interfaces
         if (local_iface_mac != local_receiving_iface_mac) {
             neighbors_on_local_iface.erase(tlvAlMac->mac());
             continue;
         }
-        new_device =
-            neighbors_on_local_iface.find(tlvAlMac->mac()) == neighbors_on_local_iface.end();
     }
 
     LOG(DEBUG) << "sender iface_mac=" << tlvMac->mac()
