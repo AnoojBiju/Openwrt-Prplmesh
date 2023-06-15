@@ -601,6 +601,10 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
 
         // Calculate max total number of VLANs which can be configured on the Agent, and
         // save it on on the AgentDB.
+        LOG(DEBUG) << "Autoconfig max_number_of_vlans_ids = "
+                   << db->traffic_separation.max_number_of_vlans_ids;
+        LOG(DEBUG) << "Autoconfig radio list size = " << db->get_radios_list().size();
+
         db->traffic_separation.max_number_of_vlans_ids =
             db->get_radios_list().size() * eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
 
@@ -1376,7 +1380,8 @@ bool ApAutoConfigurationTask::handle_profile2_traffic_separation_policy_tlv(
             db->traffic_separation.secondary_vlans_ids.insert(vlan_id);
         }
     }
-
+    LOG(DEBUG) << "policy tlv2 max_number_of_vlans_ids = "
+               << db->traffic_separation.max_number_of_vlans_ids;
     // Erase excessive secondary VIDs.
     if (db->traffic_separation.ssid_vid_mapping.size() >
         db->traffic_separation.max_number_of_vlans_ids) {

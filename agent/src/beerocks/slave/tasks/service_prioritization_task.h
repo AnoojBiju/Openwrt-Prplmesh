@@ -40,6 +40,7 @@ private:
     * @return true if config applied or handled properly, otherwise false.
     * */
     bool send_service_prio_config(const beerocks_message::sServicePrioConfig &request);
+    void gather_iface_details(std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> *);
 
     bool qos_apply_active_rule();
     bool qos_flush_setup();
