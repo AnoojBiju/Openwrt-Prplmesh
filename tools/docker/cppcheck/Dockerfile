@@ -1,4 +1,4 @@
-FROM debian:stable
+FROM debian:bullseye
 
 # Use a specific snapshot to try to make the docker image a little bit more reproducible:
 RUN printf '%s\n' 'deb     https://snapshot.debian.org/archive/debian/20210105T023154Z/ stable main' > /etc/apt/source.list.d
