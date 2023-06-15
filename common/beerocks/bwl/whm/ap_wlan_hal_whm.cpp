@@ -44,8 +44,8 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
     : base_wlan_hal(bwl::HALType::AccessPoint, iface_name, IfaceType::Intel, callback, hal_conf),
       base_wlan_hal_whm(bwl::HALType::AccessPoint, iface_name, callback, hal_conf)
 {
-    int amxp_fd = m_ambiorix_cl->get_signal_fd();
-    int amx_fd  = m_ambiorix_cl->get_fd();
+    int amxp_fd = m_ambiorix_cl.get_signal_fd();
+    int amx_fd  = m_ambiorix_cl.get_fd();
     LOG_IF((amxp_fd == -1), FATAL) << "Failed to get amx signal fd";
 
     m_fds_ext_events = {amx_fd, amxp_fd};
@@ -66,6 +66,39 @@ HALState ap_wlan_hal_whm::attach(bool block)
     }
 
     return state;
+}
+
+void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
+{
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_BSS_TM_RESPONSE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string ap_path;
+        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+            return;
+        }
+        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
+        auto &vapsExtInfo    = hal->m_vapsExtInfo;
+        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == vapsExtInfo.end()) {
+            LOG(DEBUG) << "vap_it not found";
+            return;
+        }
+        LOG(DEBUG) << "event from iface " << vap_it->first;
+
+        hal->process_ap_bss_event(vap_it->first, &event_data);
+    };
+    event_handler->context = this;
+
+    std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
+                         "[0-9]+.$')"
+                         " && (notification == '" +
+                         AMX_CL_BSS_TM_RESPONSE_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
 
 bool ap_wlan_hal_whm::enable()
@@ -89,7 +122,7 @@ bool ap_wlan_hal_whm::set_start_disabled(bool enable, int vap_id)
 bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int center_channel)
 {
     bool auto_channel_enable = false;
-    m_ambiorix_cl->get_param<>(auto_channel_enable, m_radio_path, "AutoChannelEnable");
+    m_ambiorix_cl.get_param<>(auto_channel_enable, m_radio_path, "AutoChannelEnable");
     if (auto_channel_enable) {
         LOG(ERROR) << "unable to set channel!, AutoChannelEnable option is enabled";
         return false;
@@ -97,7 +130,7 @@ bool ap_wlan_hal_whm::set_channel(int chan, beerocks::eWiFiBandwidth bw, int cen
 
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
     new_obj.add_child<>("Channel", uint8_t(chan));
-    bool ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
+    bool ret = m_ambiorix_cl.update_object(m_radio_path, new_obj);
 
     if (!ret) {
         LOG(ERROR) << "unable to set channel!";
@@ -119,7 +152,7 @@ bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
     std::string mac_filter_path = wbapi_utils::search_path_mac_filtering(ifname);
 
     std::string mode;
-    if (!m_ambiorix_cl->get_param<>(mode, mac_filter_path, "Mode")) {
+    if (!m_ambiorix_cl.get_param<>(mode, mac_filter_path, "Mode")) {
         LOG(ERROR) << "failed to get MACFiltering object";
         return false;
     }
@@ -132,7 +165,7 @@ bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
     // check if the sta is included in accesslist entries
     std::string entry_path =
         wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
-    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    bool sta_found = m_ambiorix_cl.resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "WhiteList") {
         LOG(TRACE) << "sta allowed in WhiteList mode";
@@ -149,9 +182,9 @@ bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
     args.add_child("mac", tlvf::mac_to_string(mac));
     bool ret = true;
     if (mode == "WhiteList") {
-        ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", args, result);
+        ret = m_ambiorix_cl.call(mac_filter_path, "addEntry", args, result);
     } else if (mode == "BlackList") {
-        ret = m_ambiorix_cl->call(mac_filter_path, "delEntry", args, result);
+        ret = m_ambiorix_cl.call(mac_filter_path, "delEntry", args, result);
     }
 
     if (!ret) {
@@ -174,7 +207,7 @@ bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     std::string mac_filter_path = wbapi_utils::search_path_mac_filtering(ifname);
 
     std::string mode;
-    if (!m_ambiorix_cl->get_param<>(mode, mac_filter_path, "Mode")) {
+    if (!m_ambiorix_cl.get_param<>(mode, mac_filter_path, "Mode")) {
         LOG(ERROR) << "failed to get MACFiltering object";
         return false;
     }
@@ -187,7 +220,7 @@ bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     // check if the sta is included in accesslist entries
     std::string entry_path =
         wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
-    bool sta_found = m_ambiorix_cl->resolve_path(entry_path, entry_path);
+    bool sta_found = m_ambiorix_cl.resolve_path(entry_path, entry_path);
 
     if (sta_found && mode == "BlackList") {
         LOG(TRACE) << "sta denied in BlackList mode";
@@ -206,7 +239,7 @@ bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
         LOG(WARNING) << "change MACFiltering mode to BlackList";
         AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
         new_obj.add_child<>("Mode", "BlackList");
-        ret = m_ambiorix_cl->update_object(mac_filter_path, new_obj);
+        ret = m_ambiorix_cl.update_object(mac_filter_path, new_obj);
 
         if (!ret) {
             LOG(ERROR) << "unable to change MACFiltering mode to BlackList!";
@@ -215,9 +248,9 @@ bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
         }
     }
     if (!sta_found && mode == "BlackList") {
-        ret = m_ambiorix_cl->call(mac_filter_path, "addEntry", args, result);
+        ret = m_ambiorix_cl.call(mac_filter_path, "addEntry", args, result);
     } else if (sta_found && mode == "WhiteList") {
-        ret = m_ambiorix_cl->call(mac_filter_path, "delEntry", args, result);
+        ret = m_ambiorix_cl.call(mac_filter_path, "delEntry", args, result);
     }
 
     if (!ret) {
@@ -258,7 +291,7 @@ bool ap_wlan_hal_whm::sta_deauth(int8_t vap_id, const std::string &mac, uint32_t
     args.add_child("macaddress", mac);
     args.add_child("reason", reason);
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(ifname);
-    bool ret                 = m_ambiorix_cl->call(wifi_ap_path, "kickStationReason", args, result);
+    bool ret                 = m_ambiorix_cl.call(wifi_ap_path, "kickStationReason", args, result);
 
     if (!ret) {
         LOG(ERROR) << "sta_deauth() failed!";
@@ -287,7 +320,7 @@ bool ap_wlan_hal_whm::sta_bss_steer(int8_t vap_id, const std::string &mac, const
     args.add_child("disassoc", disassoc_timer_btt);
     args.add_child("transitionReason", reason);
     auto wifi_ap_path = wbapi_utils::search_path_ap_by_iface(ifname);
-    bool ret          = m_ambiorix_cl->call(wifi_ap_path, "sendBssTransferRequest", args, result);
+    bool ret          = m_ambiorix_cl.call(wifi_ap_path, "sendBssTransferRequest", args, result);
 
     if (!ret) {
         LOG(ERROR) << "sta_bss_steer() failed!";
@@ -330,7 +363,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
             prev_teardown = true;
             LOG(INFO) << "BSS " << bss_info_conf.bssid << " flagged for tear down.";
             new_obj.add_child<bool>("Enable", false);
-            ret = m_ambiorix_cl->update_object(wifi_vap_path, new_obj);
+            ret = m_ambiorix_cl.update_object(wifi_vap_path, new_obj);
             if (!ret) {
                 LOG(ERROR) << "Failed to disable vap " << ifname;
             }
@@ -359,7 +392,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
 
         new_obj.set_type(AMXC_VAR_ID_HTABLE);
         new_obj.add_child<>("SSID", bss_info_conf.ssid);
-        ret = m_ambiorix_cl->update_object(wifi_ssid_path, new_obj);
+        ret = m_ambiorix_cl.update_object(wifi_ssid_path, new_obj);
 
         if (!ret) {
             LOG(ERROR) << "Failed to update SSID object";
@@ -380,7 +413,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
             new_obj.add_child<>("EncryptionMode", encryption_mode);
             new_obj.add_child<>("KeyPassPhrase", bss_info_conf.network_key);
         }
-        ret = m_ambiorix_cl->update_object(wifi_ap_sec_path, new_obj);
+        ret = m_ambiorix_cl.update_object(wifi_ap_sec_path, new_obj);
 
         if (!ret) {
             LOG(ERROR) << "Failed to update Security object " << wifi_ap_sec_path;
@@ -392,7 +425,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
             LOG(INFO) << "Re-enable BSS " << bss_info_conf.bssid << " after tear down.";
             new_obj.set_type(AMXC_VAR_ID_HTABLE);
             new_obj.add_child<bool>("Enable", true);
-            ret = m_ambiorix_cl->update_object(wifi_vap_path, new_obj);
+            ret = m_ambiorix_cl.update_object(wifi_vap_path, new_obj);
             if (!ret) {
                 LOG(ERROR) << "Failed to enable vap " << ifname;
                 continue;
@@ -416,7 +449,7 @@ bool ap_wlan_hal_whm::update_vap_credentials(
         }
 
         // re-notify previously enabled vaps to unblock autoconf task
-        auto status = m_ambiorix_cl->get_param(wifi_vap_path, "Status");
+        auto status = m_ambiorix_cl.get_param(wifi_vap_path, "Status");
         if (status && !status->empty()) {
             process_ap_event(ifname, "Status", status.get());
         }
@@ -527,7 +560,7 @@ bool ap_wlan_hal_whm::set_tx_power_limit(int tx_pow_limit)
 {
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
     new_obj.add_child<>("TransmitPower", uint8_t(tx_pow_limit));
-    bool ret = m_ambiorix_cl->update_object(m_radio_path, new_obj);
+    bool ret = m_ambiorix_cl.update_object(m_radio_path, new_obj);
 
     if (!ret) {
         LOG(ERROR) << "unable to set tx power limit!";
@@ -559,7 +592,7 @@ bool ap_wlan_hal_whm::generate_connected_clients_events(
         std::string associated_devices_path = vap_path + "AssociatedDevice.";
 
         auto associated_devices_pwhm =
-            m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+            m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
 
         if (associated_devices_pwhm == nullptr) {
             LOG(DEBUG) << "Failed reading: " << associated_devices_path;
@@ -664,7 +697,7 @@ bool ap_wlan_hal_whm::start_wps_pbc()
     AmbiorixVariant args, result;
     std::string main_vap_ifname = m_radio_info.available_vaps[0].bss;
     std::string wps_path        = wbapi_utils::search_path_ap_by_iface(main_vap_ifname) + "WPS.";
-    bool ret                    = m_ambiorix_cl->call(wps_path, "InitiateWPSPBC", args, result);
+    bool ret                    = m_ambiorix_cl.call(wps_path, "InitiateWPSPBC", args, result);
 
     if (!ret) {
         LOG(ERROR) << "start_wps_pbc() failed!";
@@ -707,7 +740,7 @@ AmbiorixVariantSmartPtr ap_wlan_hal_whm::get_last_assoc_frame(const std::string 
 
     std::string ap_path = wbapi_utils::search_path_assocDev_by_mac(vap_iface, sta_mac);
 
-    bool ret = m_ambiorix_cl->call(ap_path, "getLastAssocReq", args, data);
+    bool ret = m_ambiorix_cl.call(ap_path, "getLastAssocReq", args, data);
 
     AmbiorixVariantSmartPtr result = data.find_child(0);
     if (!ret || !result) {

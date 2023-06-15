@@ -46,10 +46,10 @@ public:
      */
     AmbiorixConnection(const std::string &amxb_backend, const std::string &bus_uri);
 
-    /**
+    /*
      * @brief: no Copy constructor, neither assignment operator
      */
-    AmbiorixConnection(const AmbiorixConnection &) = delete;
+    AmbiorixConnection(const AmbiorixConnection &)            = delete;
     AmbiorixConnection &operator=(const AmbiorixConnection &) = delete;
 
     /**
@@ -63,19 +63,6 @@ public:
      * @return True on success and false otherwise.
      */
     bool init();
-
-    /**
-     * @brief Factory method: creating smart pointer for established AmbiorixConnection
-     * (created and initialized)
-     *
-     * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
-     * @return shared_ptr for newly established AmbiorixConnection object
-     * or empty in case of error
-     */
-    static AmbiorixConnectionSmartPtr
-    create(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
-           const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
 
     /**
      * @brief Read and return content of matching objects.
@@ -209,10 +196,10 @@ public:
     const std::string &uri() const;
 
 private:
-    std::recursive_mutex m_mutex;
     std::string m_amxb_backend;
     std::string m_bus_uri;
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
+    bool m_connected          = false;
     int m_fd                  = -1;
     int m_signal_fd           = -1;
 };

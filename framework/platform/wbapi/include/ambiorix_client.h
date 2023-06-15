@@ -26,8 +26,9 @@ namespace wbapi {
 class AmbiorixClient {
 
 public:
-    AmbiorixClient(){};
-    AmbiorixClient(const AmbiorixClient &) = delete;
+    AmbiorixClient(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
+                   const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
+    AmbiorixClient(const AmbiorixClient &)            = delete;
     AmbiorixClient &operator=(const AmbiorixClient &) = delete;
     ~AmbiorixClient();
 
@@ -75,10 +76,7 @@ public:
     template <typename T>
     T get_object_multi(const std::string &object_path, const int32_t depth = 0)
     {
-        if (!m_connection) {
-            return T{};
-        }
-        auto objs = m_connection->get_object(object_path, depth, false);
+        auto objs = m_connection.get_object(object_path, depth, false);
         if (!objs) {
             return T{};
         }
@@ -240,7 +238,7 @@ public:
                                    const std::string &filter = {});
 
 private:
-    AmbiorixConnectionSmartPtr m_connection;
+    AmbiorixConnection m_connection;
     std::vector<sAmbiorixSubscriptionInfo> m_subscriptions;
 };
 

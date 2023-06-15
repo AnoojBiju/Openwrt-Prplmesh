@@ -94,7 +94,7 @@ protected:
     bool has_enabled_vap() const;
     bool check_enabled_vap(const std::string &bss) const;
 
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
     std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
     std::string m_radio_path;
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname

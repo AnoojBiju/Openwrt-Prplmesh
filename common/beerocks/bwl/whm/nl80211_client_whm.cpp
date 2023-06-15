@@ -12,7 +12,6 @@
 #include <bcl/network/network_utils.h>
 
 // Ambiorix
-#include "ambiorix_connection_manager.h"
 #include "wbapi_utils.h"
 
 using namespace beerocks;
@@ -20,18 +19,16 @@ using namespace wbapi;
 
 namespace bwl {
 
-nl80211_client_whm::nl80211_client_whm() : m_connection(AmbiorixConnectionManager::get_connection())
+nl80211_client_whm::nl80211_client_whm(const std::string &amxb_backend, const std::string &bus_uri)
+    : m_connection(amxb_backend, bus_uri)
 {
 }
 
 bool nl80211_client_whm::get_interfaces(std::vector<std::string> &interfaces)
 {
     interfaces.clear();
-    if (!m_connection) {
-        return false;
-    }
     // pwhm dm path: WiFi.SSID.*.Name?
-    auto ssids = m_connection->get_object(wbapi_utils::search_path_ssid_iface(), 0, false);
+    auto ssids = m_connection.get_object(wbapi_utils::search_path_ssid_iface(), 0, false);
     if (!ssids) {
         return false;
     }
@@ -64,14 +61,11 @@ bool nl80211_client_whm::get_radio_info(const std::string &interface_name, radio
 bool nl80211_client_whm::get_sta_info(const std::string &interface_name,
                                       const sMacAddr &sta_mac_address, sta_info &sta_info)
 {
-    if (!m_connection) {
-        return false;
-    }
     std::string sta_mac_str = tlvf::mac_to_string(sta_mac_address);
     std::string assoc_device_path =
         wbapi_utils::search_path_assocDev_by_mac(interface_name, sta_mac_str);
 
-    auto assoc_device_obj = m_connection->get_object(assoc_device_path, 0, true);
+    auto assoc_device_obj = m_connection.get_object(assoc_device_path, 0, true);
     if (!assoc_device_obj) {
         LOG(ERROR) << "failed to get AssociatedDevice object " << assoc_device_path;
         return false;
