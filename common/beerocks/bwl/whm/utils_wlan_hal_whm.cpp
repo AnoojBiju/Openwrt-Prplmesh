@@ -37,6 +37,7 @@ eRadioState radio_state_from_bool(const bool &flag)
 std::string security_type_to_string(const WiFiSec &security_type)
 {
     for (const auto &map_it : security_type_table) {
+        LOG(INFO) << "iacob sectype string " << map_it.first;
         if (map_it.second == security_type) {
             return map_it.first;
         }
@@ -46,7 +47,12 @@ std::string security_type_to_string(const WiFiSec &security_type)
 
 WiFiSec security_type_from_string(const std::string &security_type)
 {
+    LOG(INFO) << "security type key:" << security_type;
     auto map_it = security_type_table.find(security_type);
+    if(map_it == security_type_table.end()) { LOG(INFO) << "not found security type key";}
+
+    auto debug_it = security_type_table.find("WPA2-Personal);
+    if (debug_it != security_type_table.end()) {LOG(INFO) << "const key ok";}
     return map_it == security_type_table.end() ? WiFiSec::Invalid : map_it->second;
 }
 

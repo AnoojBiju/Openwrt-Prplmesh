@@ -731,7 +731,7 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
         data->read_child<>(ssid, "SSID");
         data->read_child<>(key, "KeyPassPhrase");
         data->read_child<>(mode, "securitymode");
-        LOG(INFO) << "WPS Event data ssid " << ssid << "; key " << key << "; securitymode " << mode;
+        LOG(INFO) << "WPS Event data ssid " << ssid << "; key " << key << "; securitymode " << mode << ";";
         if (ssid.empty() || key.empty() || mode.empty()) {
             return false;
         }
