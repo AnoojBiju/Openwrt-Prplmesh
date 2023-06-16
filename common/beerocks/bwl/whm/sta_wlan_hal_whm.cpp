@@ -43,6 +43,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     subscribe_to_ep_events();
     subscribe_to_ep_wps_events();
     subscribe_to_scan_complete_events();
+    LOG(INFO) << "create instance of sta_wlan_hal_whm";
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
@@ -160,6 +161,7 @@ bool sta_wlan_hal_whm::start_wps_pbc()
     AmbiorixVariant args, result;
     std::string wps_path = m_ep_path + "WPS.";
     bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
+    LOG(INFO) << "call " << wps_path << "pushButton()";
 
     if (!ret) {
         LOG(ERROR) << "start_wps_pbc() failed!";
@@ -532,7 +534,8 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
     }
 
     // Set BSSID : optional
-    if (!profile.bssid.empty()) {
+    if (!profile.bssid.empty() &&
+        (profile.bssid != beerocks::net::network_utils::ZERO_MAC_STRING)) {
         params.set_type(AMXC_VAR_ID_HTABLE);
         params.add_child<>("ForceBSSID", profile.bssid);
         ret = m_ambiorix_cl->update_object(profile_path, params);
@@ -540,6 +543,9 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
             LOG(ERROR) << "Failed setting bssid on interface " << get_iface_name();
             return false;
         }
+    }
+    if (!profile.bssid.empty()) {
+        LOG(INFO) << "would have forced BSSID to ZERO_MAC";
     }
 
     // Optional: set channel : not supported by pwhm
@@ -552,7 +558,8 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
     params.add_child<>("ModeEnabled", mode_enabled);
     ret = m_ambiorix_cl->update_object(profile_security_path, params);
     if (!ret) {
-        LOG(ERROR) << "Failed setting security on interface " << get_iface_name();
+        LOG(ERROR) << "Failed setting security on interface " << get_iface_name()
+                   << " mode_enabled " << mode_enabled;
         return false;
     }
 
@@ -724,6 +731,7 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
         data->read_child<>(ssid, "SSID");
         data->read_child<>(key, "KeyPassPhrase");
         data->read_child<>(mode, "securitymode");
+        LOG(INFO) << "WPS Event data ssid " << ssid << "; key " << key << "; securitymode " << mode;
         if (ssid.empty() || key.empty() || mode.empty()) {
             return false;
         }
