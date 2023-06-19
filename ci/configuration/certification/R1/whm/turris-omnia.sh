@@ -21,21 +21,27 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 5
-
-ubus wait_for DHCPv4
-ubus wait_for DHCPv6
-
-# Stop and disable the DHCP clients and servers:
-ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+sleep 20
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-/etc/init.d/ip-manager restart
-sleep 15
+/etc/init.d/ip-manager restart && sleep 15
+
+ubus wait_for IP.Interface
+
+# Stop and disable the DHCP clients and servers:
+if ubus call DHCPv4 _list ; then
+  ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+  ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+else
+    echo "DHCPv4 service not active!"
+fi
+if ubus call DHCPv6 _list ; then
+  ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+  ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+else
+    echo "DHCPv6 service not active!"
+fi
 
 # We use WAN for the control interface.
 # Add the IP address if there is none yet:

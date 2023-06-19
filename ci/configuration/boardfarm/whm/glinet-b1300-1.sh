@@ -21,17 +21,27 @@ if data_overlay_not_initialized; then
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
 fi
-sleep 2
+sleep 20
 
-ubus wait_for DHCPv4
-ubus wait_for DHCPv6
+# Save the IP settings persistently (PPM-2351):
+sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
+/etc/init.d/ip-manager restart && sleep 15
+
 ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
-ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
-ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+if ubus call DHCPv4 _list ; then
+  ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
+  ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
+else
+    echo "DHCPv4 service not active!"
+fi
+if ubus call DHCPv6 _list ; then
+  ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
+  ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
+else
+    echo "DHCPv6 service not active!"
+fi
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
@@ -82,6 +92,28 @@ ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, rest
 
 # If we still can't ping the UCC, restart the IP manager
 ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
+
+# Remove the default lan/wan SSH servers if they exist
+# ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
+# ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"wan\"]" }' || true
+
+# Trigger the startup of the SSH server
+# The SSH server on eth0 has some problems starting through the server component
+# Launch a server on the control IP later
+# ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": false } }'
+# sleep 5
+# ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Restart the ssh server
-/etc/init.d/ssh-server restart
+#/etc/init.d/ssh-server restart
+#sleep 5
+
+# Add command to start dropbear to rc.local to allow SSH access after reboot
+BOOTSCRIPT="/etc/rc.local"
+SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.1.110:22 &"
+if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
+
+# Start an ssh server on the control interfce
+/etc/init.d/ssh-server stop
+dropbear -F -T 10 -p192.168.1.110:22 &

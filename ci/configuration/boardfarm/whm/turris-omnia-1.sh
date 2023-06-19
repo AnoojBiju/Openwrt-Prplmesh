@@ -43,23 +43,24 @@ else
     echo "DHCPv6 service not active!"
 fi
 
-# We use WAN for the control interface.
+# IP for device upgrades, operational tests, Boardfarm data network, ...
+# Note that this device uses the WAN interface (as on some Omnias the
+# others don't work in the bootloader):
 # Add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
     echo "Adding IP address $IP"
     ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
 }
 # Configure it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.250.170", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.1.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
 # Enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
 
 # Set the LAN bridge IP:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.170" } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.0.100" } }'
 
 # Wired backhaul interface:
-uci set prplmesh.config.backhaul_wire_iface='lan0'
-uci commit
+uci set prplmesh.config.backhaul_wire_iface='eth2'
 
 # enable Wi-Fi radios
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
@@ -67,18 +68,12 @@ ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
-
 # Stop and disable the firewall:
 /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
 
 # Restart the ssh server
 /etc/init.d/ssh-server restart
-
-# Required for config_load:
-. /lib/functions/system.sh
-# Required for config_foreach:
-. /lib/functions.sh
 
 # add private vaps to lan to workaround Netmodel missing wlan mib
 # this must be reverted once Netmodel version is integrated
@@ -105,7 +100,7 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
-sleep 10
+# secondary vaps and backhaul are not supported yet (WIP)
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
@@ -113,8 +108,8 @@ sleep 10
 ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
 
 # Remove the default lan/wan SSH servers if they exist
 # ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
@@ -128,13 +123,14 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Restart the ssh server
-/etc/init.d/ssh-server restart
-sleep 5
+#/etc/init.d/ssh-server restart
+#sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.170:22 &"
+SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.1.100:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Start an ssh server on the control interfce
-dropbear -F -T 10 -p192.168.250.170:22 &
+/etc/init.d/ssh-server stop
+dropbear -F -T 10 -p192.168.1.100:22 &
