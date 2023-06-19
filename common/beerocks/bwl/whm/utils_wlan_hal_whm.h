@@ -67,11 +67,6 @@ get_scan_result_operating_standards_from_str(const std::string &standards);
 std::vector<eChannelScanResultSecurityMode>
 get_scan_security_modes_from_str(const std::string &security_modes);
 
-/**
-* @brief Convertion table of Security type from string to WiFiSec.
-*/
-const std::map<std::string, WiFiSec> security_type_table;
-
 } // namespace utils_wlan_hal_whm
 } // namespace whm
 } // namespace bwl

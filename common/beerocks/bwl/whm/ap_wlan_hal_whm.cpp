@@ -829,7 +829,9 @@ bool ap_wlan_hal_whm::start_wps_pbc()
     AmbiorixVariant args, result;
     std::string main_vap_ifname = m_radio_info.available_vaps[0].bss;
     std::string wps_path        = wbapi_utils::search_path_ap_by_iface(main_vap_ifname) + "WPS.";
-    bool ret                    = m_ambiorix_cl->call(wps_path, "InitiateWPSPBC", args, result);
+
+    LOG(INFO) << "start wps on path " << wps_path;
+    bool ret = m_ambiorix_cl->call(wps_path, "InitiateWPSPBC", args, result);
 
     if (!ret) {
         LOG(ERROR) << "start_wps_pbc() failed!";

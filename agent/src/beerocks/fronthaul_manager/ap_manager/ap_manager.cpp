@@ -1806,10 +1806,15 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
     }
     case beerocks_message::ACTION_APMANAGER_START_WPS_PBC_REQUEST: {
         LOG(DEBUG) << "Got ACTION_APMANAGER_START_WPS_PBC_REQUEST";
-        if (!ap_wlan_hal->start_wps_pbc()) {
-            LOG(ERROR) << "Failed to start WPS PBC";
-            return;
+        if (ap_wlan_hal != nullptr) {
+            if (!ap_wlan_hal->start_wps_pbc()) {
+                LOG(ERROR) << "Failed to start WPS PBC";
+                return;
+            }
+        } else {
+            LOG(INFO) << "nullptr so there's that";
         }
+        LOG(INFO) << "totally not a pointer error";
         break;
     }
     case beerocks_message::ACTION_APMANAGER_SET_ASSOC_DISALLOW_REQUEST: {
