@@ -92,13 +92,14 @@ class NbapiAccessPoint(PrplMeshBaseTest):
         self.configure_ssid(ssid["6G"], "Fronthaul", {"Band6G": True})
         self.configure_ssid(ssid["F+B"], "Fronthaul+Backhaul")
 
+        time.sleep(4)
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"ModeEnabled": "WPA2-Personal"})
         controller.nbapi_set_parameters(all_bands_security_obj_path,
                                         {"KeyPassphrase": "key_passphrease_value"})
 
         controller.nbapi_command("Device.WiFi.DataElements.Network", "AccessPointCommit")
-        time.sleep(10)
+        time.sleep(20)
 
         topology = self.get_topology()
         for device in topology.values():
