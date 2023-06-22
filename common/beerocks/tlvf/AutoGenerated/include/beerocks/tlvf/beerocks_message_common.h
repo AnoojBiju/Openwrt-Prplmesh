@@ -1448,6 +1448,28 @@ typedef struct sUnassociatedStationStats {
     }
 } __attribute__((packed)) sUnassociatedStationStats;
 
+typedef struct sSpatialReuseParams {
+    uint8_t bss_color;
+    uint8_t partial_bss_color;
+    uint8_t hesiga_spatial_reuse_value15_allowed;
+    uint8_t srg_information_valid;
+    uint8_t non_srg_offset_valid;
+    uint8_t psr_disallowed;
+    uint8_t non_srg_obsspd_max_offset;
+    uint8_t srg_obsspd_min_offset;
+    uint8_t srg_obsspd_max_offset;
+    uint64_t srg_bss_color_bitmap;
+    uint64_t srg_partial_bssid_bitmap;
+    uint64_t neighbor_bss_color_in_use_bitmap;
+    void struct_swap(){
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&srg_bss_color_bitmap));
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&srg_partial_bssid_bitmap));
+        tlvf_swap(64, reinterpret_cast<uint8_t*>(&neighbor_bss_color_in_use_bitmap));
+    }
+    void struct_init(){
+    }
+} __attribute__((packed)) sSpatialReuseParams;
+
 
 }; // close namespace: beerocks_message
 
