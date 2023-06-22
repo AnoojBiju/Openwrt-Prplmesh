@@ -411,6 +411,7 @@ class cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
         sApChannelSwitch& cs_params();
         int8_t& tx_limit();
         uint8_t& tx_limit_valid();
+        sSpatialReuseParams& sr_params();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -421,6 +422,7 @@ class cACTION_BACKHAUL_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
         sApChannelSwitch* m_cs_params = nullptr;
         int8_t* m_tx_limit = nullptr;
         uint8_t* m_tx_limit_valid = nullptr;
+        sSpatialReuseParams* m_sr_params = nullptr;
 };
 
 class cACTION_BACKHAUL_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST : public BaseClass
