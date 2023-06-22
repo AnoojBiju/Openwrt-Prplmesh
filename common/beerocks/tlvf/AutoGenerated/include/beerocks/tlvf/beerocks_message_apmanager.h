@@ -633,6 +633,27 @@ class cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG : public BaseClass
         sServicePrioConfig* m_cs_params = nullptr;
 };
 
+class cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION);
+        }
+        sSpatialReuseParams& sr_params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sSpatialReuseParams* m_sr_params = nullptr;
+};
+
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass
 {
     public:
