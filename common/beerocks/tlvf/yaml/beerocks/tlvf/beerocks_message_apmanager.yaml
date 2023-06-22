@@ -145,6 +145,10 @@ cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG:
   _type: class
   cs_params: sServicePrioConfig
 
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
+  _type: class
+  sr_params: sSpatialReuseParams
+
 cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION:
   _type: class
   mac: sMacAddr
