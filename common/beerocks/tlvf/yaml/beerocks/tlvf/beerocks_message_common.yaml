@@ -1079,3 +1079,18 @@ sServicePrioConfig:
     _type: uint8_t
     _length: [ 64 ]
     _value: 0
+
+sSpatialReuseParams:
+  _type: struct
+  bss_color: uint8_t #bit[5-0]
+  partial_bss_color: uint8_t #bit 6
+  hesiga_spatial_reuse_value15_allowed: uint8_t #bit 4
+  srg_information_valid: uint8_t #bit 3
+  non_srg_offset_valid: uint8_t #bit 2
+  psr_disallowed: uint8_t #bit 0
+  non_srg_obsspd_max_offset: uint8_t
+  srg_obsspd_min_offset: uint8_t
+  srg_obsspd_max_offset: uint8_t
+  srg_bss_color_bitmap: uint64_t
+  srg_partial_bssid_bitmap: uint64_t
+  neighbor_bss_color_in_use_bitmap: uint64_t
