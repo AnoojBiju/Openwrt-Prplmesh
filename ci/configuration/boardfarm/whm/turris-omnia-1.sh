@@ -44,7 +44,23 @@ else
 fi
 
 # IP for device upgrades, operational tests, Boardfarm data network, ...
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
+# Note that this device uses the WAN interface (as on some Omnias the
+# others don't work in the bootloader):
+# Add the IP address if there is none yet:
+ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
+    echo "Adding IP address $IP"
+    ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
+}
+# Configure it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.1.100", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
+# Enable it:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
+
+# Set the LAN bridge IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.0.100" } }'
+
+# Wired backhaul interface:
+uci set prplmesh.config.backhaul_wire_iface='eth2'
 
 # enable Wi-Fi radios
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
@@ -52,11 +68,12 @@ ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
-# For now there is no way to disable the firewall (see PCF-590).
-# Instead, wait for it in the datamodel, then set the whole INPUT
-# chain to ACCEPT:
-ubus wait_for Firewall
-iptables -P INPUT ACCEPT
+# Stop and disable the firewall:
+/etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/S22tr181-firewall
+
+# Restart the ssh server
+/etc/init.d/ssh-server restart
 
 # add private vaps to lan to workaround Netmodel missing wlan mib
 # this must be reverted once Netmodel version is integrated
@@ -111,9 +128,9 @@ ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.1.110:22 &"
+SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.1.100:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Start an ssh server on the control interfce
 /etc/init.d/ssh-server stop
-dropbear -F -T 10 -p192.168.1.110:22 &
+dropbear -F -T 10 -p192.168.1.100:22 &

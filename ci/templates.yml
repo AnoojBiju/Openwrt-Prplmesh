@@ -37,11 +37,11 @@
   stage: build
   timeout: 5h
   script:
-    - mkdir -p "build/$TARGET_DEVICE"
-    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1
+    - mkdir -p "buildWHM/$TARGET_DEVICE"
+    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-whm-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" --whm 2>&1
   artifacts:
     paths:
-      - "build/*"
+      - "buildWHM/*"
     expire_in: 4 weeks
     when: always
   tags:
@@ -49,17 +49,17 @@
     - docker-build
   needs: []
 
-.build-for-openwrt-whm:
+.build-for-openwrt-legacy:
   extends: .build-for-openwrt
   script:
     - mkdir -p "build/$TARGET_DEVICE"
-    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-whm-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" --whm 2>&1
+    - tools/docker/builder/openwrt/build.sh --verbose -d "$TARGET_DEVICE" -t "prplmesh-builder-$TARGET_DEVICE:$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_ID" 2>&1
   artifacts:
     paths:
-      - "buildWHM/*"
+      - "build/*"
   rules:
-  - when: always
-    allow_failure: false
+    - when: always
+      allow_failure: false
 
 .build-for-rdkb:
   stage: build
@@ -86,7 +86,7 @@
 .test-upgrade-image:
   stage: test
   script:
-    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --full --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --full --configuration ci/configuration/boardfarm/whm/"$TARGET_DEVICE_NAME".sh
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
     - when: manual
@@ -94,6 +94,11 @@
   tags:
     - targets
   timeout: 20m
+
+.test-upgrade-image-legacy:
+  extends: .test-upgrade-image
+  script:
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --full --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
 
 .test-on-target:
   stage: test
@@ -104,8 +109,8 @@
     - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
     # kill prplmesh on each target to make sure they don't interfere with the test
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
-    - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --configuration ci/configuration/boardfarm/whm/"$TARGET_DEVICE_NAME".sh
+    - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "buildWHM/$TARGET_DEVICE/"prplmesh.ipk
   script:
     - |
       ssh "$TARGET_DEVICE_NAME" <<'EOF'
@@ -128,20 +133,20 @@
   tags:
     - targets
   timeout: 20m
-
-.test-on-target-whm:
-  extends: .test-on-target
-  before_script:
-  # Remove any leftover from docker-compose
-  - ./dctest.py --clean
-  # we need a list of all the targets to be able to kill them
-  - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
-  # kill prplmesh on each target to make sure they don't interfere with the test
-  - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
-  - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --whm --full --configuration ci/configuration/boardfarm/whm/"$TARGET_DEVICE_NAME".sh
-  - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "buildWHM/$TARGET_DEVICE/"prplmesh.ipk
   # remove once PCF-695 is fixed:
   retry: 1
+
+.test-on-target-legacy:
+  extends: .test-on-target
+  before_script:
+    # Remove any leftover from docker-compose
+    - ./dctest.py --clean
+    # we need a list of all the targets to be able to kill them
+    - ALL_TARGETS="turris-omnia-1 turris-omnia-2 glinet-b1300-1 netgear-rax40-1 nec-wx3000hp-1"
+    # kill prplmesh on each target to make sure they don't interfere with the test
+    - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
+    - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
+    - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
 
 .test-on-rdkb:
   stage: test
@@ -182,19 +187,23 @@
           ;;
           turris-omnia)
               IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
+              USE_WHM="y"
           ;;
           glinet-b1300)
               IMAGE_NAME="$GLINET_B1300_FULLIMAGE"
+              USE_WHM="y"
           ;;
           *)
               IMAGE_NAME=''
           ;;
       esac
+
+      if [ -n "$USE_WHM" ]; then WHM_FLAG="--whm"; WHM_FOLDER="whm/"; BUILD_FOLDER="buildWHM"; else WHM_FLAG=""; WHM_FOLDER=""; BUILD_FOLDER="build"; fi
       if [ -n "$IMAGE_NAME" ] ; then
           echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
-          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME --configuration ci/configuration/certification/"$EASYMESH_REVISION"/"$DEVICE_UNDER_TEST".sh
+          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME "$WHM_FLAG" --configuration ci/configuration/certification/"$EASYMESH_REVISION"/"$WHM_FOLDER""$DEVICE_UNDER_TEST".sh
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
-          tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST build/$DEVICE_UNDER_TEST/prplmesh.ipk
+          tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST "$BUILD_FOLDER"/$DEVICE_UNDER_TEST/prplmesh.ipk
       fi
     - ~/easymesh_cert/run_test_file.py --easymesh-revision "$EASYMESH_REVISION" --upload-results --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
   artifacts:
