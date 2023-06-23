@@ -12,7 +12,7 @@ FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-    autoconf-archive build-essential libncurses5 libncurses5-dev python python3 \
+    autoconf-archive build-essential libncurses5 libncurses5-dev python3 python3-distutils libelf-dev \
     unzip git ca-certificates gawk wget file bash fakeroot \
     python-yaml python3-yaml rsync less vim gnupg software-properties-common \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
