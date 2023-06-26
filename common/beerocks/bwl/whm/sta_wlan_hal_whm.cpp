@@ -157,9 +157,18 @@ bool sta_wlan_hal_whm::process_scan_complete_event(const std::string &result)
 
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
+    // MultiAPEnable default value may be false, do not rely only on
+    // an outside entity to configure the EndPoint correctly
+    AmbiorixVariant enable_map(AMXC_VAR_ID_HTABLE);
+    enable_map.add_child("MultiAPEnable", true);
+    bool ret = m_ambiorix_cl->update_object(m_ep_path, enable_map);
+    if (!ret) {
+        LOG(WARNING) << "failed to enable multi ap mode for" << m_ep_path;
+    }
+
     AmbiorixVariant args, result;
     std::string wps_path = m_ep_path + "WPS.";
-    bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
+    ret                  = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
 
     if (!ret) {
         LOG(ERROR) << "start_wps_pbc() failed!";
