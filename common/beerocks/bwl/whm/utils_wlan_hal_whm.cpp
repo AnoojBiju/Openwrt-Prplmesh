@@ -34,6 +34,18 @@ eRadioState radio_state_from_bool(const bool flag)
     }
 }
 
+const std::map<std::string, WiFiSec> security_type_table = {
+    {"INVALID", WiFiSec::Invalid},
+    {"None", WiFiSec::None},
+    {"WEP-64", WiFiSec::WEP_64},
+    {"WEP-128", WiFiSec::WEP_128},
+    {"WPA-Personal", WiFiSec::WPA_PSK},
+    {"WPA2-Personal", WiFiSec::WPA2_PSK},
+    {"WPA-WPA2-Personal", WiFiSec::WPA_WPA2_PSK},
+    {"WPA2-WPA3-Personal", WiFiSec::WPA2_WP3_PSK},
+    {"WPA3-Personal", WiFiSec::WPA3_PSK},
+};
+
 std::string security_type_to_string(const WiFiSec &security_type)
 {
     for (const auto &map_it : security_type_table) {
@@ -158,21 +170,6 @@ get_scan_security_modes_from_str(const std::string &security_modes_str)
     return security_modes;
 }
 
-namespace {
-
-const std::map<std::string, WiFiSec> security_type_table = {
-    {"INVALID", WiFiSec::Invalid},
-    {"None", WiFiSec::None},
-    {"WEP-64", WiFiSec::WEP_64},
-    {"WEP-128", WiFiSec::WEP_128},
-    {"WPA-Personal", WiFiSec::WPA_PSK},
-    {"WPA2-Personal", WiFiSec::WPA2_PSK},
-    {"WPA-WPA2-Personal", WiFiSec::WPA_WPA2_PSK},
-    {"WPA2-WPA3-Personal", WiFiSec::WPA2_WP3_PSK},
-    {"WPA3-Personal", WiFiSec::WPA3_PSK},
-};
-
-} // namespace
 } // namespace utils_wlan_hal_whm
 } // namespace whm
 } // namespace bwl
