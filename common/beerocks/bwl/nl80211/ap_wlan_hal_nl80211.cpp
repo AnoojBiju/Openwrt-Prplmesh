@@ -1841,7 +1841,22 @@ bool ap_wlan_hal_nl80211::set_no_deauth_unknown_sta(const std::string &ifname, b
     return true;
 }
 
+
 bool ap_wlan_hal_nl80211::configure_service_priority(const uint8_t *data)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_nl80211::set_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
+    return false;
+}
+
+bool ap_wlan_hal_nl80211::get_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;
