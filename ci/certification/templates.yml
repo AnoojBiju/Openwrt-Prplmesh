@@ -75,7 +75,6 @@ include:
   - local: "ci/certification/R4/axepoint.yml"
   - local: "ci/certification/R4/turris-omnia.yml"
 
-
 # Merge train tests
 ##################
 

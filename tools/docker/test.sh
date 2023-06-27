@@ -33,7 +33,7 @@ main() {
     while true; do
         case "$1" in
             -v | --verbose)    VERBOSE=true; OPT="-v"; shift ;;
-            -h | --help)       usage; exit 0; shift ;;
+            -h | --help)       usage; exit 0;;
             -n | --name)       NAME="$2"; shift; shift ;;
             -b | --bridge_mac) BRIDGE_MAC="$2"; shift; shift ;;
             -- ) shift; break ;;
@@ -42,9 +42,9 @@ main() {
     done
 
     if [ -z "$BRIDGE_MAC" ]; then 
-        run docker container exec "${NAME}" "${rootdir}/build/install/scripts/prplmesh_utils.sh" status $OPT
+        run docker container exec "${NAME}" "${rootdir}/build/install/scripts/prplmesh_utils.sh" status "$OPT"
     else
-        run docker container exec "${NAME}" "${rootdir}/build/install/scripts/prplmesh_utils.sh" status "$BRIDGE_MAC" $OPT
+        run docker container exec "${NAME}" "${rootdir}/build/install/scripts/prplmesh_utils.sh" status "$BRIDGE_MAC" "$OPT"
     fi
 
     

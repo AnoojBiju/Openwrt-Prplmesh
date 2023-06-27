@@ -36,7 +36,7 @@ main() {
 
     while true; do
         case "$1" in
-            -h | --help)            usage; exit 0; shift ;;
+            -h | --help)            usage; exit 0;;
             -p | --push)            push=true; shift ;;
             -t | --tag)             tags+=(":$2"); shift ; shift ;;
             -i | --image)           build_images+=("$2"); shift ; shift ;;

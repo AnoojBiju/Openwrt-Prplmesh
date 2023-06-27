@@ -69,6 +69,7 @@ mapfile -t failed <<< "$(jq -c '.test_results[] | select(.grade == "FAIL") | .na
 mapfile -t passed <<< "$(jq -c '.test_results[] | select(.grade == "OK") | .name' "${resultdir}"/test_results.json)"
 mapfile -t skipped <<< "$(jq -c '.test_results[] | select(.grade == null) | .name' "${resultdir}"/test_results.json)"
 
+# shellcheck disable=SC2048
 if [[ -n "${passed[*]/$'\n'/}" ]]; then
     if [[ -n "${failed[*]/$'\n'/}" ]]; then
         printf '\n\033[2;32m%s\033[0m\n' "${#passed[@]} tests passed!"
@@ -81,6 +82,7 @@ if [[ -n "${passed[*]/$'\n'/}" ]]; then
 fi
 
 exit_code=0
+# shellcheck disable=SC2048
 if [[ -n "${skipped[*]/$'\n'/}" ]]; then
     printf '\n\033[1;36m%s\033[0m\n' "${#skipped[@]} tests skipped!"
     for test in ${skipped[*]};do
@@ -90,6 +92,7 @@ if [[ -n "${skipped[*]/$'\n'/}" ]]; then
     exit_code=1
 fi
 
+# shellcheck disable=SC2048
 if [[ -n "${failed[*]/$'\n'/}" ]]; then
     printf '\n\033[1;31m%s\033[0m\n' "${#failed[@]} tests failed!"
     for test in ${failed[*]};do

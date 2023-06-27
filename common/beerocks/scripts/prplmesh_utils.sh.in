@@ -370,7 +370,7 @@ main() {
     while true; do
         case "$1" in
             -v | --verbose)       VERBOSE=true; shift ;;
-            -h | --help)          usage; exit 0; shift ;;
+            -h | --help)          usage; exit 0;;
             -m | --mode)          PRPLMESH_MODE="$2"; shift; shift ;;
             -p | --platform-init) PLATFORM_INIT=true; shift ;;
             -d | --delete-logs)   DELETE_LOGS=true; shift ;;

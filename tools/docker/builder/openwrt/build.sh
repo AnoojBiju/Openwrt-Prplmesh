@@ -110,7 +110,7 @@ main() {
 
     while true; do
         case "$1" in
-            -h | --help)                      usage; exit 0; shift ;;
+            -h | --help)                      usage; exit 0;;
             -v | --verbose)                   VERBOSE=true; shift ;;
             -d | --target-device)             TARGET_DEVICE="$2"; shift ; shift ;;
             --docker-target-stage)            DOCKER_TARGET_STAGE="$2"; IMAGE_ONLY=true; shift 2 ;;
@@ -192,7 +192,8 @@ main() {
     fi
 
     build_image "$build_directory/$TARGET_DEVICE"
-    [ $IMAGE_ONLY = true ] && exit $?
+    build_success=$?
+    [ $IMAGE_ONLY = true ] && exit "$build_success"
 
     build_prplmesh "$build_directory/$TARGET_DEVICE"
 
