@@ -2924,11 +2924,16 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
-    auto selected_backhaul_it =
-        std::find_if(m_radios_info.begin(), m_radios_info.end(),
-                     [&](const std::shared_ptr<sRadioInfo> &radio_info) {
-                         return tlvf::mac_from_string(m_selected_backhaul) == radio_info->radio_mac;
-                     });
+    // If backhaul is wired or not set
+    if (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH) {
+        LOG(DEBUG) << "Empty or wired backhaul";
+        return nullptr;
+    }
+    auto backhaulStr          = tlvf::mac_from_string(m_selected_backhaul);
+    auto selected_backhaul_it = std::find_if(m_radios_info.begin(), m_radios_info.end(),
+                                             [&](const std::shared_ptr<sRadioInfo> &radio_info) {
+                                                 return backhaulStr == radio_info->radio_mac;
+                                             });
     if (selected_backhaul_it == m_radios_info.end()) {
         LOG(ERROR) << "Invalid backhaul";
         return nullptr;
