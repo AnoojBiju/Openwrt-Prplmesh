@@ -121,6 +121,10 @@ public:
     virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
     virtual bool update_beacon(const std::string &ifname) override;
     virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
+    virtual bool set_spatial_reuse_config(
+        son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) override;
+    virtual bool get_spatial_reuse_config(
+        son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) override;
 
     virtual bool configure_service_priority(const uint8_t *data) override;
 
