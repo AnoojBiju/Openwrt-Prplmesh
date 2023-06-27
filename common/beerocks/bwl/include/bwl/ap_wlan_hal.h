@@ -578,6 +578,24 @@ public:
      */
     virtual bool configure_service_priority(const uint8_t *data) = 0;
 
+    /**
+     * @brief Set Spatial reuse parameters
+     * 
+     * @param spatial_reuse_params The spatial reuse parameters to be set
+     * @return true if the spatial reuse parameters were successfully set, false otherwise.
+     */
+    virtual bool
+    set_spatial_reuse_config(son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) = 0;
+
+    /**
+     * @brief Get Spatial reuse parameters
+     * 
+     * @param spatial_reuse_params The object to store the retrieved spatial reuse parameters
+     * @return true if the spatial reuse parameters were successfully retrieved, false otherwise.
+     */
+    virtual bool
+    get_spatial_reuse_config(son::wireless_utils::sSpatialReuseParams &spatial_reuse_params) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
