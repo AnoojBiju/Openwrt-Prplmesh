@@ -62,7 +62,8 @@
         "future": "cpp",
         "numeric": "cpp",
         "random": "cpp",
-        "bit": "cpp"
+        "bit": "cpp",
+        "regex": "cpp"
     },
     "files.exclude": {
         "build": true

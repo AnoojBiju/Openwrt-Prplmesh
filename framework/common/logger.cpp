@@ -226,6 +226,8 @@ std::string Logger::Config::ToEasyLoggingString()
         settings += "*ERROR:\nENABLED = " + bool_to_string(true) + "\n";
     }
 
+    std::cerr << "pid=" << getpid() << " Settings: " << std::to_string(max_file_size_) << std::endl;
+
     return settings;
 }
 } // namespace mapf

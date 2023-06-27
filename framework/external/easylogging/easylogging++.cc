@@ -18,6 +18,9 @@
 //
 
 #include "easylogging++.h"
+#include <iostream>
+#include <stdio.h>
+#include <unistd.h>
 
 #if defined(AUTO_INITIALIZE_EASYLOGGINGPP)
 INITIALIZE_EASYLOGGINGPP
@@ -1842,10 +1845,14 @@ bool TypedConfigurations::unsafeValidateFileRolling(Level level, const PreRollOu
   }
   std::size_t maxLogFileSize = unsafeGetConfigByVal(level, &m_maxLogFileSizeMap, "maxLogFileSize");
   std::size_t currFileSize = base::utils::File::getSizeOfFile(fs.get());
+  //std::cerr << __func__ << " pid=" << getpid() << " currsize= " << currFileSize << " maxLOG= " << maxLogFileSize << std::endl;
   if (maxLogFileSize != 0 && currFileSize >= maxLogFileSize) {
     std::string fname = unsafeGetConfigByRef(level, &m_filenameMap, "filename");
+    std::cerr << __func__ << " pid=" << getpid() << "inside if currsize= " << currFileSize << " maxLOG= " << maxLogFileSize << std::endl;
     ELPP_INTERNAL_INFO(1, "Truncating log file [" << fname << "] as a result of configurations for level ["
                        << LevelHelper::convertToString(level) << "]");
+    std::cerr << "Truncating log file [" << fname << "] as a result of configurations for level ["
+                       << LevelHelper::convertToString(level) << "]" << std::endl;
     fs->close();
     preRollOutCallback(fname.c_str(), currFileSize);
     fs->open(fname, std::fstream::out | std::fstream::trunc);

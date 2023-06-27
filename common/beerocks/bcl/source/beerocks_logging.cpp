@@ -18,7 +18,7 @@
 #include <easylogging++.h>
 
 #define LOG_MAX_LEVELS 6
-#define LOGGING_DEFAULT_MAX_SIZE (size_t)100000
+#define LOGGING_DEFAULT_MAX_SIZE (size_t)654321
 
 class RollMonitor : public el::LogDispatchCallback {
 public:
@@ -61,9 +61,13 @@ public:
 
         // Get current file size
         auto logFileSize = el::base::utils::File::getSizeOfFile(m_fsLogFileStream);
+        std::cerr << __func__ << ": PID=" << getpid() << " logFileSize=" << logFileSize << std::endl;
+        std::cerr << __func__ << ": PID=" << getpid() << " m_szRollLogFileSize=" << m_szRollLogFileSize << std::endl;
+
 
         // Check if rolling should be triggered
         if (logFileSize >= m_szRollLogFileSize) {
+            std::cerr << __func__ << ":" << __LINE__ << ": PID=" << getpid() << " logFileSize=" << logFileSize << " m_szRollLogFileSize=" << m_szRollLogFileSize << std::endl;
             // get process path
             std::stringstream exe_path;
             exe_path << "/proc/" << getpid() << "/exe";
@@ -347,6 +351,7 @@ logging::logging(const std::string &module_name, const beerocks::config_file::SC
     m_settings_map.insert({"log_global_levels", settings.global_levels});
     m_settings_map.insert({"log_global_syslog_levels", settings.syslog_levels});
     m_settings_map.insert({"log_global_size", settings.global_size});
+    std::cerr << __func__ << ": PID=" << getpid() << " log_global_size=" << settings.global_size << std::endl;
     m_settings_map.insert(
         {"log_stdout_enabled", settings.stdout_enabled.empty() ? "true" : settings.stdout_enabled});
     if (!settings.syslog_enabled.empty()) {
@@ -494,6 +499,10 @@ void logging::apply_settings()
         defaultConf.setGlobally(el::ConfigurationType::Filename, get_log_filepath());
         defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize, get_log_max_size_setting());
     }
+
+    // Temporarily adding below setting without checking m_log_files_enabled to resolve WLANRTSYS-56199 in GA
+    defaultConf.setGlobally(el::ConfigurationType::MaxLogFileSize, get_log_max_size_setting());
+
 
     defaultConf.set(el::Level::Fatal, el::ConfigurationType::Enabled,
                     string_utils::bool_str(m_levels.fatal_enabled()));
@@ -675,6 +684,7 @@ void logging::eval_settings()
     module_setting      = m_settings_map.find(module_setting_name);
     size_t size         = LOGGING_DEFAULT_MAX_SIZE;
     size_t module_size  = LOGGING_DEFAULT_MAX_SIZE;
+    std::cerr << __func__ << ":" << __LINE__ << " LOGGING_DEFAULT_MAX_SIZE = " << LOGGING_DEFAULT_MAX_SIZE;
     if (setting != m_settings_map.end()) {
         size = strtoul(setting->second.c_str(), nullptr, 10);
     }
@@ -684,6 +694,8 @@ void logging::eval_settings()
         module_size = size; // If no module specific setting, accept a global, then default
     }
     m_logfile_size = std::min(size, module_size);
+    std::cerr << __func__ << ": PID=" << getpid() << " m_logfile_size=" << m_logfile_size << std::endl;
+
 
     // levels
     setting             = m_settings_map.find("log_global_levels");

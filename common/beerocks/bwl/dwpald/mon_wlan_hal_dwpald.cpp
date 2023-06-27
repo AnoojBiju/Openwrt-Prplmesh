@@ -827,6 +827,8 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
     return true;
 }
 
+std::unordered_map<sMacAddr, bool> client_limit_log;
+
 bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name,
                                                const std::string &sta_mac, SStaStats &sta_stats,
                                                bool is_read_unicast)
@@ -901,10 +903,13 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
             (char *)vap_iface_name.c_str(), LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS, &res,
             client_mac.oct, sizeof(client_mac.oct), &sta_ext_stats, &stats_size);
         if ((ret != DWPALD_SUCCESS) || (res < 0)) {
-            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS failed!";
+            if(client_limit_log[client_mac] == false) {
+                LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_TR181_PEER_STATS failed!";
+                client_limit_log[client_mac] = true;
+            }
             return false;
         }
-
+        client_limit_log[client_mac] = false;
         // TX Bytes
         calc_curr_traffic(sta_ext_stats.unicast_tx_bytes_cnt, sta_stats.tx_bytes_cnt,
                           sta_stats.tx_bytes);
@@ -924,9 +929,32 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
             (char *)vap_iface_name.c_str(), LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS, &res,
             client_mac.oct, sizeof(client_mac.oct), &peer_stats, &peer_stats_size);
         if ((ret != DWPALD_SUCCESS) || (res < 0)) {
-            LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!";
+            if(client_limit_log[client_mac] == false) {
+                LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!";
+                client_limit_log[client_mac] = true;
+            }
             return false;
         }
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!1";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!2";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!3";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!4";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!5";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!6";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!7";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!8";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!9";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!10";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!11";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!12";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!13";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!14";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!15";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!16";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!17";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!18";
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PER_CLIENT_STATS failed!19";
+        client_limit_log[client_mac] = false;
         // TX Bytes
         if (!read_param("BytesSent", reply, tmp_int)) {
             LOG(ERROR) << "Failed reading BytesSent parameter!";
