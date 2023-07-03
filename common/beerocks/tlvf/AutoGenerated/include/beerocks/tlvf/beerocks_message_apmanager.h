@@ -317,6 +317,7 @@ class cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START);
         }
         sApChannelSwitch& cs_params();
+        sSpatialReuseParams& sr_params();
         int8_t& tx_limit();
         uint8_t& tx_limit_valid();
         void class_swap() override;
@@ -327,6 +328,7 @@ class cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         sApChannelSwitch* m_cs_params = nullptr;
+        sSpatialReuseParams* m_sr_params = nullptr;
         int8_t* m_tx_limit = nullptr;
         uint8_t* m_tx_limit_valid = nullptr;
 };
