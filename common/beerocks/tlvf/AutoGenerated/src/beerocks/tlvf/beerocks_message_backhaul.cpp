@@ -2237,6 +2237,76 @@ bool cACTION_BACKHAUL_RECONNECT_COMMAND::init()
     return true;
 }
 
+cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::~cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION() {
+}
+sSpatialReuseParams& cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::sr_params() {
+    return (sSpatialReuseParams&)(*m_sr_params);
+}
+
+void cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
+    m_sr_params->struct_swap();
+}
+
+bool cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sSpatialReuseParams); // sr_params
+    return class_size;
+}
+
+bool cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_sr_params = reinterpret_cast<sSpatialReuseParams*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sSpatialReuseParams))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSpatialReuseParams) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sr_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();

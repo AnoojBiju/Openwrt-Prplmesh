@@ -86,7 +86,7 @@ public:
         static AgentDB instance;
         return SafeDB(instance);
     }
-    AgentDB(const AgentDB &) = delete;
+    AgentDB(const AgentDB &)        = delete;
     void operator=(const AgentDB &) = delete;
 
 private:
@@ -304,6 +304,21 @@ public:
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
             beerocks_message::eDfsState dfs_state;
         };
+
+        struct sSpatialReuseParams {
+            uint8_t bss_color;
+            uint8_t partial_bss_color;
+            bool hesiga_spatial_reuse_value15_allowed;
+            bool srg_information_valid;
+            bool non_srg_offset_valid;
+            bool psr_disallowed;
+            uint8_t non_srg_obsspd_max_offset;
+            uint8_t srg_obsspd_min_offset;
+            uint8_t srg_obsspd_max_offset;
+            uint64_t srg_bss_color_bitmap;
+            uint64_t srg_partial_bssid_bitmap;
+            uint64_t neighbor_bss_color_in_use_bitmap;
+        } spatial_reuse_params;
 
         // Estimated time of completion of the CAC procedure.
         std::chrono::time_point<std::chrono::steady_clock> cac_completion_time;
