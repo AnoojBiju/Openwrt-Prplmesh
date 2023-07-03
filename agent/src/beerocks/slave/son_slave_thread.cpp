@@ -1801,6 +1801,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         request_out->cs_params()      = request_in->cs_params();
         request_out->tx_limit()       = request_in->tx_limit();
         request_out->tx_limit_valid() = request_in->tx_limit_valid();
+        request_out->sr_params()      = request_in->sr_params();
         send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
         break;
     }
@@ -3159,6 +3160,53 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         action_header->radio_mac() = radio->front.iface_mac;
 
         m_backhaul_manager_client->send_cmdu(cmdu_tx);
+        break;
+    }
+    case beerocks_message::ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION: {
+        auto notification = beerocks_header->addClass<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>();
+        if (!notification) {
+            LOG(ERROR)
+                << "addClass cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION failed";
+            return false;
+        }
+        LOG(TRACE) << "received cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION";
+
+        auto db    = AgentDB::get();
+        auto radio = db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(),
+                                          AgentDB::eMacType::RADIO);
+        if (!radio) {
+            break;
+        }
+        const auto &sender_iface_name = radio->front.iface_name;
+        LOG(DEBUG) << "received cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION from "
+                   << sender_iface_name;
+
+        radio->spatial_reuse_params.bss_color         = notification->sr_params().bss_color;
+        radio->spatial_reuse_params.partial_bss_color = notification->sr_params().partial_bss_color;
+        radio->spatial_reuse_params.hesiga_spatial_reuse_value15_allowed =
+            notification->sr_params().hesiga_spatial_reuse_value15_allowed;
+        radio->spatial_reuse_params.srg_information_valid =
+            notification->sr_params().srg_information_valid;
+        radio->spatial_reuse_params.non_srg_offset_valid =
+            notification->sr_params().non_srg_offset_valid;
+        radio->spatial_reuse_params.psr_disallowed = notification->sr_params().psr_disallowed;
+        radio->spatial_reuse_params.non_srg_obsspd_max_offset =
+            notification->sr_params().non_srg_obsspd_max_offset;
+        radio->spatial_reuse_params.srg_obsspd_min_offset =
+            notification->sr_params().srg_obsspd_min_offset;
+        radio->spatial_reuse_params.srg_obsspd_max_offset =
+            notification->sr_params().srg_obsspd_max_offset;
+        radio->spatial_reuse_params.srg_bss_color_bitmap =
+            notification->sr_params().srg_bss_color_bitmap;
+        radio->spatial_reuse_params.srg_partial_bssid_bitmap =
+            notification->sr_params().srg_partial_bssid_bitmap;
+        radio->spatial_reuse_params.neighbor_bss_color_in_use_bitmap =
+            notification->sr_params().neighbor_bss_color_in_use_bitmap;
+
+        LOG(DEBUG) << "Added spatial reuse params to the agent DB for interface : "
+                   << sender_iface_name;
+
         break;
     }
     default: {
