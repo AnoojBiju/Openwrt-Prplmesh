@@ -148,6 +148,10 @@ cACTION_BACKHAUL_DISCONNECT_COMMAND:
 cACTION_BACKHAUL_RECONNECT_COMMAND:
   _type: class
 
+cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
+  _type: class
+  sr_params: sSpatialReuseParams
+
 ################################################
 # CHANNEL SCAN REQUESTS/RESPONSES
 ################################################
