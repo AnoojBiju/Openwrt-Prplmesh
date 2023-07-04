@@ -1269,6 +1269,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         LOG_IF(request->cs_params().channel == 0, DEBUG) << "Start ACS";
 
+        // Set spatial reuse parameters
         son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
 
         spatial_reuse_params.bss_color = request->sr_params().bss_color;
@@ -1287,8 +1288,35 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         LOG(DEBUG) << "Setting the spatial reuse params for radio : "
                    << ap_wlan_hal->get_radio_mac();
-        if (!ap_wlan_hal->set_spatial_reuse_config(spatial_reuse_params)) {
-            LOG(ERROR) << "set_spatial_reuse_config failed";
+        if (ap_wlan_hal->set_spatial_reuse_config(spatial_reuse_params)) {
+            LOG(INFO) << "set_spatial_reuse_config completed successfully";
+
+            auto spatial_reuse_report = message_com::create_vs_message<
+                beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>(
+                cmdu_tx);
+            if (!spatial_reuse_report) {
+                LOG(ERROR) << "Failed building message!";
+                return;
+            }
+            fill_sr_params(spatial_reuse_report->sr_params());
+            send_cmdu(cmdu_tx);
+
+            if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                    request->cs_params().bandwidth) {
+                LOG(DEBUG) << "Setting spatial reuse parameters without channel switch, send CSA "
+                              "notification";
+                auto notification = message_com::create_vs_message<
+                    beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+                if (!notification) {
+                    LOG(ERROR) << "Failed building message!";
+                    return;
+                }
+                ap_wlan_hal->refresh_radio_info();
+                fill_cs_params(notification->cs_params());
+                fill_sr_params(notification->sr_params());
+                send_cmdu(cmdu_tx);
+            }
         }
 
         // Set transmit power
@@ -2039,6 +2067,27 @@ void ApManager::fill_cs_params(beerocks_message::sApChannelSwitch &params)
     params.vht_center_frequency      = ap_wlan_hal->get_radio_info().vht_center_freq;
     params.switch_reason             = uint8_t(ap_wlan_hal->get_radio_info().last_csa_sw_reason);
     params.is_dfs_channel            = ap_wlan_hal->get_radio_info().is_dfs_channel;
+}
+
+void ApManager::fill_sr_params(beerocks_message::sSpatialReuseParams &params)
+{
+    son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
+
+    if (!ap_wlan_hal->get_spatial_reuse_config(spatial_reuse_params)) {
+        LOG(ERROR) << "get_spatial_reuse_config failed";
+    }
+
+    params.bss_color = spatial_reuse_params.bss_color;
+    params.hesiga_spatial_reuse_value15_allowed =
+        spatial_reuse_params.hesiga_spatial_reuse_value15_allowed;
+    params.srg_information_valid     = spatial_reuse_params.srg_information_valid;
+    params.non_srg_offset_valid      = spatial_reuse_params.non_srg_offset_valid;
+    params.psr_disallowed            = spatial_reuse_params.psr_disallowed;
+    params.non_srg_obsspd_max_offset = spatial_reuse_params.non_srg_obsspd_max_offset;
+    params.srg_obsspd_min_offset     = spatial_reuse_params.srg_obsspd_min_offset;
+    params.srg_obsspd_max_offset     = spatial_reuse_params.srg_obsspd_max_offset;
+    params.srg_bss_color_bitmap      = spatial_reuse_params.srg_bss_color_bitmap;
+    params.srg_partial_bssid_bitmap  = spatial_reuse_params.srg_partial_bssid_bitmap;
 }
 
 bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
