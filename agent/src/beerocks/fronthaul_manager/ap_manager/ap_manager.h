@@ -166,6 +166,7 @@ private:
     bool handle_ap_enabled(int vap_id);
     bool handle_aps_update_list();
     void fill_cs_params(beerocks_message::sApChannelSwitch &params);
+    void fill_sr_params(beerocks_message::sSpatialReuseParams &params);
     bool create_ap_wlan_hal();
     void send_heartbeat();
     void send_steering_return_status(beerocks_message::eActionOp_APMANAGER ActionOp,
