@@ -1291,52 +1291,35 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         if (ap_wlan_hal->set_spatial_reuse_config(spatial_reuse_params)) {
             LOG(INFO) << "set_spatial_reuse_config completed successfully";
 
-            auto spatial_reuse_report = message_com::create_vs_message<
-                beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>(
-                cmdu_tx);
-            if (!spatial_reuse_report) {
-                LOG(ERROR) << "Failed building message!";
-                return;
-            }
-            fill_sr_params(spatial_reuse_report->sr_params());
-            send_cmdu(cmdu_tx);
-
-            if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
-                    request->cs_params().bandwidth) {
-                LOG(DEBUG) << "Setting spatial reuse parameters without channel switch, send CSA "
-                              "notification";
-                auto notification = message_com::create_vs_message<
-                    beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
-                if (!notification) {
-                    LOG(ERROR) << "Failed building message!";
-                    return;
+            // Starts a timer to trigger a CSA notification after approximately 5 seconds.
+            // The ap_manager continues executing other tasks while the timer is ongoing.
+            // When the timer elapses, the ap_manager performs the following actions:
+            //  1. Uses the HAL API to get the spatial reuse configuration.
+            //  2. Sends the cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION event
+            //     to the son_slave_thread, which adds the fetched values to the radio structure of AgentDB.
+            //  3. Sends the cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION event to the son_slave_thread
+            //     to trigger the CSA notification.
+            start_csa_notification_timer(request);
+        } else {
+            // Set transmit power
+            if (request->tx_limit_valid()) {
+                ap_wlan_hal->set_tx_power_limit(request->tx_limit());
+                LOG(INFO) << "Current channel: " << ap_wlan_hal->get_radio_info().channel
+                          << " Current BW: " << ap_wlan_hal->get_radio_info().bandwidth;
+                if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+                    utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                        request->cs_params().bandwidth) {
+                    LOG(DEBUG) << "Setting tx power without channel switch, send CSA notification";
+                    auto notification = message_com::create_vs_message<
+                        beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+                    if (!notification) {
+                        LOG(ERROR) << "Failed building message!";
+                        return;
+                    }
+                    ap_wlan_hal->refresh_radio_info();
+                    fill_cs_params(notification->cs_params());
+                    send_cmdu(cmdu_tx);
                 }
-                ap_wlan_hal->refresh_radio_info();
-                fill_cs_params(notification->cs_params());
-                fill_sr_params(notification->sr_params());
-                send_cmdu(cmdu_tx);
-            }
-        }
-
-        // Set transmit power
-        if (request->tx_limit_valid()) {
-            ap_wlan_hal->set_tx_power_limit(request->tx_limit());
-            LOG(INFO) << "Current channel: " << ap_wlan_hal->get_radio_info().channel
-                      << " Current BW: " << ap_wlan_hal->get_radio_info().bandwidth;
-            if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
-                    request->cs_params().bandwidth) {
-                LOG(DEBUG) << "Setting tx power without channel switch, send CSA notification";
-                auto notification = message_com::create_vs_message<
-                    beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
-                if (!notification) {
-                    LOG(ERROR) << "Failed building message!";
-                    return;
-                }
-                ap_wlan_hal->refresh_radio_info();
-                fill_cs_params(notification->cs_params());
-                send_cmdu(cmdu_tx);
             }
         }
 
@@ -3297,4 +3280,67 @@ void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     LOG(DEBUG) << "Sending Client Security Context Reponse back to controller";
     send_cmdu(cmdu_tx);
+}
+
+void ApManager::csa_notification_timer_elapsed(
+    std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
+{
+    if (!csa_notification_timer_on) {
+        // The timer elapsed, but CSA notification is no longer required
+        return;
+    }
+
+    // Sends the cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION event
+    // to the son_slave_thread, which adds the fetched values to the radio structure of AgentDB
+    auto spatial_reuse_report = message_com::create_vs_message<
+        beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>(cmdu_tx);
+    if (!spatial_reuse_report) {
+        LOG(ERROR) << "Failed building message!";
+        return;
+    }
+    fill_sr_params(spatial_reuse_report->sr_params());
+    send_cmdu(cmdu_tx);
+
+    // Set transmit power
+    if (request->tx_limit_valid()) {
+        ap_wlan_hal->set_tx_power_limit(request->tx_limit());
+    }
+
+    if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+        utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+            request->cs_params().bandwidth) {
+        LOG(DEBUG) << "Setting spatial reuse parameters without channel switch, send CSA "
+                      "notification";
+
+        // Sends the cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION event to the son_slave_thread
+        // to trigger the CSA notification
+        auto notification = message_com::create_vs_message<
+            beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+        if (!notification) {
+            LOG(ERROR) << "Failed building message!";
+            return;
+        }
+        ap_wlan_hal->refresh_radio_info();
+        fill_cs_params(notification->cs_params());
+        fill_sr_params(notification->sr_params());
+        send_cmdu(cmdu_tx);
+    }
+
+    // Reset the variable indicating the presence of an ongoing timer for CSA notification
+    csa_notification_timer_on = false;
+}
+
+void ApManager::start_csa_notification_timer(
+    std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
+{
+    // Set a variable to indicate the presence of an ongoing timer for CSA notification
+    csa_notification_timer_on = true;
+
+    // Start a timer for approximately 5 seconds (timer should be configurable based on the CSA count).
+    // When the timer elapses, the "csa_notification_timer_elapsed" function will be called
+    std::thread timer_thread([this, request]() {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        csa_notification_timer_elapsed(request);
+    });
+    timer_thread.detach();
 }

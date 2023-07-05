@@ -274,6 +274,15 @@ private:
     std::chrono::steady_clock::time_point m_next_generate_connected_events_time =
         std::chrono::steady_clock::time_point::min();
 
+    //Timer for triggering a CSA notification
+    void start_csa_notification_timer(
+        std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
+            request);
+    void csa_notification_timer_elapsed(
+        std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
+            request);
+    bool csa_notification_timer_on = false;
+
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
      */
