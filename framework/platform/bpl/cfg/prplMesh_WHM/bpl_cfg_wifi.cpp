@@ -27,22 +27,22 @@ namespace bpl {
 
 static AmbiorixVariantSmartPtr bpl_cfg_get_wifi_ssid_object(const std::string &iface)
 {
-    return m_ambiorix_cl->get_object(wbapi_utils::search_path_ssid_by_iface(iface));
+    return m_ambiorix_cl.get_object(wbapi_utils::search_path_ssid_by_iface(iface));
 }
 
 static AmbiorixVariantSmartPtr bpl_cfg_get_wifi_radio_object(const std::string &rad_iface)
 {
-    return m_ambiorix_cl->get_object(wbapi_utils::search_path_radio_by_iface(rad_iface));
+    return m_ambiorix_cl.get_object(wbapi_utils::search_path_radio_by_iface(rad_iface));
 }
 
 static AmbiorixVariantSmartPtr bpl_cfg_get_wifi_radio_object(const AmbiorixVariant &ap_obj)
 {
-    return m_ambiorix_cl->get_object(wbapi_utils::get_path_radio_reference(ap_obj));
+    return m_ambiorix_cl.get_object(wbapi_utils::get_path_radio_reference(ap_obj));
 }
 
 static AmbiorixVariantSmartPtr bpl_cfg_get_wifi_security_object(const std::string &iface)
 {
-    return m_ambiorix_cl->get_object(wbapi_utils::search_path_ap_by_iface(iface) + "Security.");
+    return m_ambiorix_cl.get_object(wbapi_utils::search_path_ap_by_iface(iface) + "Security.");
 }
 
 int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of_interfaces)
@@ -65,7 +65,7 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
     int interfaces_count = 0;
 
     // pwhm dm path: WiFi.Radio.*.Name?
-    auto radios = m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(
+    auto radios = m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(
         wbapi_utils::search_path_radio_iface());
     if (radios) {
         for (auto const &it : *radios) {
@@ -121,7 +121,7 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
 bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> &wireless_settings)
 {
     auto aps =
-        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
+        m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
     if (!aps) {
         return false;
     }
@@ -206,7 +206,7 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
     std::string wifi_ssid_path = wbapi_utils::search_path_ssid_by_iface(iface);
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
     new_obj.add_child<>("SSID", configuration.ssid);
-    bool ret = m_ambiorix_cl->update_object(wifi_ssid_path, new_obj);
+    bool ret = m_ambiorix_cl.update_object(wifi_ssid_path, new_obj);
 
     // update WiFi.SSID.iface. object
     if (!ret) {
@@ -222,7 +222,7 @@ bool bpl_cfg_set_wifi_credentials(const std::string &iface,
     new_obj.add_child<>("ModeEnabled", security_mode);
     new_obj.add_child<>("EncryptionMode", encryption_type);
     new_obj.add_child<>("KeyPassPhrase", configuration.network_key);
-    ret = m_ambiorix_cl->update_object(wifi_ap_sec_path, new_obj);
+    ret = m_ambiorix_cl.update_object(wifi_ap_sec_path, new_obj);
 
     // update WiFi.AccessPoint.iface.Security. object
     if (!ret) {
@@ -252,13 +252,13 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
 
     // Get the current radio reference for the given iface
     std::string radio_path;
-    if (!m_ambiorix_cl->resolve_path(wbapi_utils::search_path_radio_by_iface(iface), radio_path)) {
+    if (!m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(iface), radio_path)) {
         return RETURN_ERR;
     }
 
     // Find the endpoint that its radioreference is the current one
     auto result =
-        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ep());
+        m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ep());
     if (!result) {
         return false;
     }
@@ -267,8 +267,8 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
     for (auto &it : *result) {
         auto &ep = it.second;
         if ((ep.empty()) ||
-            !(m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ep),
-                                          ep_radio_path)) ||
+            !(m_ambiorix_cl.resolve_path(wbapi_utils::get_path_radio_reference(ep),
+                                         ep_radio_path)) ||
             (ep_radio_path != radio_path) || !(ep.read_child(ep_ifname, "IntfName"))) {
             continue;
         }

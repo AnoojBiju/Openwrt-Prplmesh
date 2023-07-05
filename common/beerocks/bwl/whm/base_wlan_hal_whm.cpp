@@ -32,14 +32,12 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
       beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>(whm_fsm_state::Delay),
       m_iso_nl80211_client(nl80211_client_factory::create_instance())
 {
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
-    LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client instance!";
 
-    LOG_IF(!m_ambiorix_cl->connect(), FATAL) << "Unable to connect to the ambiorix backend!";
+    LOG_IF(!m_ambiorix_cl.connect(), FATAL) << "Unable to connect to the ambiorix backend!";
 
-    m_fds_ext_events = {};
+    m_fds_ext_events = {m_ambiorix_cl.get_fd(), m_ambiorix_cl.get_signal_fd()};
 
-    m_ambiorix_cl->resolve_path(wbapi_utils::search_path_radio_by_iface(iface_name), m_radio_path);
+    m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(iface_name), m_radio_path);
 
     // Initialize the FSM
     fsm_setup();
@@ -80,7 +78,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
                          "')"
                          " && (contains('parameters.Status'))";
 
-    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
 
 void base_wlan_hal_whm::subscribe_to_ap_events()
@@ -94,9 +92,10 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
         if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
             return;
         }
+
         auto &vapsExtInfo = hal->m_vapsExtInfo;
         auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                         [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -139,7 +138,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
                          "')"
                          " && (contains('parameters.Status'))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(wifi_ap_path, event_handler, filter);
 }
 
 void base_wlan_hal_whm::subscribe_to_sta_events()
@@ -154,9 +153,10 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
             return;
         }
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
-        auto &vapsExtInfo   = hal->m_vapsExtInfo;
-        auto vap_it         = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+
+        auto &vapsExtInfo = hal->m_vapsExtInfo;
+        auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                         [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -164,7 +164,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -173,7 +173,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
             sta_mac = sta_mac_obj->get<std::string>();
         } else if (sta_it != stations.end()) {
             sta_mac = sta_it->first;
-        } else if (!hal->m_ambiorix_cl->get_param<>(sta_mac, sta_path, "MACAddress")) {
+        } else if (!hal->m_ambiorix_cl.get_param<>(sta_mac, sta_path, "MACAddress")) {
             LOG(WARNING) << "unknown sta path " << sta_path;
             return;
         }
@@ -213,7 +213,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                          " || (contains('parameters.MACAddress')))";
 
     // TODO : switch the subscription object path back to wifi_ad_path once libamxb client start supporting large path subscriptions
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 
     // station instances cleanup
     auto sta_del_event_handler         = std::make_shared<sAmbiorixEventHandler>();
@@ -228,9 +228,10 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         std::string sta_path = sta_templ_path + std::to_string(sta_index) + ".";
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
+
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
+                                      [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
@@ -245,8 +246,8 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
              " && (notification == '" +
              AMX_CL_INSTANCE_REMOVED_EVT + "')";
 
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), sta_del_event_handler,
-                                             filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), sta_del_event_handler,
+                                            filter);
 }
 
 bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const std::string &key,
@@ -291,7 +292,9 @@ bool base_wlan_hal_whm::reassociate() { return true; }
 
 bool base_wlan_hal_whm::refresh_radio_info()
 {
-    auto radio = m_ambiorix_cl->get_object(m_radio_path);
+    lock();
+
+    auto radio = m_ambiorix_cl.get_object(m_radio_path);
     if (!radio) {
         LOG(ERROR) << " cannot refresh radio info, radio object missing ";
         return false;
@@ -430,7 +433,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
             m_radio_info.tx_enabled        = 1;
         }
     }
-    m_ambiorix_cl->get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
+    m_ambiorix_cl.get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
     if (!m_radio_info.available_vaps.size()) {
         LOG(INFO) << " calling refresh_vaps_info because local info struct is empty ";
@@ -447,7 +450,7 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
 {
     aps.clear();
     auto result =
-        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
+        m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
     if (!result) {
         LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
         return false;
@@ -456,7 +459,7 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
     for (auto &it : *result) {
         auto &ap = it.second;
         if ((ap.empty()) ||
-            (!m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path)) ||
+            (!m_ambiorix_cl.resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path)) ||
             (radio_path != m_radio_path)) {
             LOG(ERROR) << "iteration on ap " << it.first << " problem with radio reference ? ";
             LOG(ERROR) << "radio path " << radio_path << " m_radio_path " << m_radio_path;
@@ -484,6 +487,8 @@ bool base_wlan_hal_whm::check_enabled_vap(const std::string &bss) const
 
 bool base_wlan_hal_whm::refresh_vaps_info(int id)
 {
+    lock();
+
     bool ret   = false;
     int vap_id = -1;
     LOG(DEBUG) << "refresh vaps info id: " << id;
@@ -540,7 +545,7 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
     if (!wifi_ssid_path.empty() && !ifname.empty() &&
         !wbapi_utils::get_path_radio_reference(ap_obj).empty()) {
         std::string mac;
-        auto ssid_obj = m_ambiorix_cl->get_object(wifi_ssid_path);
+        auto ssid_obj = m_ambiorix_cl.get_object(wifi_ssid_path);
         if (ssid_obj && ((mac = wbapi_utils::get_ssid_mac(*ssid_obj)) != "") &&
             (mac != beerocks::net::network_utils::ZERO_MAC_STRING)) {
             vap_element.bss = ifname;
@@ -564,9 +569,9 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
                     vap_element.backhaul = true;
                 }
             }
-            m_ambiorix_cl->resolve_path(wbapi_utils::search_path_ap_by_iface(ifname),
-                                        vap_extInfo.path);
-            m_ambiorix_cl->resolve_path(wifi_ssid_path, vap_extInfo.ssid_path);
+            m_ambiorix_cl.resolve_path(wbapi_utils::search_path_ap_by_iface(ifname),
+                                       vap_extInfo.path);
+            m_ambiorix_cl.resolve_path(wifi_ssid_path, vap_extInfo.ssid_path);
             vap_extInfo.status = wbapi_utils::get_ap_status(ap_obj);
             LOG(INFO) << "status for " << ifname << " " << vap_extInfo.status;
         }
@@ -618,10 +623,12 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
 
 bool base_wlan_hal_whm::process_ext_events(int fd)
 {
-    if (m_ambiorix_cl->get_fd() == fd) {
-        m_ambiorix_cl->read();
-    } else if (m_ambiorix_cl->get_signal_fd() == fd) {
-        m_ambiorix_cl->read_signal();
+    lock();
+
+    if (m_ambiorix_cl.get_fd() == fd) {
+        m_ambiorix_cl.read();
+    } else if (m_ambiorix_cl.get_signal_fd() == fd) {
+        m_ambiorix_cl.read_signal();
     }
     return true;
 }
@@ -645,7 +652,7 @@ bool base_wlan_hal_whm::whm_get_radio_ref(const std::string &iface, std::string 
 {
     ref          = "";
     auto ap_path = wbapi_utils::search_path_ap_by_iface(iface);
-    if (!m_ambiorix_cl->get_param<>(ref, ap_path, "RadioReference")) {
+    if (!m_ambiorix_cl.get_param<>(ref, ap_path, "RadioReference")) {
         LOG(ERROR) << "failed to get RadioReference of ap iface " << iface;
         return false;
     }
@@ -658,26 +665,29 @@ bool base_wlan_hal_whm::whm_get_radio_ref(const std::string &iface, std::string 
 
 bool base_wlan_hal_whm::whm_get_radio_path(const std::string &iface, std::string &path)
 {
-    return m_ambiorix_cl->resolve_path(wbapi_utils::search_path_radio_by_iface(iface), path);
+    return m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(iface), path);
 }
 
 std::string base_wlan_hal_whm::get_radio_mac()
 {
+    lock();
     std::string mac("");
     auto wifi_radio_path = wbapi_utils::search_path_radio_by_iface(get_iface_name());
-    m_ambiorix_cl->get_param<>(mac, wifi_radio_path, "BaseMACAddress");
+    m_ambiorix_cl.get_param<>(mac, wifi_radio_path, "BaseMACAddress");
     return mac;
 }
 
 bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
 {
     uint16_t chLoad;
-    m_ambiorix_cl->get_param<>(chLoad, m_radio_path, "ChannelLoad");
+    m_ambiorix_cl.get_param<>(chLoad, m_radio_path, "ChannelLoad");
 
     //convert channel load from ratio 100 to ratio 255
     channel_utilization = (chLoad * UINT8_MAX) / 100;
     return true;
 }
+
+void base_wlan_hal_whm::lock() const { std::lock_guard<std::recursive_mutex> lk(m_mutex); }
 
 void base_wlan_hal_whm::subscribe_to_scan_complete_events()
 {
@@ -714,7 +724,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
                          " && (notification == '" +
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 
-    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
 
 } // namespace whm

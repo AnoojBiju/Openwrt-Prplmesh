@@ -48,28 +48,26 @@ bool AmbiorixConnection::init()
         LOG(ERROR) << "Failed to connect to the " << m_bus_uri.c_str() << " bus";
         return false;
     }
-    m_fd        = amxb_get_fd(m_bus_ctx);
-    m_signal_fd = amxp_signal_fd();
-    return true;
-}
+    m_fd = amxb_get_fd(m_bus_ctx);
+    LOG_IF((m_fd == -1), FATAL) << "Something wrong with amx fd= " << m_fd;
 
-AmbiorixConnectionSmartPtr AmbiorixConnection::create(const std::string &amxb_backend,
-                                                      const std::string &bus_uri)
-{
-    auto cnx = std::make_shared<AmbiorixConnection>(amxb_backend, bus_uri);
-    if (!cnx->init()) {
-        return AmbiorixConnectionSmartPtr{};
-    }
-    return cnx;
+    m_signal_fd = amxp_signal_fd();
+    LOG_IF((m_signal_fd == -1), FATAL) << "Something wrong with  amxp signal fd= " << m_signal_fd;
+
+    m_connected = true;
+    return true;
 }
 
 AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object_path,
                                                        const int32_t depth, bool only_first)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+    if (!m_connected) {
+        return nullptr;
+    }
     AmbiorixVariant result;
     int ret      = amxb_get(m_bus_ctx, object_path.c_str(), depth, get_amxc_var_ptr(result),
-                       AMX_CL_DEF_TIMEOUT);
+                            AMX_CL_DEF_TIMEOUT);
     auto entries = result.find_child(0);
     if (ret != AMXB_STATUS_OK || !entries) {
         LOG(ERROR) << "Request path [" << object_path << "] failed";
@@ -88,6 +86,9 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object
 AmbiorixVariantSmartPtr AmbiorixConnection::get_param(const std::string &object_path,
                                                       const std::string &param_name)
 {
+    if (!m_connected) {
+        return nullptr;
+    }
     auto answer = get_object(object_path + param_name, 0, true);
     if (answer) {
         auto entry = answer->first_child();
@@ -102,7 +103,10 @@ AmbiorixVariantSmartPtr AmbiorixConnection::get_param(const std::string &object_
 bool AmbiorixConnection::resolve_path(const std::string &search_path,
                                       std::vector<std::string> &absolute_path_list)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        return false;
+    }
+
     absolute_path_list.clear();
     amxd_path_t amxd_path;
     amxd_path_init(&amxd_path, search_path.c_str());
@@ -123,7 +127,9 @@ bool AmbiorixConnection::resolve_path(const std::string &search_path,
 
 bool AmbiorixConnection::update_object(const std::string &object_path, AmbiorixVariant &object_data)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        return false;
+    }
     AmbiorixVariant result;
     int ret = amxb_set(m_bus_ctx, object_path.c_str(), get_amxc_var_ptr(object_data),
                        get_amxc_var_ptr(result), AMX_CL_DEF_TIMEOUT);
@@ -134,7 +140,9 @@ bool AmbiorixConnection::update_object(const std::string &object_path, AmbiorixV
 bool AmbiorixConnection::add_instance(const std::string &object_path, AmbiorixVariant &object_data,
                                       int &instance_id)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        return false;
+    }
     AmbiorixVariant result;
     bool success = false;
     if (amxb_add(m_bus_ctx, object_path.c_str(), 0, NULL, get_amxc_var_ptr(object_data),
@@ -144,13 +152,17 @@ bool AmbiorixConnection::add_instance(const std::string &object_path, AmbiorixVa
             instance_id = pID->get<uint32_t>();
             success     = true;
         }
+    } else {
+        LOG(ERROR) << "adding instance under teamplate with path [" << object_path << "] failed";
     }
     return success;
 }
 
 bool AmbiorixConnection::remove_instance(const std::string &object_path, int instance_id)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        return false;
+    }
     AmbiorixVariant result;
     int ret = amxb_del(m_bus_ctx, object_path.c_str(), instance_id, NULL, get_amxc_var_ptr(result),
                        AMX_CL_DEF_TIMEOUT);
@@ -162,7 +174,9 @@ bool AmbiorixConnection::remove_instance(const std::string &object_path, int ins
 bool AmbiorixConnection::call(const std::string &object_path, const char *method,
                               AmbiorixVariant &args, AmbiorixVariant &result)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        return false;
+    }
     int ret = amxb_call(m_bus_ctx, object_path.c_str(), method, get_amxc_var_ptr(args),
                         get_amxc_var_ptr(result), AMX_CL_DEF_TIMEOUT);
     LOG_IF(ret != AMXB_STATUS_OK, ERROR)
@@ -172,33 +186,35 @@ bool AmbiorixConnection::call(const std::string &object_path, const char *method
 
 int AmbiorixConnection::read()
 {
-    m_mutex.lock();
-    int ret = amxb_read(m_bus_ctx);
-    m_mutex.unlock();
-    if (ret > 0) {
-        int ret2 = 0;
-        do {
-            m_mutex.lock();
-            ret2 = amxb_read(m_bus_ctx);
-            m_mutex.unlock();
-        } while (ret2 > 0);
+    if (!m_connected) {
+        return -1;
     }
+    int ret(0);
+    int ret2(0);
+    do {
+        ret2 = amxb_read(m_bus_ctx);
+        ret += ret2;
+    } while (ret2 >= 0);
+
     return ret;
 }
 
 int AmbiorixConnection::read_signal()
 {
-    int ret = amxp_signal_read();
-    if (ret == 0) {
-        while (amxp_signal_read() == 0) {
-        }
+    if (!m_connected) {
+        return -1;
     }
+    int ret(0);
+    do {
+        ret = amxp_signal_read();
+    } while (ret == 0);
+
     return ret;
 }
 
-int AmbiorixConnection::get_fd() { return m_fd; }
+int AmbiorixConnection::get_fd() const { return m_connected ? m_fd : -1; }
 
-int AmbiorixConnection::get_signal_fd() { return m_signal_fd; }
+int AmbiorixConnection::get_signal_fd() const { return m_connected ? m_signal_fd : -1; }
 
 static void event_callback(const char *const sig_name, const amxc_var_t *const data,
                            void *const priv)
@@ -222,17 +238,27 @@ static void event_callback(const char *const sig_name, const amxc_var_t *const d
 bool AmbiorixConnection::subscribe(const std::string &object_path, const std::string &filter,
                                    sAmbiorixSubscriptionInfo &subscriptionInfo)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        LOG(ERROR) << " AmbiorixConnection not connected! Can Not to subscribe to " << object_path;
+        return false;
+    }
     int ret =
         amxb_subscription_new(&subscriptionInfo.subscription_ctx, m_bus_ctx, object_path.c_str(),
                               filter.c_str(), event_callback, subscriptionInfo.handler.get());
-    LOG_IF(ret != AMXB_STATUS_OK, ERROR) << "subscribe to [" << object_path << "] failed";
+    if (ret == AMXB_STATUS_OK) {
+        LOG(INFO) << "subscribed successfully to object events, path:" << object_path;
+    } else {
+        LOG(ERROR) << "subscribe to [" << object_path << "] failed";
+    }
     return (ret == AMXB_STATUS_OK);
 }
 
 bool AmbiorixConnection::unsubscribe(sAmbiorixSubscriptionInfo &subscriptionInfo)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (!m_connected) {
+        LOG(ERROR) << " AmbiorixConnection not connected! can not call unsubscribe!";
+        return false;
+    }
     int ret = amxb_subscription_delete(&subscriptionInfo.subscription_ctx);
     LOG_IF(ret != AMXB_STATUS_OK, ERROR) << "unsubscribe failed";
     return (ret == AMXB_STATUS_OK);

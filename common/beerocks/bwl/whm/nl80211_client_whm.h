@@ -24,7 +24,8 @@ public:
     /**
      * @brief Class constructor.
      */
-    nl80211_client_whm();
+    nl80211_client_whm(const std::string &amxb_backend = AMBIORIX_WBAPI_BACKEND_PATH,
+                       const std::string &bus_uri      = AMBIORIX_WBAPI_BUS_URI);
 
     /**
      * @brief Class destructor.
@@ -158,7 +159,7 @@ public:
                     const sMacAddr &bssid) override;
 
 private:
-    beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
+    beerocks::wbapi::AmbiorixConnection m_connection;
 };
 
 } // namespace bwl

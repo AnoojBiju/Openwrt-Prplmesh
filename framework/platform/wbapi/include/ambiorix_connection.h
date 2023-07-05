@@ -44,12 +44,13 @@ public:
      * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
      * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
      */
-    AmbiorixConnection(const std::string &amxb_backend, const std::string &bus_uri);
+    AmbiorixConnection(const std::string &amxb_backend = AMBIORIX_WBAPI_BACKEND_PATH,
+                       const std::string &bus_uri      = AMBIORIX_WBAPI_BUS_URI);
 
-    /**
+    /*
      * @brief: no Copy constructor, neither assignment operator
      */
-    AmbiorixConnection(const AmbiorixConnection &) = delete;
+    AmbiorixConnection(const AmbiorixConnection &)            = delete;
     AmbiorixConnection &operator=(const AmbiorixConnection &) = delete;
 
     /**
@@ -63,19 +64,6 @@ public:
      * @return True on success and false otherwise.
      */
     bool init();
-
-    /**
-     * @brief Factory method: creating smart pointer for established AmbiorixConnection
-     * (created and initialized)
-     *
-     * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
-     * @return shared_ptr for newly established AmbiorixConnection object
-     * or empty in case of error
-     */
-    static AmbiorixConnectionSmartPtr
-    create(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
-           const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
 
     /**
      * @brief Read and return content of matching objects.
@@ -176,14 +164,14 @@ public:
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
      */
-    int get_fd();
+    int get_fd() const;
 
     /**
      * @brief Get the amxp signal file descriptor.
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
      */
-    int get_signal_fd();
+    int get_signal_fd() const;
 
     /**
      * @brief Subscribe for event for a given object.
@@ -208,13 +196,17 @@ public:
      */
     const std::string &uri() const;
 
+    const std::string &get_amxb_backend() const { return m_amxb_backend; }
+    const std::string &get_bus_uri() const { return m_bus_uri; }
+
 private:
-    std::recursive_mutex m_mutex;
     std::string m_amxb_backend;
     std::string m_bus_uri;
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
+    bool m_connected          = false;
     int m_fd                  = -1;
     int m_signal_fd           = -1;
+    std::vector<sAmbiorixSubscriptionInfo> m_subscriptions;
 };
 
 } // namespace wbapi

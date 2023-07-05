@@ -10,6 +10,7 @@
 #define _BWL_MON_WLAN_HAL_WHM_H_
 
 #include "base_wlan_hal_whm.h"
+#include <atomic>
 #include <bwl/mon_wlan_hal.h>
 
 namespace bwl {
@@ -102,7 +103,7 @@ private:
 
     bool get_scan_results_from_pwhm();
 
-    bool m_scan_active = false;
+    std::atomic<bool> m_scan_active;
 };
 
 } // namespace whm

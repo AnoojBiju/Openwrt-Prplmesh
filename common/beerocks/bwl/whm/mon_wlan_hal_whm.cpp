@@ -47,48 +47,53 @@ mon_wlan_hal_whm::mon_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     subscribe_to_ap_events();
     subscribe_to_sta_events();
     subscribe_to_scan_complete_events();
+    m_scan_active = false;
 }
 
 mon_wlan_hal_whm::~mon_wlan_hal_whm() {}
 
 bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
 {
+    lock();
+
     std::string stats_path = m_radio_path + "Stats.";
 
-    auto stats_obj = m_ambiorix_cl->get_object(stats_path);
+    auto stats_obj = m_ambiorix_cl.get_object(stats_path);
     if (!stats_obj) {
         LOG(ERROR) << "failed to get radio Stats object " << stats_path;
         return true;
     }
 
-    stats_obj->read_child<>(radio_stats.tx_bytes_cnt, "BytesSent");
-    stats_obj->read_child<>(radio_stats.rx_bytes_cnt, "BytesReceived");
-    stats_obj->read_child<>(radio_stats.tx_packets_cnt, "PacketsSent");
-    stats_obj->read_child<>(radio_stats.rx_packets_cnt, "PacketsReceived");
-    stats_obj->read_child<>(radio_stats.errors_sent, "ErrorsSent");
-    stats_obj->read_child<>(radio_stats.errors_received, "ErrorsReceived");
-    stats_obj->read_child<>(radio_stats.noise, "Noise");
+    stats_obj->read_child(radio_stats.tx_bytes_cnt, "BytesSent");
+    stats_obj->read_child(radio_stats.rx_bytes_cnt, "BytesReceived");
+    stats_obj->read_child(radio_stats.tx_packets_cnt, "PacketsSent");
+    stats_obj->read_child(radio_stats.rx_packets_cnt, "PacketsReceived");
+    stats_obj->read_child(radio_stats.errors_sent, "ErrorsSent");
+    stats_obj->read_child(radio_stats.errors_received, "ErrorsReceived");
+    stats_obj->read_child(radio_stats.noise, "Noise");
 
     return true;
 }
 
 bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats)
 {
+    lock();
+
     std::string ssid_stats_path = wbapi_utils::search_path_ssid_by_iface(vap_iface_name) + "Stats.";
 
-    auto ssid_stats_obj = m_ambiorix_cl->get_object(ssid_stats_path);
+    auto ssid_stats_obj = m_ambiorix_cl.get_object(ssid_stats_path);
     if (!ssid_stats_obj) {
         LOG(ERROR) << "failed to get SSID Stats object, path:" << ssid_stats_path;
         return true;
     }
 
-    ssid_stats_obj->read_child<>(vap_stats.tx_bytes_cnt, "BytesSent");
-    ssid_stats_obj->read_child<>(vap_stats.rx_bytes_cnt, "BytesReceived");
-    ssid_stats_obj->read_child<>(vap_stats.tx_packets_cnt, "PacketsSent");
-    ssid_stats_obj->read_child<>(vap_stats.rx_packets_cnt, "PacketsReceived");
-    ssid_stats_obj->read_child<>(vap_stats.errors_sent, "ErrorsSent");
-    ssid_stats_obj->read_child<>(vap_stats.errors_received, "ErrorsReceived");
-    ssid_stats_obj->read_child<>(vap_stats.retrans_count, "RetransCount");
+    ssid_stats_obj->read_child(vap_stats.tx_bytes_cnt, "BytesSent");
+    ssid_stats_obj->read_child(vap_stats.rx_bytes_cnt, "BytesReceived");
+    ssid_stats_obj->read_child(vap_stats.tx_packets_cnt, "PacketsSent");
+    ssid_stats_obj->read_child(vap_stats.rx_packets_cnt, "PacketsReceived");
+    ssid_stats_obj->read_child(vap_stats.errors_sent, "ErrorsSent");
+    ssid_stats_obj->read_child(vap_stats.errors_received, "ErrorsReceived");
+    ssid_stats_obj->read_child(vap_stats.retrans_count, "RetransCount");
 
     return true;
 }
@@ -97,6 +102,7 @@ bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
                                              const std::string &sta_mac, SStaStats &sta_stats,
                                              bool is_read_unicast)
 {
+    lock();
     auto sta_mac_address = tlvf::mac_from_string(sta_mac);
     nl80211_client::sta_info sta_info;
     if (!m_iso_nl80211_client->get_sta_info(vap_iface_name, sta_mac_address, sta_info)) {
@@ -120,17 +126,17 @@ bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
         wbapi_utils::search_path_assocDev_by_mac(vap_iface_name, sta_mac);
 
     float s_float;
-    if (m_ambiorix_cl->get_param<>(s_float, assoc_device_path, "SignalNoiseRatio")) {
+    if (m_ambiorix_cl.get_param(s_float, assoc_device_path, "SignalNoiseRatio")) {
         if (s_float >= beerocks::SNR_MIN) {
             sta_stats.rx_snr_watt = std::pow(10, s_float / float(10));
             sta_stats.rx_snr_watt_samples_cnt++;
         }
     }
 
-    m_ambiorix_cl->get_param<>(sta_stats.tx_bytes_cnt, assoc_device_path, "TxBytes");
-    m_ambiorix_cl->get_param<>(sta_stats.rx_bytes_cnt, assoc_device_path, "RxBytes");
-    m_ambiorix_cl->get_param<>(sta_stats.rx_packets_cnt, assoc_device_path, "RxPacketCount");
-    m_ambiorix_cl->get_param<>(sta_stats.tx_packets_cnt, assoc_device_path, "TxPacketCount");
+    m_ambiorix_cl.get_param(sta_stats.tx_bytes_cnt, assoc_device_path, "TxBytes");
+    m_ambiorix_cl.get_param(sta_stats.rx_bytes_cnt, assoc_device_path, "RxBytes");
+    m_ambiorix_cl.get_param(sta_stats.rx_packets_cnt, assoc_device_path, "RxPacketCount");
+    m_ambiorix_cl.get_param(sta_stats.tx_packets_cnt, assoc_device_path, "TxPacketCount");
 
     return true;
 }
@@ -153,6 +159,7 @@ bool mon_wlan_hal_whm::sta_channel_load_11k_request(const std::string &vap_iface
 bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
                                               const SBeaconRequest11k &req, int &dialog_token)
 {
+    lock();
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
     args.add_child("mac", tlvf::mac_to_string(req.sta_mac.oct));
@@ -161,7 +168,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
-    bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
+    bool ret = m_ambiorix_cl.call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
     if (!ret) {
         LOG(ERROR) << "sta_beacon_11k_request() failed!";
@@ -180,6 +187,8 @@ bool mon_wlan_hal_whm::sta_link_measurements_11k_request(const std::string &vap_
 bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
                                             const std::vector<unsigned int> &channel_pool)
 {
+    lock();
+
     if (channel_pool.empty()) {
         LOG(INFO) << "channel_pool is empty!, scanning all channels";
     }
@@ -197,7 +206,7 @@ bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
         AmbiorixVariant result_abort;
         AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
         //scan is already active, as per spec, cancel the old one and start new one
-        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+        if (!m_ambiorix_cl.call(m_radio_path, "stopScan", args_abort, result_abort)) {
             LOG(INFO) << " remote function stopScan startScan Failed!";
             return false;
         } else {
@@ -210,7 +219,7 @@ bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
     if (!channels.empty()) {
         args.add_child<>("channels", channels);
     }
-    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+    if (!m_ambiorix_cl.call(m_radio_path, "startScan", args, result)) {
         LOG(ERROR) << " remote function call startScan Failed!";
         return false;
     }
@@ -221,6 +230,7 @@ bool mon_wlan_hal_whm::channel_scan_trigger(int dwell_time_msec,
 
 bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 {
+    lock();
     //read stats cached internally
     for (auto &map : m_scan_results) {
         auto results_notif = std::make_shared<sCHANNEL_SCAN_RESULTS_NOTIFICATION>();
@@ -279,6 +289,7 @@ bool mon_wlan_hal_whm::channel_scan_dump_cached_results()
 
 bool mon_wlan_hal_whm::channel_scan_dump_results()
 {
+    lock();
     //Lets update our internal results from the pwhm then dump them
     get_scan_results_from_pwhm();
     channel_scan_dump_cached_results(); //lets dump the results
@@ -288,6 +299,8 @@ bool mon_wlan_hal_whm::channel_scan_dump_results()
 bool mon_wlan_hal_whm::generate_connected_clients_events(
     bool &is_finished_all_clients, std::chrono::steady_clock::time_point max_iteration_timeout)
 {
+    lock();
+
     // For the pwhm, we belive the time requirement will be maintained all time, thus we will ignore the max_iteration_timeout
     for (auto &vap : m_vapsExtInfo) {
 
@@ -295,7 +308,7 @@ bool mon_wlan_hal_whm::generate_connected_clients_events(
         std::string associated_devices_path = vap_path + "AssociatedDevice.";
 
         auto associated_devices_pwhm =
-            m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
+            m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(associated_devices_path);
 
         if (associated_devices_pwhm == nullptr) {
             LOG(DEBUG) << "Failed reading: " << associated_devices_path;
@@ -360,7 +373,7 @@ bool mon_wlan_hal_whm::channel_scan_abort()
 {
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args, result)) {
+    if (!m_ambiorix_cl.call(m_radio_path, "stopScan", args, result)) {
         LOG(ERROR) << " remote function call stopScan Failed!";
         return false;
     }
@@ -480,7 +493,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
     std::string non_associated_device_path = m_radio_path + "NaStaMonitor.NonAssociatedDevice.";
 
     auto non_ass_devices =
-        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(non_associated_device_path);
+        m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(non_associated_device_path);
     if (!non_ass_devices) {
         return false;
     }
@@ -492,14 +505,14 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         uint8_t operating_class(0);
         std::string time_stamp_str;
         std::string mac_address_amx;
-        non_ass_device.second.read_child<>(mac_address_amx, "MACAddress");
+        non_ass_device.second.read_child(mac_address_amx, "MACAddress");
         if (mac_address_amx.empty()) {
             continue;
         }
-        non_ass_device.second.read_child<>(signal_strength, "SignalStrength");
-        non_ass_device.second.read_child<>(channel, "Channel");
-        non_ass_device.second.read_child<>(operating_class, "OperatingClass");
-        non_ass_device.second.read_child<>(time_stamp_str, "TimeStamp");
+        non_ass_device.second.read_child(signal_strength, "SignalStrength");
+        non_ass_device.second.read_child(channel, "Channel");
+        non_ass_device.second.read_child(operating_class, "OperatingClass");
+        non_ass_device.second.read_child(time_stamp_str, "TimeStamp");
 
         amxc_ts_t time;
         memset(&time, 0, sizeof(amxc_ts_t));
@@ -534,7 +547,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
         args.add_child("MACAddress", mac_address);
-        if (!m_ambiorix_cl->call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
+        if (!m_ambiorix_cl.call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
                        << nasta_monitor_path << " Failed!";
             continue;
@@ -549,7 +562,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
         args.add_child("MACAddress", station_to_remove);
-        if (!m_ambiorix_cl->call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
+        if (!m_ambiorix_cl.call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
                        << " for object " << nasta_monitor_path
                        << " and  MACAddress: " << station_to_remove << " Failed!!";
@@ -599,7 +612,7 @@ bool mon_wlan_hal_whm::get_scan_results_from_pwhm()
 {
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+    if (!m_ambiorix_cl.call(m_radio_path, "getScanResults", args, result)) {
         LOG(ERROR) << " remote function call getScanResults Failed!";
         return false;
     }

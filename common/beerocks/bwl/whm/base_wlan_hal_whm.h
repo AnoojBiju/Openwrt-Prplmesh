@@ -81,6 +81,13 @@ public:
 
     // Protected methods
 protected:
+    mutable std::recursive_mutex m_mutex;
+    /**
+     * @brief Set a recursive lock 
+     * This lock is needed because pwhm signals can be picked up by any thread(monitor/ap_manager), thus the need of a synchronization.
+     */
+    void lock() const;
+
     base_wlan_hal_whm(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                       const hal_conf_t &hal_conf = {});
 
@@ -94,7 +101,7 @@ protected:
     bool has_enabled_vap() const;
     bool check_enabled_vap(const std::string &bss) const;
 
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
     std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
     std::string m_radio_path;
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
