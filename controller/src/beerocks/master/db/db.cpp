@@ -1857,7 +1857,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
         LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
-    if (sta_cap.he_bw != beerocks::BANDWIDTH_UNKNOWN &&
+    if ((sta_cap.wifi_standard & beerocks::STANDARD_AX) &&
         !dm_set_sta_he_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Failed to set station HE Capabilities";
         return false;
