@@ -202,12 +202,18 @@
           ;;
       esac
 
-      if [ -n "$USE_WHM" ]; then WHM_FLAG="--whm"; WHM_FOLDER="whm/"; BUILD_FOLDER="buildWHM"; else WHM_FLAG=""; WHM_FOLDER=""; BUILD_FOLDER="build"; fi
       if [ -n "$IMAGE_NAME" ] ; then
           echo "Checking if the firmware on $DEVICE_UNDER_TEST needs to be updated"
-          tools/deploy_firmware.py --device $DEVICE_UNDER_TEST --target-name "$DEVICE_UNDER_TEST" --image $IMAGE_NAME "$WHM_FLAG" --configuration ci/configuration/certification/"$EASYMESH_REVISION"/"$WHM_FOLDER""$DEVICE_UNDER_TEST".sh
+          if [ -n "$USE_WHM" ] ; then
+              BUILD_FOLDER="buildWHM"
+              tools/deploy_firmware.py --device "$DEVICE_UNDER_TEST" --target-name "$DEVICE_UNDER_TEST" --image "$IMAGE_NAME" --whm --configuration ci/configuration/certification/"$EASYMESH_REVISION"/whm/"$DEVICE_UNDER_TEST".sh
+          else
+              BUILD_FOLDER="build"
+              tools/deploy_firmware.py --device "$DEVICE_UNDER_TEST" --target-name "$DEVICE_UNDER_TEST" --image "$IMAGE_NAME" --configuration ci/configuration/certification/"$EASYMESH_REVISION"/"$DEVICE_UNDER_TEST".sh
+          fi
+          
           echo "Deploying prplMesh to $DEVICE_UNDER_TEST"
-          tools/deploy_ipk.sh --certification-mode $DEVICE_UNDER_TEST "$BUILD_FOLDER"/$DEVICE_UNDER_TEST/prplmesh.ipk
+          tools/deploy_ipk.sh --certification-mode "$DEVICE_UNDER_TEST" "$BUILD_FOLDER"/"$DEVICE_UNDER_TEST"/prplmesh.ipk
       fi
     - ~/easymesh_cert/run_test_file.py --easymesh-revision "$EASYMESH_REVISION" --upload-results --verbose --log-folder logs --device-under-test $DEVICE_UNDER_TEST $TESTS_TO_RUN
   artifacts:
