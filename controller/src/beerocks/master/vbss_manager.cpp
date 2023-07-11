@@ -116,33 +116,6 @@ bool VbssManager::analyze_radio_restriction(
         }
         m_radio_vbss_capable_received[radio_id] = true;
     }
-    // This only matters if using legacy steering
-    if (!m_use_legacy_steering && (m_max_num_vbss_system != m_unused_ssid_extensions.size() +
-                                                                m_used_ssid_extensions.size())) {
-        // This is brute force and ugly, but it'll work
-        if (m_max_num_vbss_system >
-            m_unused_ssid_extensions.size() + m_used_ssid_extensions.size()) {
-            auto num_to_make = (m_max_num_vbss_system - m_used_ssid_extensions.size()) -
-                               m_unused_ssid_extensions.size();
-            for (uint i = 0; i < num_to_make; ++i) {
-                std::string ssid_extention = "_vbss_" + std::to_string(i);
-                const auto &used_it        = std::find(m_used_ssid_extensions.begin(),
-                                                       m_used_ssid_extensions.end(), ssid_extention);
-                if (used_it != m_used_ssid_extensions.end())
-                    continue;
-                const auto &unused_it = std::find(m_unused_ssid_extensions.begin(),
-                                                  m_unused_ssid_extensions.end(), ssid_extention);
-                if (unused_it != m_unused_ssid_extensions.end())
-                    continue;
-                m_unused_ssid_extensions.push_back(ssid_extention);
-            }
-        } else if (m_max_num_vbss_system > m_used_ssid_extensions.size()) {
-            m_unused_ssid_extensions.resize(
-                (m_max_num_vbss_system - m_used_ssid_extensions.size()));
-        } else {
-            m_unused_ssid_extensions.clear();
-        }
-    }
     return ret_val;
 }
 
@@ -192,14 +165,13 @@ bool VbssManager::find_and_create_vbss(const sMacAddr &agent_mac, vbss::sCreatio
                             LOG(ERROR) << "Unable to find a VBSS ID on radio " << radio->radio_uid;
                             return false;
                         }
-                        std::string ssid_extension         = m_unused_ssid_extensions.back();
-                        crtn_Struct.client_vbss.vbssid     = vbssId;
-                        crtn_Struct.client_vbss.client_mac = {};
+                        crtn_Struct.client_vbss.vbssid               = vbssId;
+                        crtn_Struct.client_vbss.client_mac           = {};
                         crtn_Struct.client_vbss.client_is_associated = false;
                         crtn_Struct.dest_ruid                        = radio->radio_uid;
-                        crtn_Struct.ssid         = bss_info.ssid + ssid_extension;
-                        crtn_Struct.password     = bss_info.network_key;
-                        crtn_Struct.sec_ctx_info = nullptr;
+                        crtn_Struct.ssid                             = bss_info.ssid + "_vbss";
+                        crtn_Struct.password                         = bss_info.network_key;
+                        crtn_Struct.sec_ctx_info                     = nullptr;
                         LOG(DEBUG) << "Creation info successfully found for VBSS ID: " << vbssId
                                    << "\n On radio: " << radio->radio_uid
                                    << "\nWith SSID: " << crtn_Struct.ssid;
@@ -209,9 +181,6 @@ bool VbssManager::find_and_create_vbss(const sMacAddr &agent_mac, vbss::sCreatio
                         vbssStatus.create_sent    = true;
                         vbssStatus.create_success = false;
                         m_open_vbsses[agent_mac]  = vbssStatus;
-                        // book keeping
-                        m_used_ssid_extensions.push_back(ssid_extension);
-                        m_unused_ssid_extensions.pop_back();
                         return true;
                     }
                 }
@@ -482,10 +451,6 @@ bool VbssManager::handle_vbss_destruction(const sMacAddr &vbssid)
         LOG(ERROR) << "VBSS with BSSID '" << vbssid << "' not in database!";
         return false;
     }
-    // Get the vbss substring to place back in unused vbss options
-    std::size_t pos           = vbss->ssid.find("_vbss_");
-    std::string ssid_addition = vbss->ssid.substr(pos);
-    m_unused_ssid_extensions.push_back(ssid_addition);
     --m_current_num_vbss;
     return true;
 }
