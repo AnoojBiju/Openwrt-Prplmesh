@@ -1217,8 +1217,98 @@ bool ap_wlan_hal_whm::set_no_deauth_unknown_sta(const std::string &ifname, bool 
 
 bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    unsigned char i = 0, j = 0, k = 0;
+    unsigned char dscp[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
+    struct range_t {
+        int start;
+        int end;
+        int pcp;
+    } range[8] = {};
+    struct map_t {
+        int dscp;
+        int pcp;
+    } exception[64] = {};
+    std::stringstream ss;
+    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, dscp);
+
+    for (i = 0; i < 8; i++) {
+        range[i].start = -1;
+        range[i].end   = -1;
+        range[i].pcp   = i;
+    }
+    for (i = 0; i < 64; i++) {
+        exception[i].dscp = -1;
+        exception[i].pcp  = -1;
+    }
+    for (i = 0; i < 64; i++) {
+        if ((i != 63) && dscp[i] == dscp[i + 1]) {
+            for (j = i + 1; j < 64; j++) {
+                if (j == 63 || dscp[j] != dscp[j + 1]) {
+                    if ((j - i) >= (range[dscp[j]].end - range[dscp[j]].start)) {
+                        range[dscp[j]].start = i;
+                        range[dscp[j]].end   = j;
+                        i                    = j;
+                        break;
+                    }
+                } else {
+                    continue;
+                }
+            }
+        }
+    }
+    for (i = 0; i < 8; i++) {
+        LOG(DEBUG) << "range[" << +i << "] : start = " << +range[i].start
+                   << ", end = " << +range[i].end;
+    }
+    for (i = 0, j = 0; i < 64; i++) {
+        for (k = 0; k < 8; k++) {
+            if ((i >= range[k].start) && (i <= range[k].end)) {
+                break;
+            }
+        }
+        if (k == 8) {
+            exception[j].pcp    = dscp[i];
+            exception[j++].dscp = i;
+        }
+    }
+    for (i = 0; i < 64; i++) {
+        if (exception[i].dscp == 255) {
+            break;
+        }
+    }
+    for (i = 0; i < 21; i++) {
+        if (exception[i].dscp == 255) {
+            break;
+        }
+        ss << +exception[i].dscp << "," << +exception[i].pcp << ",";
+    }
+    for (i = 0; i < 8; i++) {
+        ss << +range[i].start << "," << +range[i].end << ",";
+    }
+    ss.seekp(-1, std::ios_base::end);
+
+    std::string qos_map = std::move(ss).str();
+    LOG(DEBUG) << "Setting QOS_MAP_SET " << qos_map;
+
+    auto search_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
+
+    std::vector<std::string> paths;
+    if (!m_ambiorix_cl->resolve_path_multi(search_path, paths)) {
+        LOG(ERROR) << "Could not resolve " << search_path;
+        return false;
+    }
+
+    for (const auto &path : paths) {
+        AmbiorixVariant new_map(AMXC_VAR_ID_HTABLE);
+        new_map.add_child("QoSMapSet", qos_map);
+
+        if (!m_ambiorix_cl->update_object(path + "IEEE80211u.", new_map)) {
+            LOG(ERROR) << "Could not set QoSMapSet for " << path;
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool ap_wlan_hal_whm::set_spatial_reuse_config(
