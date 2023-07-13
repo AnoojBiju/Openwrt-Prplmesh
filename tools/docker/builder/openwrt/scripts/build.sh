@@ -27,6 +27,9 @@ OPENWRT_TOOLCHAIN_VERSION=${OPENWRT_TOOLCHAIN_VERSION}
 PRPLMESH_VERSION=${PRPLMESH_VERSION}
 EOT
 
+# If the target is OSP URX; move the build files from the intel_x86 target directory
+TARGET_SYSTEM=${TARGET_SYSTEM//mxl_x86_osp_tb341/intel_x86}
+
 find bin -name 'prplmesh_*.ipk' -exec cp -v {} "artifacts/prplmesh.ipk" \;
 find bin/targets/"$TARGET_SYSTEM"/*/ -type f -maxdepth 1 -exec cp -v {} "artifacts/" \;
 cp .config artifacts/openwrt.config

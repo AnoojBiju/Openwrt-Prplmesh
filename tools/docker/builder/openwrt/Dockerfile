@@ -12,9 +12,9 @@ FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-    autoconf-archive build-essential libncurses5 libncurses5-dev python3 python3-distutils libelf-dev \
+    autoconf-archive build-essential libncurses5 libncurses5-dev python3 python3-distutils libelf-dev libdw-dev \
     unzip git ca-certificates gawk wget file bash fakeroot \
-    python-yaml python3-yaml rsync less vim gnupg software-properties-common \
+    python-yaml python3-yaml rsync less vim gnupg software-properties-common openssh-client \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
     && if [ -n "$HTTP_PROXY" ]; then KEYSERVER_OPTIONS="--keyserver-options http-proxy=$HTTP_PROXY"; fi \
     && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 $KEYSERVER_OPTIONS --recv-keys CC86BB64 \
