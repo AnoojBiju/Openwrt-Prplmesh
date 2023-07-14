@@ -16,7 +16,7 @@
 namespace bwl {
 
 /**
- * @Class implements NL80211 client methods, using wbapi shared connection for requests
+ * @Class implements NL80211 client methods, using wbapi
  */
 class nl80211_client_whm : public nl80211_client {
 
@@ -30,6 +30,16 @@ public:
      * @brief Class destructor.
      */
     virtual ~nl80211_client_whm() = default;
+
+    /**
+     * @brief Get File Descriptor of the ambiorix connection
+     */
+    int get_fd() const;
+
+    /**
+     * @brief Read from the ambiorix file descriptor
+     */
+    int read() const;
 
     /**
      * @brief Gets a list with the names of existing wireless VAP interfaces.
@@ -158,7 +168,7 @@ public:
                     const sMacAddr &bssid) override;
 
 private:
-    beerocks::wbapi::AmbiorixConnectionSmartPtr m_connection;
+    beerocks::wbapi::AmbiorixConnection m_connection;
 };
 
 } // namespace bwl

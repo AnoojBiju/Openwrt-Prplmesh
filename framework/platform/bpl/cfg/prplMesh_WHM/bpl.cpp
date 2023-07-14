@@ -19,15 +19,13 @@
 namespace beerocks {
 namespace bpl {
 
-std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl = nullptr;
+beerocks::wbapi::AmbiorixClient m_ambiorix_cl(ambiorix_wbapi_backend_path,
+                                              ambiorix_wbapi_backend_uri);
 
 int bpl_init()
 {
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
-    LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client object!";
 
-    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_WBAPI_BACKEND_PATH, AMBIORIX_WBAPI_BUS_URI), FATAL)
-        << "Unable to connect to the ambiorix backend!";
+    LOG_IF(!m_ambiorix_cl.connect(), FATAL) << "Unable to connect to the ambiorix backend!";
 
     return RETURN_OK;
 }

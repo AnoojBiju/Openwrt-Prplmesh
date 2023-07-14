@@ -7,12 +7,10 @@
  */
 
 #include "nl80211_client_whm.h"
-
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
 // Ambiorix
-#include "ambiorix_connection_manager.h"
 #include "wbapi_utils.h"
 
 using namespace beerocks;
@@ -20,18 +18,25 @@ using namespace wbapi;
 
 namespace bwl {
 
-nl80211_client_whm::nl80211_client_whm() : m_connection(AmbiorixConnectionManager::get_connection())
+nl80211_client_whm::nl80211_client_whm()
+    : m_connection(ambiorix_wbapi_backend_path, ambiorix_wbapi_backend_uri)
 {
+    if (!m_connection.init()) {
+
+        LOG(ERROR) << "Failed to connect to the backend " << m_connection.get_amxb_backend_path()
+                   << "on uri: " << m_connection.get_uri();
+    }
 }
+
+int nl80211_client_whm::get_fd() const { return m_connection.get_fd(); }
+
+int nl80211_client_whm::read() const { return m_connection.read(); }
 
 bool nl80211_client_whm::get_interfaces(std::vector<std::string> &interfaces)
 {
     interfaces.clear();
-    if (!m_connection) {
-        return false;
-    }
     // pwhm dm path: WiFi.SSID.*.Name?
-    auto ssids = m_connection->get_object(wbapi_utils::search_path_ssid_iface(), 0, false);
+    auto ssids = m_connection.get_object(wbapi_utils::search_path_ssid_iface(), 0, false);
     if (!ssids) {
         return false;
     }
@@ -64,16 +69,19 @@ bool nl80211_client_whm::get_radio_info(const std::string &interface_name, radio
 bool nl80211_client_whm::get_sta_info(const std::string &interface_name,
                                       const sMacAddr &sta_mac_address, sta_info &sta_info)
 {
-    if (!m_connection) {
-        return false;
-    }
     std::string sta_mac_str = tlvf::mac_to_string(sta_mac_address);
     std::string assoc_device_path =
         wbapi_utils::search_path_assocDev_by_mac(interface_name, sta_mac_str);
 
-    auto assoc_device_obj = m_connection->get_object(assoc_device_path, 0, true);
+    auto assoc_device_obj = m_connection.get_object(assoc_device_path, 0, true);
     if (!assoc_device_obj) {
         LOG(ERROR) << "failed to get AssociatedDevice object " << assoc_device_path;
+        //return false;
+    }
+    assoc_device_path = "WiFi.AccessPoint.";
+    assoc_device_obj  = m_connection.get_object(assoc_device_path, 0, true);
+    if (!assoc_device_obj) {
+        LOG(ERROR) << "failed to get object " << assoc_device_path;
         return false;
     }
     assoc_device_obj->read_child<>(sta_info.tx_bytes, "TxBytes");
