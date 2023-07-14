@@ -9,6 +9,7 @@
 #ifndef _BWL_BASE_WLAN_HAL_WHM_H_
 #define _BWL_BASE_WLAN_HAL_WHM_H_
 
+#include "nl80211_client_whm.h"
 #include "utils_wlan_hal_whm.h"
 #include <bcl/beerocks_state_machine.h>
 #include <bwl/base_wlan_hal.h>
@@ -94,8 +95,12 @@ protected:
     bool has_enabled_vap() const;
     bool check_enabled_vap(const std::string &bss) const;
 
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl;
+    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
+
     std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
+    //impl nl80211 client apis with whm dm, this is a pointer to the derived class, to avoid repetitive cast
+    bwl::nl80211_client_whm *m_iso_nl80211_whm_client;
+
     std::string m_radio_path;
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
     std::unordered_map<std::string, sStationInfo> m_stations;  // key = sta_mac

@@ -24,7 +24,9 @@ namespace whm {
 
 class WifiManager {
 public:
-    WifiManager(std::shared_ptr<beerocks::EventLoop> event_loop, son::db *master_db);
+    explicit WifiManager(std::shared_ptr<beerocks::EventLoop> event_loop, son::db *master_db);
+    WifiManager(const WifiManager &) = delete;
+    WifiManager &operator=(const WifiManager &) = delete;
 
     ~WifiManager();
 
@@ -32,7 +34,7 @@ public:
 
 private:
     bool bss_info_config_change();
-    std::shared_ptr<beerocks::wbapi::AmbiorixClient> m_ambiorix_cl = nullptr;
+    beerocks::wbapi::AmbiorixClient m_ambiorix_cl;
     son::db *m_ctx_wifi_db;
     std::shared_ptr<beerocks::EventLoop> m_event_loop;
 };

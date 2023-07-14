@@ -26,7 +26,8 @@ namespace wbapi {
 class AmbiorixClient {
 
 public:
-    AmbiorixClient(){};
+    explicit AmbiorixClient(const std::string &amxb_backend = ambiorix_wbapi_backend_path,
+                            const std::string &bus_uri      = ambiorix_wbapi_backend_uri);
     AmbiorixClient(const AmbiorixClient &) = delete;
     AmbiorixClient &operator=(const AmbiorixClient &) = delete;
     ~AmbiorixClient();
@@ -39,8 +40,7 @@ public:
      * @return True on success and false otherwise.
      * 
     */
-    bool connect(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
-                 const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
+    bool connect();
 
     /**
      * @brief read and return content tree of first object matching requested path.
@@ -75,10 +75,7 @@ public:
     template <typename T>
     T get_object_multi(const std::string &object_path, const int32_t depth = 0)
     {
-        if (!m_connection) {
-            return T{};
-        }
-        auto objs = m_connection->get_object(object_path, depth, false);
+        auto objs = m_connection.get_object(object_path, depth, false);
         if (!objs) {
             return T{};
         }
@@ -236,11 +233,11 @@ public:
      * @return true on success, false otherwise.
      */
     bool subscribe_to_object_event(const std::string &object_path,
-                                   std::shared_ptr<sAmbiorixEventHandler> &event_handler,
+                                   std::shared_ptr<sAmbiorixEventHandler> event_handler,
                                    const std::string &filter = {});
 
 private:
-    AmbiorixConnectionSmartPtr m_connection;
+    AmbiorixConnection m_connection;
     std::vector<sAmbiorixSubscriptionInfo> m_subscriptions;
 };
 

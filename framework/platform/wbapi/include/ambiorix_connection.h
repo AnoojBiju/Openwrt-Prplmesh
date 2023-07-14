@@ -19,11 +19,22 @@
 
 #include <vector>
 
+const std::string ambiorix_ubus_backend_path = "/usr/bin/mods/amxb/mod-amxb-ubus.so";
+const std::string ambiorix_ubus_backend_uri  = "ubus:/var/run/ubus.sock";
+
+const std::string ambiorix_usp_backend_path = "/usr/bin/mods/amxb/mod-amxb-usp.so";
+const std::string ambiorix_usp_backend_uri  = "usp:/var/run/pwhm_usp.sock";
+
 #ifndef AMBIORIX_WBAPI_BACKEND_PATH
-#define AMBIORIX_WBAPI_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
+const std::string ambiorix_wbapi_backend_path = ambiorix_usp_backend_path;
+#else
+const std::string ambiorix_wbapi_backend_path = AMBIORIX_WBAPI_BACKEND_PATH;
 #endif
+
 #ifndef AMBIORIX_WBAPI_BUS_URI
-#define AMBIORIX_WBAPI_BUS_URI "ubus:/var/run/ubus.sock"
+const std::string ambiorix_wbapi_backend_uri = ambiorix_usp_backend_uri;
+#else
+const std::string ambiorix_wbapi_backend_uri  = AMBIORIX_WBAPI_BUS_URI;
 #endif
 
 namespace beerocks {
@@ -44,9 +55,10 @@ public:
      * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
      * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
      */
-    AmbiorixConnection(const std::string &amxb_backend, const std::string &bus_uri);
+    explicit AmbiorixConnection(const std::string &amxb_backend = ambiorix_wbapi_backend_path,
+                                const std::string &bus_uri      = ambiorix_wbapi_backend_uri);
 
-    /**
+    /*
      * @brief: no Copy constructor, neither assignment operator
      */
     AmbiorixConnection(const AmbiorixConnection &) = delete;
@@ -65,17 +77,9 @@ public:
     bool init();
 
     /**
-     * @brief Factory method: creating smart pointer for established AmbiorixConnection
-     * (created and initialized)
-     *
-     * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
-     * @return shared_ptr for newly established AmbiorixConnection object
-     * or empty in case of error
+     * @brief Triggered when connection is disconnected
      */
-    static AmbiorixConnectionSmartPtr
-    create(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
-           const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
+    void disconnected();
 
     /**
      * @brief Read and return content of matching objects.
@@ -160,15 +164,15 @@ public:
      * and depends on the backend implementation, typically the number of bytes
      * read are returned.
      */
-    int read();
+    int read() const;
 
     /**
       * @brief Read event from the amxp signal pipe file descriptor.
-      * To be able to use this method it is recommended to implement an eventloop.
+      * To be able to use this method, this file descriptor need to be added to an event loop for monitoring, like an EPOLL one.
       *
       * @return 0 when successful, otherwise an error code
       */
-    int read_signal();
+    int read_signal() const;
 
     /**
      * @brief Get the amxb file descriptor.
@@ -176,14 +180,14 @@ public:
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
      */
-    int get_fd();
+    int get_fd() const;
 
     /**
      * @brief Get the amxp signal file descriptor.
      *
      * @return the valid file descriptor or -1 when no file descriptor is available.
      */
-    int get_signal_fd();
+    int get_signal_fd() const;
 
     /**
      * @brief Subscribe for event for a given object.
@@ -206,13 +210,19 @@ public:
     /**
      * @brief Return connection bus URI.
      */
-    const std::string &uri() const;
+    const std::string &get_bus_uri() const;
+
+    /**
+     * @brief Return connection backend path
+     */
+    const std::string &get_amxb_backend() const;
 
 private:
-    std::recursive_mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     std::string m_amxb_backend;
     std::string m_bus_uri;
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
+    bool m_connected          = false;
     int m_fd                  = -1;
     int m_signal_fd           = -1;
 };

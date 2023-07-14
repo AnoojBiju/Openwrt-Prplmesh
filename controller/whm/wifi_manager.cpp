@@ -26,18 +26,16 @@ namespace controller {
 namespace whm {
 
 WifiManager::WifiManager(std::shared_ptr<beerocks::EventLoop> event_loop, son::db *ctx_wifi_db)
+    : m_ambiorix_cl(ambiorix_ubus_backend_path, ambiorix_ubus_backend_uri)
 {
 
     m_event_loop  = event_loop;
     m_ctx_wifi_db = ctx_wifi_db;
 
-    m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
-    LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client object!";
+    LOG_IF(!m_ambiorix_cl.connect(), FATAL) << "Unable to connect to the ambiorix backend!";
 
-    LOG_IF(!m_ambiorix_cl->connect(), FATAL) << "Unable to connect to the ambiorix backend!";
-
-    m_ambiorix_cl->init_event_loop(m_event_loop);
-    m_ambiorix_cl->init_signal_loop(m_event_loop);
+    m_ambiorix_cl.init_event_loop(m_event_loop);
+    m_ambiorix_cl.init_signal_loop(m_event_loop);
 }
 
 bool WifiManager::bss_info_config_change()
@@ -88,8 +86,8 @@ void WifiManager::subscribe_to_bss_info_config_change()
              " && (contains('parameters.OperatingClass') || contains('parameters.Channel')"
              " || contains('parameters.AP_Mode') || contains('parameters.MultiAPType'))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_radio(), event_handler,
-                                             filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_radio(), event_handler,
+                                            filter);
 
     filter = "(path matches '" + wbapi_utils::search_path_ssid() +
              "[0-9]+.$')"
@@ -98,8 +96,7 @@ void WifiManager::subscribe_to_bss_info_config_change()
              "')"
              " && contains('parameters.SSID')";
 
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ssid(), event_handler,
-                                             filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ssid(), event_handler, filter);
 
     filter = "(path matches '" + wbapi_utils::search_path_ap() +
              "[0-9]+.Security.$')"
@@ -109,7 +106,7 @@ void WifiManager::subscribe_to_bss_info_config_change()
              " && (contains('parameters.ModeEnabled') || contains('parameters.EncryptionMode')"
              " || contains('parameters.KeyPassPhrase'))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 
     // subscribe for VAPs enabling to re-trigger autoConf when new BSS is enabled
     // and potentially resume previously timeouted agent configuration
@@ -120,13 +117,13 @@ void WifiManager::subscribe_to_bss_info_config_change()
              "')"
              " && (contains('parameters.Enable'))";
 
-    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
 
 WifiManager::~WifiManager()
 {
-    m_ambiorix_cl->remove_event_loop(m_event_loop);
-    m_ambiorix_cl->remove_signal_loop(m_event_loop);
+    m_ambiorix_cl.remove_event_loop(m_event_loop);
+    m_ambiorix_cl.remove_signal_loop(m_event_loop);
 }
 
 } // namespace whm
