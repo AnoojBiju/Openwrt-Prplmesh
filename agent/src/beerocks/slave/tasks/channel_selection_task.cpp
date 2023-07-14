@@ -346,7 +346,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, db->controller_info.bridge_mac, db->bridge.mac);
     m_pending_selection.mid = 0;
 
-    bool manually_send_operating_report = false;
+    bool manually_send_operating_report = true;
     // Handle pending Outgoing requests.
     for (auto &request_iter : m_pending_selection.requests) {
         auto &request         = request_iter.second;
@@ -362,8 +362,9 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         if (!request.channel_switch_needed && !request.power_switch_received) {
             LOG(DEBUG) << "No Channel Switch needed for radio " << radio_mac;
             request.manually_send_operating_report = true;
-            manually_send_operating_report         = true;
             continue;
+        } else {
+            manually_send_operating_report = false;
         }
 
         // Check if ZWDFS if ZWDFS is needed and On-Selection is enabled.
@@ -391,7 +392,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         }
     }
 
-    if (manually_send_operating_report) {
+    if (!manually_send_operating_report && !m_pending_selection.requests.empty()) {
         // No need to manually send operating channel report message.
         // If a Channel-Switch was requested, a CSA notification
         // will be received, and an operating channel report will

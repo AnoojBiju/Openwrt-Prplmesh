@@ -153,19 +153,23 @@ class ChannelSelection(PrplMeshBaseTest):
                                                         self.ieee1905['eMessageType']
                                                         ['OPERATING_CHANNEL_REPORT_MESSAGE'],
                                                         agent.mac, controller.mac)
+            powerFlags = {agent.radios[0].mac: False, agent.radios[1].mac: False}
             for report in oper_channel_reports:
                 for ocr in report.ieee1905_tlvs:
-                    if ocr.tlv_type != 0x8F:
+                    if ocr.tlv_type == 0x8F:
+                        if int(ocr.operating_channel_eirp) == payload_transmit_power:
+                            powerFlags[ocr.operating_channel_radio_id] = True
+                    elif ocr.tlv_type != 0xD9:
                         self.fail("Unexpected TLV in operating channel report: {}".format(ocr))
                         continue
-                    if int(ocr.operating_channel_eirp) != payload_transmit_power:
-                        self.fail("Unexpected transmit power {} instead of {} for {}".format(
-                            ocr.operating_channel_eirp, payload_transmit_power,
-                            ocr.operating_channel_radio_id))
                 self.check_cmdu_type_single("ACK",
                                             self.ieee1905['eMessageType']['ACK_MESSAGE'],
                                             controller.mac, agent.mac,
                                             report.ieee1905_mid)
+            if powerFlags[agent.radios[0].mac] is not True:
+                self.fail("Transmit power for {} it not set".format(agent.radios[0].mac))
+            if powerFlags[agent.radios[1].mac] is not True:
+                self.fail("Transmit power for {} it not set".format(agent.radios[1].mac))
 
             self.checkpoint()
 
@@ -237,18 +241,22 @@ class ChannelSelection(PrplMeshBaseTest):
                                                         self.ieee1905['eMessageType']
                                                         ['OPERATING_CHANNEL_REPORT_MESSAGE'],
                                                         agent.mac, controller.mac)
+            powerFlags = {agent.radios[0].mac: False, agent.radios[1].mac: False}
             for report in oper_channel_reports:
                 for ocr in report.ieee1905_tlvs:
-                    if ocr.tlv_type != self.ieee1905['eTlvTypeMap']['TLV_OPERATING_CHANNEL_REPORT']:
+                    if ocr.tlv_type == 0x8F:
+                        if int(ocr.operating_channel_eirp) == tp16dBm:
+                            powerFlags[ocr.operating_channel_radio_id] = True
+                    elif ocr.tlv_type != 0xD9:
                         self.fail("Unexpected TLV in operating channel report: {}".format(ocr))
                         continue
-                    if int(ocr.operating_channel_eirp) != tp16dBm:
-                        self.fail("Unexpected transmit power {} instead of {} for {}".format(
-                            ocr.operating_channel_eirp, payload_transmit_power,
-                            ocr.operating_channel_radio_id))
                 self.check_cmdu_type_single("ACK",
                                             self.ieee1905['eMessageType']['ACK_MESSAGE'],
                                             controller.mac, agent.mac,
                                             report.ieee1905_mid)
+            if powerFlags[agent.radios[0].mac] is not True:
+                self.fail("Transmit power for {} it not set".format(agent.radios[0].mac))
+            if powerFlags[agent.radios[1].mac] is not True:
+                self.fail("Transmit power for {} it not set".format(agent.radios[1].mac))
 
             self.checkpoint()

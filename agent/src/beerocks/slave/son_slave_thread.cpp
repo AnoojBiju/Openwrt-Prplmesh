@@ -4962,16 +4962,12 @@ bool slave_thread::send_operating_channel_report(const std::string &fronthaul_if
         return false;
     }
 
-    auto db    = AgentDB::get();
-    auto radio = db->radio(fronthaul_iface);
-    if (!radio) {
-        LOG(DEBUG) << "Radio of interface " << fronthaul_iface << " does not exist on the db";
-        return false;
-    }
-
-    if (!tlvf_utils::create_operating_channel_report(cmdu_tx, radio->front.iface_mac)) {
-        LOG(ERROR) << "Failed adding Operating Channel Report TLV";
-        return false;
+    auto db = AgentDB::get();
+    for (const auto radio : db->get_radios_list()) {
+        if (!tlvf_utils::create_operating_channel_report(cmdu_tx, radio->front.iface_mac)) {
+            LOG(ERROR) << "Failed adding Operating Channel Report TLV";
+            return false;
+        }
     }
     return send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
 }
