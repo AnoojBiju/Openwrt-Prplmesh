@@ -86,7 +86,7 @@ public:
         static AgentDB instance;
         return SafeDB(instance);
     }
-    AgentDB(const AgentDB &)        = delete;
+    AgentDB(const AgentDB &) = delete;
     void operator=(const AgentDB &) = delete;
 
 private:
