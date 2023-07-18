@@ -1773,6 +1773,8 @@ bool ChannelSelectionTask::send_channel_switch_request(
             request.spatial_reuse_request.srg_partial_bssid_bitmap;
     }
 
+    request_msg->spatial_reuse_valid() = request.spatial_reuse_request_received;
+
     auto agent_fd = m_btl_ctx.get_agent_fd();
     if (agent_fd == beerocks::net::FileDescriptor::invalid_descriptor) {
         LOG(ERROR) << "socket to Agent not found";
