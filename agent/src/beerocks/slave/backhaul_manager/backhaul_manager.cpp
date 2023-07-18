@@ -2976,7 +2976,7 @@ void BackhaulManager::handle_dev_reset_default(
         // If certification program is mapr2, set the certification_profile to Profile 2.
         db->device_conf.certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_2;
-    } else if (program == supported_programs[2]) {
+    } else if (program == supported_programs[2] || program == supported_programs[3]) {
         // If certification program is mapr3, set the certification_profile to Profile 3.
         db->device_conf.certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_3;
