@@ -1224,8 +1224,35 @@ bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
 bool ap_wlan_hal_whm::set_spatial_reuse_config(
     son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    std::string path_to_80211ax = m_radio_path + "IEEE80211ax.";
+    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
+
+    new_obj.add_child("BssColor", spatial_reuse_params.bss_color);
+    new_obj.add_child("BssColorPartial", spatial_reuse_params.partial_bss_color);
+    new_obj.add_child("HESIGASpatialReuseValue15Allowed",
+                      spatial_reuse_params.hesiga_spatial_reuse_value15_allowed);
+    new_obj.add_child("SRGInformationValid", spatial_reuse_params.srg_information_valid);
+    new_obj.add_child("NonSRGOffsetValid", spatial_reuse_params.non_srg_offset_valid);
+    new_obj.add_child("PSRDisallowed", spatial_reuse_params.psr_disallowed);
+
+    if (spatial_reuse_params.non_srg_offset_valid) {
+        new_obj.add_child("NonSRGOBSSPDMaxOffset", spatial_reuse_params.non_srg_obsspd_max_offset);
+    }
+
+    if (spatial_reuse_params.srg_information_valid) {
+        new_obj.add_child("SRGOBSSPDMinOffset", spatial_reuse_params.srg_obsspd_min_offset);
+        new_obj.add_child("SRGOBSSPDMaxOffset", spatial_reuse_params.srg_obsspd_max_offset);
+        new_obj.add_child("SRGBSSColorBitmap",
+                          std::to_string(spatial_reuse_params.srg_bss_color_bitmap));
+        new_obj.add_child("SRGPartialBSSIDBitmap",
+                          std::to_string(spatial_reuse_params.srg_partial_bssid_bitmap));
+    }
+    if (!m_ambiorix_cl->update_object(path_to_80211ax, new_obj)) {
+        LOG(ERROR) << "Could not set spatial reuse parameters for " << path_to_80211ax;
+        return false;
+    }
+
+    return true;
 }
 
 bool ap_wlan_hal_whm::get_spatial_reuse_config(
