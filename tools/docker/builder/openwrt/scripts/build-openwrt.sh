@@ -27,8 +27,6 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ] || [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb34
     sed -i '/iw-full$/d' "profiles/debug.yml"
 fi
 
-args+=("webui")
-
 # feed-prpl is in the prpl profile:
 if [ -n "$WHM_ENABLE" ] ; then
     args+=("prpl")

@@ -106,7 +106,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips haze"
 
     while true; do
         case "$1" in
@@ -142,6 +142,9 @@ main() {
         axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
             ;;
+        haze)
+            TARGET_SYSTEM=ipq807x
+            ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
             info "Currently supported targets are:"
@@ -151,6 +154,14 @@ main() {
             exit 1
             ;;
     esac
+
+    if [ "$TARGET_DEVICE" == "haze" ] ; then
+        OPENWRT_TOOLCHAIN_VERSION='d6de5bc3ade373eba296a9098649b96c28ff0629'
+        OPENWRT_VERSION='d6de5bc3ade373eba296a9098649b96c28ff0629'
+        dbg "Building on prplOS-next"
+    else
+        dbg "Building on prplOS"
+    fi
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
     dbg "OPENWRT_TOOLCHAIN_VERSION=$OPENWRT_TOOLCHAIN_VERSION"
