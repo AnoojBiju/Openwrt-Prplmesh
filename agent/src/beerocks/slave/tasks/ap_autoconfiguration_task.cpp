@@ -953,6 +953,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfile) {
         db->controller_info.profile_support = tlvProfile2MultiApProfile->profile();
+        if (db->controller_info.profile_support ==
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+            db->controller_info.profile_support =
+                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1_AS_OF_R4;
+        }
     }
 
     auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
@@ -977,11 +982,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(WARNING)
             << "Invalid tlvSupportedService - supported service is not MULTI_AP_CONTROLLER";
         return;
-    }
-
-    auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
-    if (multiap_profile_tlv) {
-        db->controller_info.profile_support = multiap_profile_tlv->profile();
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.
@@ -1506,7 +1506,6 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
 
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
         } else if (db->controller_info.profile_support !=
                        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
                    bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
