@@ -141,6 +141,8 @@
 .test-on-target-legacy:
   extends: .test-on-target
   before_script:
+    # Use CI defined credentials to pull container images
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     # Remove any leftover from docker-compose
     - ./dctest.py --clean
     # we need a list of all the targets to be able to kill them
