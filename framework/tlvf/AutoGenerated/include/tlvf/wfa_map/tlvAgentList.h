@@ -39,14 +39,16 @@ class tlvAgentList : public BaseClass
             MULTIAP_PROFILE_1 = 0x1,
             MULTIAP_PROFILE_2 = 0x2,
             MULTIAP_PROFILE_3 = 0x3,
+            MULTIAP_PROFILE_1_AS_OF_R4 = 0x4,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
         static const char *eMultiApProfile_str(eMultiApProfile enum_value) {
             switch (enum_value) {
-            case MULTIAP_PROFILE_1: return "MULTIAP_PROFILE_1";
-            case MULTIAP_PROFILE_2: return "MULTIAP_PROFILE_2";
-            case MULTIAP_PROFILE_3: return "MULTIAP_PROFILE_3";
+            case MULTIAP_PROFILE_1:          return "MULTIAP_PROFILE_1";
+            case MULTIAP_PROFILE_2:          return "MULTIAP_PROFILE_2";
+            case MULTIAP_PROFILE_3:          return "MULTIAP_PROFILE_3";
+            case MULTIAP_PROFILE_1_AS_OF_R4: return "MULTIAP_PROFILE_1_AS_OF_R4";
             }
             static std::string out_str = std::to_string(int(enum_value));
             return out_str.c_str();
