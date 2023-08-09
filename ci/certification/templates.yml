@@ -40,6 +40,20 @@
     - certs-tests
     - glinet-b1300
 
+.certification:R1:haze:
+  stage: certification-R1-haze
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "haze"
+  before_script:
+    - tools/deploy_firmware.py --device haze --target-name "$RUN_ON_DEVICE" --image "$HAZE_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/haze.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-haze
+  tags:
+    - certs-tests
+    - haze
+
 .certification:R4:axepoint:
   stage: certification-R4-axepoint
   extends: .certification-generic-R4
@@ -100,6 +114,7 @@ include:
   - local: "ci/certification/R1/axepoint.yml"
   - local: "ci/certification/R1/turris-omnia.yml"
   - local: "ci/certification/R1/glinet-b1300.yml"
+  - local: "ci/certification/R1/haze.yml"
   - local: "ci/certification/R4/axepoint.yml"
   - local: "ci/certification/R4/turris-omnia.yml"
   - local: "ci/certification/R4/haze.yml"
