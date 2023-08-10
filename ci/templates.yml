@@ -141,6 +141,8 @@
 .test-on-target-legacy:
   extends: .test-on-target
   before_script:
+    # Use CI defined credentials to pull container images
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     # Remove any leftover from docker-compose
     - ./dctest.py --clean
     # we need a list of all the targets to be able to kill them
@@ -195,6 +197,10 @@
           ;;
           glinet-b1300)
               IMAGE_NAME="$GLINET_B1300_FULLIMAGE"
+              USE_WHM="y"
+          ;;
+          haze)
+              IMAGE_NAME="$HAZE_FULLIMAGE"
               USE_WHM="y"
           ;;
           *)
