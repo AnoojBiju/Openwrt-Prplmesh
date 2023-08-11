@@ -847,16 +847,53 @@ bool ap_wlan_hal_whm::start_wps_pbc()
     return true;
 }
 
+static bool
+set_mbo_assoc_disallow_vap(const std::shared_ptr<beerocks::wbapi::AmbiorixClient> ambiorix_cl,
+                           const std::string &vap_path, bool enable)
+{
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+
+    std::string reason = enable ? "Unspecified" : "Off";
+
+    args.add_child("MBOEnable", enable);
+    args.add_child("MBOAssocDisallowReason", reason);
+
+    bool ret = ambiorix_cl->update_object(vap_path, args);
+
+    if (!ret) {
+        LOG(ERROR) << "vap " << vap_path << " set MBOEnable/MBOAssocDisallow:" << reason
+                   << " failed";
+    }
+    return ret;
+}
+
 bool ap_wlan_hal_whm::set_mbo_assoc_disallow(const std::string &bssid, bool enable)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    int vap_id = get_vap_id_with_mac(bssid);
+    if (!check_vap_id(vap_id)) {
+        LOG(ERROR) << "no matching vap_id for bssid " << bssid;
+        return false;
+    }
+    auto &vap_info = m_radio_info.available_vaps[vap_id];
+    auto &ifname   = vap_info.bss;
+    auto vap_it    = m_vapsExtInfo.find(ifname);
+    if (vap_it == m_vapsExtInfo.end()) {
+        LOG(ERROR) << "fail to get ifname of " << bssid;
+        return false;
+    }
+
+    return set_mbo_assoc_disallow_vap(m_ambiorix_cl, vap_it->second.path, enable);
 }
 
 bool ap_wlan_hal_whm::set_radio_mbo_assoc_disallow(bool enable)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    bool ret = true;
+    for (const auto &vap_it : m_vapsExtInfo) {
+        if (!set_mbo_assoc_disallow_vap(m_ambiorix_cl, vap_it.second.path, enable)) {
+            ret = false;
+        }
+    }
+    return ret;
 }
 
 bool ap_wlan_hal_whm::set_primary_vlan_id(uint16_t primary_vlan_id)
