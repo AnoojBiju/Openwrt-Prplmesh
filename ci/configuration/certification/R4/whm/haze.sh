@@ -67,11 +67,6 @@ ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
-
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
-
 # Restart the ssh server
 /etc/init.d/ssh-server restart
 
@@ -135,6 +130,10 @@ sleep 5
 BOOTSCRIPT="/etc/rc.local"
 SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.130:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
+
+# Stop and disable the firewall:
+/etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
 dropbear -F -T 10 -p192.168.250.130:22 &

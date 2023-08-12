@@ -70,10 +70,6 @@ uci set prplmesh.config.backhaul_wire_iface='eth0_5'
 # wireless.radio4.band='6GHz'
 # wireless.radio6.band='5GHz'
 
-# Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
-rm -f /etc/rc.d/S22tr181-firewall
-
 # Restart the ssh server
 /etc/init.d/ssh-server restart
 
@@ -156,6 +152,10 @@ sleep 5
 BOOTSCRIPT="/etc/rc.local"
 SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.120:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
+
+# Stop and disable the firewall:
+/etc/init.d/tr181-firewall stop
+rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
 dropbear -F -T 10 -p192.168.250.120:22 &
