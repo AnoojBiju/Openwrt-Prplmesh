@@ -43,29 +43,32 @@ else
     echo "DHCPv6 service not active!"
 fi
 
-# We use WAN for the control interface.
+# The OSP has two "physical WAN" ports: eth0_6 and eth0_0 (left to right)
+# The yellow "LAN" ports are: eth0_2, eth0_3, eth0_4, eth0_5 (left to right)
+# eth0_0 is in the LAN bridge by default
+# We use eth0_6 as WAN (control); and eth0_5 as LAN (prplMesh data)
+
+# Set the LAN bridge IP:
+ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.120" } }'
+
+# We use WAN - eth0_6 for the control interface.
 # Add the IP address if there is none yet:
 ubus call IP.Interface _get '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.[Alias == \"wan\"]." }' || {
     echo "Adding IP address $IP"
     ubus call "IP.Interface" _add '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.", "parameters": { "Alias": "wan", "AddressingType": "Static" } }'
 }
 # Configure it:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.250.170", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
+ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].IPv4Address.1", "parameters": { "IPAddress": "192.168.250.120", "SubnetMask": "255.255.255.0", "AddressingType": "Static", "Enable" : true } }'
 # Enable it:
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters": { "IPv4Enable": true } }'
 
-# Set the LAN bridge IP:
-ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.165.100.170" } }'
-
 # Wired backhaul interface:
-uci set prplmesh.config.backhaul_wire_iface='lan0'
-uci commit
+uci set prplmesh.config.backhaul_wire_iface='eth0_5'
 
-# enable Wi-Fi radios
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
-
-# all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
+# wireless.radio0.band='2.4GHz'
+# wireless.radio2.band='5GHz'
+# wireless.radio4.band='6GHz'
+# wireless.radio6.band='5GHz'
 
 # Restart the ssh server
 /etc/init.d/ssh-server restart
@@ -100,6 +103,25 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
+# secondary vaps and backhaul are not supported yet (WIP)
+
+# Remove 6Ghz radio until it's supported
+ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan4.1\"]." }' && {
+    ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan4.1\"]." }'
+}
+ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan4.2\"]." }' && {
+    ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan4.2\"]." }'
+}
+ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan4.1\"]." }' && {
+    ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan4.1\"]." }'
+}
+ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan4.2\"]." }' && {
+    ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan4.2\"]." }'
+}
+ubus call WiFi.Radio _get '{ "rel_path": ".[Name == \"wlan4\"]." }' && {
+    ubus call WiFi.Radio _del '{ "rel_path": ".[Name == \"wlan4\"]." }'
+}
+
 sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
@@ -128,7 +150,7 @@ sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.170:22 &"
+SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.120:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Stop and disable the firewall:
@@ -136,4 +158,4 @@ if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo 
 rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
-dropbear -F -T 10 -p192.168.250.170:22 &
+dropbear -F -T 10 -p192.168.250.120:22 &
