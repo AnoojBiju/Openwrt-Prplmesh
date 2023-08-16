@@ -305,7 +305,7 @@ void client_steering_task::steer_sta()
             son_actions::send_client_association_control(
                 m_database, m_cmdu_tx, agent_mac, tlvf::mac_from_string(hostap_vap.second.mac),
                 block_list, STEERING_WAIT_TIME_MS / 1000,
-                wfa_map::tlvClientAssociationControlRequest::BLOCK);
+                wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK);
 
             // update bml listeners
             bml_task::client_disallow_req_available_event client_disallow_event;
