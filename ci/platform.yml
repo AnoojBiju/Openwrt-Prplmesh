@@ -280,6 +280,7 @@ run-certification-tests-R1-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
+    - job: build-for-haze
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
     - when: manual
@@ -316,6 +317,8 @@ run-certification-tests-R4-platform-essensium:
   needs:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
+    - job: build-for-haze
+    - job: build-for-osp
 
 run-certification-tests-R1-platform-isr:
   extends: .run-certification-tests-R1
