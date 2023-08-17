@@ -305,8 +305,8 @@ run-certification-tests-R1-platform-essensium:
     - certs-tests-essensium
   needs:
     - job: build-for-intel-mips
-    - job: build-for-turris-omnia
-    - job: build-for-glinet-b1300
+    - job: build-for-turris-omnia-legacy
+    - job: build-for-glinet-b1300-legacy
     - job: build-for-haze
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
@@ -327,7 +327,7 @@ run-certification-tests-R2-platform-essensium:
     - certs-tests-R2-essensium
   needs:
     - job: build-for-intel-mips
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-legacy
 
 run-certification-tests-R4-platform-essensium:
   extends: .run-certification-tests-R4
@@ -343,7 +343,7 @@ run-certification-tests-R4-platform-essensium:
     - certs-tests-R4-essensium
   needs:
     - job: build-for-intel-mips
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-legacy
     - job: build-for-haze
     - job: build-for-osp
 
@@ -357,7 +357,7 @@ run-certification-tests-R1-platform-isr:
     - certs-tests-isr
   needs:
     - job: build-for-intel-mips
-    - job: build-for-turris-omnia
+    - job: build-for-turris-omnia-legacy
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR != "prplmesh"'
     - when: manual
