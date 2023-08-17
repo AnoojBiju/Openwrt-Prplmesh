@@ -193,11 +193,9 @@
           ;;
           turris-omnia)
               IMAGE_NAME="$TURRIS_OMNIA_FULLIMAGE"
-              USE_WHM="y"
           ;;
           glinet-b1300)
               IMAGE_NAME="$GLINET_B1300_FULLIMAGE"
-              USE_WHM="y"
           ;;
           haze)
               IMAGE_NAME="$HAZE_FULLIMAGE"
