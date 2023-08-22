@@ -194,7 +194,8 @@ private:
 
     bool register_ext_events_handler(int fd);
 
-    bool handle_sta_conn_event(const std::string &sta_mac, const int8_t &vap_id);
+    bool handle_sta_conn_event(const std::string &sta_mac, const int8_t &vap_id,
+                               bool is_vbss = false);
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
      */

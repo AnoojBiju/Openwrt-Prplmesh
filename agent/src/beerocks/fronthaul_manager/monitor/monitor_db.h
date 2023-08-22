@@ -44,6 +44,12 @@ public:
     void set_ipv4(const std::string &ip) { ipv4 = ip; }
     std::string get_ipv4() const { return ipv4; }
 
+    void set_is_virtual_bss_client(bool b) { m_is_virtual_bss_client = b; }
+    bool get_is_virtual_bss_client() const { return m_is_virtual_bss_client; }
+
+    void set_has_been_arped(bool b) { m_arpd = b; }
+    bool has_been_arped() const { return m_arpd; }
+
     void set_bridge_4addr_mac(const std::string &bridge_mac_4addr_)
     {
         bridge_mac_4addr = bridge_mac_4addr_;
@@ -151,7 +157,9 @@ private:
     std::chrono::steady_clock::time_point arp_time = std::chrono::steady_clock::now();
     SStaStats m_sta_stats;
     bwl::SStaQosCtrlParams m_sta_qos_ctrl_params;
-    bool m_measure_sta_enable = false;
+    bool m_measure_sta_enable    = false;
+    bool m_is_virtual_bss_client = false;
+    bool m_arpd                  = false;
 };
 
 ////////////////////////////////////////////

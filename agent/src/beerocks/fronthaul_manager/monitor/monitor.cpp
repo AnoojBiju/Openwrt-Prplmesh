@@ -98,6 +98,10 @@ Monitor::Monitor(const std::string &monitor_iface_,
             (measurement_window_poll_count != 0)
                 ? (measurement_window_poll_count * polling_rate_msec)
                 : (mon_db.MONITOR_DB_DEFAULT_MEASUREMENT_WINDOW_POLL_COUNT * polling_rate_msec);
+#ifdef ENABLE_VBSS
+        // TODO: switch ARPing to be event based
+        measurement_window_msec = 1;
+#endif
         mon_db.set_measurement_window_msec(measurement_window_msec);
         LOG(DEBUG) << "Set measurement-window(msec) to: " << measurement_window_msec;
     } else {
@@ -1919,7 +1923,7 @@ void Monitor::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                            << virtual_bss_creation_req->bssid();
                 return;
             }
-            if (!handle_sta_conn_event(sta_mac, vap_id)) {
+            if (!handle_sta_conn_event(sta_mac, vap_id, true)) {
                 LOG(ERROR) << "Failed to register connected sta in vbss request";
             }
         }
@@ -2016,7 +2020,7 @@ std::string Monitor::get_vbss_interface_name(const sMacAddr &vbssid)
     return ifname + monitor_iface.at(indx);
 }
 
-bool Monitor::handle_sta_conn_event(const std::string &sta_mac, const int8_t &vap_id)
+bool Monitor::handle_sta_conn_event(const std::string &sta_mac, const int8_t &vap_id, bool is_vbss)
 {
 
     LOG(INFO) << "STA_Connected: mac=" << sta_mac << " vap_id=" << int(vap_id);
@@ -2041,6 +2045,7 @@ bool Monitor::handle_sta_conn_event(const std::string &sta_mac, const int8_t &va
     auto sta_node = mon_db.sta_add(sta_mac, vap_id);
     sta_node->set_ipv4(sta_ipv4);
     sta_node->set_bridge_4addr_mac(set_bridge_4addr_mac);
+    sta_node->set_is_virtual_bss_client(is_vbss);
 
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
     sta_node->set_measure_sta_enable(true);

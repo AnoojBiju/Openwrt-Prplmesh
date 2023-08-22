@@ -42,6 +42,7 @@ public:
 private:
     void send_rssi_measurement_response(const std::string &sta_mac, monitor_sta_node *sta_node);
     void monitor_idle_station(const std::string &sta_mac, monitor_sta_node *sta_node);
+    void handle_virtual_bss_arps(monitor_sta_node *sta_node);
 
     monitor_db *mon_db = nullptr;
 

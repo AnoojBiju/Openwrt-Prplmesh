@@ -186,6 +186,32 @@ void monitor_rssi::arp_recv()
     }
 }
 
+void monitor_rssi::handle_virtual_bss_arps(monitor_sta_node *sta_node)
+{
+    if (!sta_node)
+        return;
+    auto sta_vap_id = sta_node->get_vap_id();
+    auto vap_node   = mon_db->vap_get_by_id(sta_vap_id);
+    if (!vap_node) {
+        LOG(ERROR) << "No VAP node for VAP ID=" << sta_vap_id;
+        return;
+    }
+    std::string arp_iface            = vap_node->get_bridge_iface();
+    std::string arp_iface_ipv4       = vap_node->get_bridge_ipv4();
+    std::string arp_iface_mac        = vap_node->get_bridge_mac();
+    std::string sta_bridge_4addr_mac = sta_node->get_bridge_4addr_mac();
+    LOG(TRACE) << " VBSS ARP. arp_iface=" << arp_iface << ", arp_iface_ipv4=" << arp_iface_ipv4
+               << ", arp_iface_mac=" << arp_iface_mac << ", STA MAC " << sta_node->get_mac()
+               << ", STA ipv4=" << sta_node->get_ipv4();
+    bool arp_ok = network_utils::arp_send(arp_iface, sta_node->get_ipv4(), arp_iface_ipv4,
+                                          tlvf::mac_from_string(sta_node->get_mac()),
+                                          tlvf::mac_from_string(arp_iface_mac), 5);
+    if (!arp_ok) {
+        LOG(ERROR) << __func__ << " - ARP send failed!";
+    }
+    sta_node->set_has_been_arped(arp_ok);
+}
+
 // enter every m_measurement_window_msec
 void monitor_rssi::process()
 {
@@ -198,6 +224,17 @@ void monitor_rssi::process()
     for (auto it = mon_db->sta_begin(); it != mon_db->sta_end(); ++it) {
         auto sta_mac  = it->first;
         auto sta_node = it->second;
+        if (sta_node->get_is_virtual_bss_client() && !sta_node->has_been_arped()) {
+            // Virtual BSS, as a feature, uses `station-sniffer`
+            // (see: https://gitlab.com/prpl-foundation/prplmesh/stationsniffer)
+            // for both associated and unassociated RSSI due to sniffing signal strength at layer 2.
+            // We bypass the ARP (layer 3) state machine for RSSI reading here, but we still want
+            // to send an ARP request to Virtual BSS STAs in case they have roamed while only
+            // doing down-stream traffic, in order to force a reply from the STA and have the
+            // mesh's routing tables updated.
+            handle_virtual_bss_arps(sta_node);
+            return;
+        }
 
         // If clients-measurement-mode is disabled or if it is set to selected-clients-only,
         // the measure_sta_enable flag might be disabled for the clients.
