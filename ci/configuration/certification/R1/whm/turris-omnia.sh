@@ -100,6 +100,11 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
 
+# Restrict channel bandwidth or the certification test could miss beacons
+# (see PPM-258)
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "OperatingChannelBandwidth": "20MHz" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "OperatingChannelBandwidth": "20MHz" } }'
+
 sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
