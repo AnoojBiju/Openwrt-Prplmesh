@@ -36,8 +36,8 @@ class tlvSupportedFreqBand : public BaseClass
         enum eValue: uint8_t {
             BAND_2_4G = 0x0,
             BAND_5G = 0x1,
-            BAND_6G = 0x2,
-            BAND_60G = 0x3,
+            BAND_60G = 0x2,
+            BAND_6G = 0x3,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
@@ -45,8 +45,8 @@ class tlvSupportedFreqBand : public BaseClass
             switch (enum_value) {
             case BAND_2_4G: return "BAND_2_4G";
             case BAND_5G:   return "BAND_5G";
-            case BAND_6G:   return "BAND_6G";
             case BAND_60G:  return "BAND_60G";
+            case BAND_6G:   return "BAND_6G";
             }
             static std::string out_str = std::to_string(int(enum_value));
             return out_str.c_str();
