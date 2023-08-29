@@ -1,0 +1,426 @@
+OPENWRT_REPOSITORY=https://gitlab.com/prpl-foundation/prplos/prplos.git
+OPENWRT_VERSION=ec5ee48507a4c2c75838044ce9bc0e674c32c337
+OPENWRT_TOOLCHAIN_VERSION=
+
+Profile mxl_x86_osp_tb341:
+---
+profiles:
+  - PRPL_OSP_TB341
+target: intel_x86
+subtarget: lgm
+external_target: True
+description: Build images for the Maxlinear x86 devices - OSP
+             This target requires sources from MaxLinear, that are accessible via
+             git.maxlinear.com.
+             For reference boards, source code access and reporting issues,
+             please check https://gitlab.com/prpl-foundation/prplos/prplos/-/wikis/MaxLinear-Open-Service-Platform
+feeds:
+  - name: intel_x86
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_target_x86.git
+    tracking_branch: updk_9.1.30
+    revision: 5665b682615993745ac3398a003db2b9209fbd5c
+  - name: rootfs
+    uri: ssh://git@git.maxlinear.com/ugw/rootfs.git
+    tracking_branch: updk_9.1.30
+    revision: 425d010d585228ef8388b862e8f4a55613e68b99
+  - name: 3rdparty
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_3rdparty.git
+    tracking_branch: updk_9.1.30
+    revision: 46a05a23aac3f90bc9c66a4bd8294de498e946da
+  - name: datapath
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_datapath.git
+    tracking_branch: updk_9.1.30
+    revision: e867d3d95fdbd2c52e5a51a1160bc7042c07fed8
+  - name: gphy_firmware
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_gphy_firmware.git
+    tracking_branch: updk_9.1.30
+    revision: f7ed02509c18851120b559155e9f2316afb46f29
+  - name: gwdpa_dpm
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_gwdpa-dpm.git
+    tracking_branch: updk_9.1.30
+    revision: 28b8d2f1c840acdab55ba71a9c4f7d06dc7c9abb
+  - name: misc
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_common.git
+    tracking_branch: updk_9.1.30
+    revision: 7bf766c519c882ce31a9b179ccab25b79d0e48a5
+  - name: opensource_apps
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_opensource_apps.git
+    tracking_branch:  updk_9.1.30
+    revision: a1fbc0ca349029cc5e21fe75424bcff870067ceb
+  - name: packet_learn
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_packet_learn.git
+    tracking_branch: updk_9.1.30
+    revision: 1f326221d8909add27139f7c5edcf72ca11da850
+  - name: pon
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_pon.git
+    tracking_branch: updk_9.1.30
+    revision: 14728fd34c859216d42280fd26f77295db5e180d
+  - name: ppa
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_ppa.git
+    tracking_branch: updk_9.1.30
+    revision: 47e3aac213072703ee818ae42d5f048420f131d7
+  - name: pp_net_adapter
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_pp_net_adapter.git
+    tracking_branch: updk_9.1.30
+    revision: ebc1e4fa2e5b2dbc6e347d1a5c853c5df8e6502d
+  - name: vpn_fw
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_vpn_fw.git
+    tracking_branch: updk_9.1.30
+    revision: befe57974f1b70223f8027cd8aebe78735c7191d
+  - name: qos
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_qos_tc.git
+    tracking_branch: updk_9.1.30
+    revision: 8904e7fbb73db1d880d7f14139cb971296275c9b
+  - name: utils
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_ugw_utils.git
+    tracking_branch: updk_9.1.30
+    revision: cf45032a3f079090dbd40778c77cebff676d0c18
+  - name: bootloader
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_uboot.git
+    tracking_branch:  updk_9.1.30
+    revision: d66f77c0722bf99e80d78772f23c6c6fa7976d61
+  - name: mcast_service
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_mcast_service.git
+    tracking_branch:  updk_9.1.30
+    revision: 4bcbd243ce4ec04200a85749fb2e8b6fa1bae2c4
+  - name: dpl
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_dpl.git
+    tracking_branch:  updk_9.1.30
+    revision: 4059c44ca150034295619969a5feaf6f707176d6
+
+additional_packages:
+  - feed: packages
+    packages:
+      - miniupnpd2-iptables
+
+packages:
+  - kmod-mxl_eth_drv
+  - kmod-gwdpa-dpm
+  - kmod-pp_net_adapter
+  - kmod-packet_learn
+  - ppv4-firmware-lgm
+  - kmod-intel_ppv4_fw_lgm
+  - kmod-ppv4
+  - kmod-p34x_phy_fwdl
+  - ltq-gphy-fw-lgm
+  #- netifd-ugw
+  - e2fsprogs
+  - kmod-directconnect-dp
+  - kmod-ppa-drv
+  - kmod-ppa-drv-accel
+  - kmod-ppa-drv-gre
+  - kmod-ppa-drv-lgm
+  - kmod-ppa-drv-stack-al
+  - ppacmd
+  - kmod-mxl_vpn
+  - kmod-mxl_lgm_toe
+  - kmod-ipsec4
+  - kmod-ipsec6
+  - kmod-ipsec
+  - eip197-firmware
+  - kmod-safexcel
+  - vpn-firmware-lgm
+  - kmod-ipsec4-offload
+  - kmod-ipsec6-offload
+  - pon-libnl
+  - gpon-omci-onu
+  - pon-mcc-lib
+  - pon-lib
+  - pon-net-lib
+  - pon-img-lib
+  - pon-tools
+  - base-files-platform-lgm
+  - pon-base-files
+  - pon-base-files-debug
+  - pon-base-files-prpl
+  - pon-lib-cli
+  - pon-lib-daemon
+  - ponmbox-cli
+  - pon-gpon-firmware-urx-b
+  - pon-xpon-firmware-urx-b
+  - pon-serdes-firmware-urx-b
+  - kmod-pon-mbox-drv-eth
+  - kmod-dp-eth-reinsert
+  - kmod-pon-mcc-drv
+  - kmod-pon-mcc-drv-filter
+  - kmod-mxl_pon_hgu_vuni_lgm
+  - ethtool
+  - base-files-prpl
+  - ppmd
+  - pm-util
+  - kmod-intel-qos
+  - kmod-qos-tc
+  - partx-utils
+  - obudpst
+  - speedtest-modules
+  - kmod-mcast-helper
+  - libmcastdaemon
+  - libmcastfapi
+  - mcastcli
+  - kmod-dpl
+
+diffconfig: |
+  CONFIG_DEVEL=y
+  CONFIG_KERNEL_GIT_CLONE_URI="git@git.maxlinear.com:mxl/linux.git"
+  CONFIG_KERNEL_GIT_DEPTH=""
+  CONFIG_KERNEL_GIT_REF="updk_9.1.30"
+  CONFIG_GPON_OMCI_ONU_UBUS_INTERFACE=y
+  CONFIG_TARGET_OPTIONS=y
+  CONFIG_TARGET_MULTI_PROFILE=y
+  CONFIG_TARGET_PER_DEVICE_ROOTFS=y
+  CONFIG_TARGET_DEVICE_intel_x86_lgm_DEVICE_PRPL_OSP_TB341=y
+  # CONFIG_TARGET_DEVICE_intel_x86_lgm_DEVICE_LGM_PRPL is not set
+  # CONFIG_TARGET_ROOTFS_EXT4FS is not set
+  CONFIG_BUILD_LOG=y
+  CONFIG_PACKAGE_uboot-osp-tb341-p34x-phy-emmc=y
+  CONFIG_VERSION_FILENAMES=n
+  CONFIG_VERSION_CODE_FILENAMES=n
+  # CONFIG_PACKAGE_bios_images is not set
+  CONFIG_BUILD_SDK="prplos"
+  CONFIG_BUSYBOX_CUSTOM=y
+  CONFIG_BUSYBOX_CONFIG_TFTPD=y
+  CONFIG_BUSYBOX_CONFIG_FEATURE_TFTP_GET=y
+  CONFIG_BUSYBOX_CONFIG_FEATURE_TFTP_PUT=y
+  CONFIG_BUSYBOX_CONFIG_TFTP=y
+
+Profile debug:
+---
+description: Debugging tools and features
+
+packages:
+  - tcpdump
+  - strace
+  - gdb
+  - gdbserver
+  - wpa-cli
+
+diffconfig: |
+  CONFIG_BUSYBOX_DEFAULT_FEATURE_REVERSE_SEARCH=y
+  CONFIG_BUSYBOX_DEFAULT_HUSH_SAVEHISTORY=y
+  CONFIG_BUILD_LOG=y
+  CONFIG_WPA_MSG_MIN_PRIORITY=0
+
+
+Profile mxl_wlan_hostap_ng:
+---
+description: Add the WLAN feature with opensource hostap for the Maxlinear devices
+feeds:
+  - name: wlan_6x
+    uri: ssh://git@git.maxlinear.com/ugw/feeds/feed_wlan.git
+    tracking_branch: updk_9.1.30
+    revision: 45284ec8d98e9e8ad0265cd6c627575965cdac0a
+
+packages:
+  - dwpal_6x-uci-osp
+  - iwlwav-hostap-ng-uci
+  - iwlwav-iw
+  - iwlwav-tools-osp
+  - iwlwav-firmware
+  - iwinfo
+  - ltq-wlan-wave_6x-uci-osp
+  - mod-whm
+  - safeclibs3
+  - swpal_6x-uci-prpl
+
+Profile prpl:
+---
+description: Add the prpl features
+feeds:
+  - name: feed_prpl
+    uri: https://gitlab.com/prpl-foundation/prplOS/feed-prpl.git
+    tracking_branch: prplos-next
+    revision: d8b19a9c076331deb4188a4b9eeacb49173a3efc
+
+additional_packages:
+  - feed: packages
+    packages:
+      - chrony
+      - libnl-core
+      - libnl-route
+      - lighttpd
+      - lighttpd-mod-auth
+      - lighttpd-mod-authn_file
+      - lighttpd-mod-fastcgi
+      - syslog-ng
+
+packages:
+  - acl-manager
+  - amx-cli
+  - cthulhu
+  - cthulhu-lxc
+  - debug-information
+  - deviceinfo-manager
+  - dhcpv4-manager
+  - dhcpv6s-manager
+  - ethernet-manager
+  - ip6tables-zz-legacy
+  - gmap-client
+  - gmap-mod-ethernet-dev
+  - gmap-mod-name-selector
+  - gmap-mod-self
+  - gmap-server
+  - hosts-manager
+  - ip-manager
+  - iptables-mod-ipopt
+  - iptables-zz-legacy
+  - libdhcpoptions
+  - libfwinterface
+  - libfwrules
+  - libnetmodel
+  - lua-amx
+  - lxc
+  - lxc-attach
+  - lxc-auto
+  - lxc-autostart
+  - lxc-cgroup
+  - lxc-checkconfig
+  - lxc-common
+  - lxc-config
+  - lxc-configs
+  - lxc-console
+  - lxc-copy
+  - lxc-create
+  - lxc-destroy
+  - lxc-device
+  - lxc-execute
+  - lxc-freeze
+  - lxc-hooks
+  - lxc-info
+  - lxc-ls
+  - lxc-monitor
+  - lxc-start
+  - lxc-stop
+  - lxc-templates
+  - lxc-top
+  - lxc-unfreeze
+  - lxc-unprivileged
+  - lxc-unshare
+  - lxc-user-nic
+  - lxc-usernsexec
+  - lxc-wait
+  - mod-amxb-ubus
+  - mod-autosensing
+  - mod-ba-cli
+  - mod-dmext
+  - mod-dmstats
+  - mod-fw-amx
+  - mod-fw-host
+  - mod-httpaccess-lighttpd
+  - mod-lua-amx
+  - mod-qos-tc
+  - mod-sahtrace
+  - mod-vlan-ioctl
+  - mod-xpon-prpl
+  - multisettings
+  - netdev-plugin
+  - netmodel
+  - netmodel-bridge
+  - netmodel-clients
+  - netmodel-dhcpv4
+  - netmodel-dhcpv6
+  - netmodel-ethernet
+  - netmodel-ip
+  - netmodel-iprouter
+  - netmodel-logical
+  - netmodel-netdev
+  - netmodel-ppp
+  - netmodel-radio
+  - netmodel-ssid
+  - netmodel-vlan
+  - odl-generator
+  - packet-interception
+  - pcm-manager
+  - procps-ng-pgrep
+  - procps-ng-pkill
+  - procps-ng-uptime
+  - prpl-webui
+  - prplmesh
+  - rlyeh
+  - routing-manager
+  - ssh-server
+  - tc-tiny
+  - time-manager
+  - timingila
+  - timingila-cthulhu
+  - timingila-rlyeh
+  - tr069-manager
+  - tr181-bridging
+  - tr181-device
+  - tr181-dhcpv4client
+  - tr181-dhcpv6client
+  - tr181-dns
+  - tr181-dnssd
+  - tr181-dslite
+  - tr181-dynamicdns
+  - tr181-firewall
+  - tr181-httpaccess
+  - tr181-logical
+  - tr181-neighbordiscovery
+  - tr181-pcp
+  - tr181-ppp
+  - tr181-qos
+  - tr181-rest-api
+  - tr181-routeradvertisement
+  - tr181-upnp
+  - tr181-usermanagement
+  - tr181-xpon
+  - umdns
+  - wan-manager
+
+diffconfig: |
+          CONFIG_PACKAGE_rpcd-mod-luci=y
+          CONFIG_PACKAGE_ip-full=y
+          CONFIG_PACKAGE_ip-bridge=y
+          CONFIG_SYSLOGNG_LOGROTATE=y
+          CONFIG_SYSLOGNG_LOGROTATE_MAXSIZE="5M"
+          CONFIG_PACKAGE_mod-xpon-prpl-mock=m
+          # CONFIG_PACKAGE_firewall4 is not set
+          # CONFIG_PACKAGE_logd is not set
+          # lxc options for LCM
+          CONFIG_SAH_SERVICES_CTHULHU_INIT_CONTAINER_BACKEND=y
+          CONFIG_SAH_SERVICES_CTHULHU_CONTAINER_BACKEND="/usr/lib/cthulhu-lxc/cthulhu-lxc.so"
+          CONFIG_SAH_SERVICES_TIMINGILA_INIT_ADAPTERS=y
+          CONFIG_SAH_SERVICES_TIMINGILA_ADAPTER_PACKAGER="/usr/lib/timingila-rlyeh/timingila-rlyeh.so"
+          CONFIG_SAH_SERVICES_TIMINGILA_ADAPTER_CONTAINER="/usr/lib/timingila-cthulhu/timingila-cthulhu.so"
+          CONFIG_SAH_LIB_CTHULHU-LXC_LXC_TOOLS_PREFIX="/usr/bin/"
+          # CONFIG_SAH_LIB_CTHULHU-LXC_PRPL_OS_RPATH is not set
+          # pwhm options
+          CONFIG_USE_PRPLMESH_WHM=y
+          CONFIG_SAH_WLD_INIT_SCRIPT="prplmesh_whm"
+          CONFIG_PACKAGE_prplmesh-unit-tests=m
+          # kernel options for lcm
+          CONFIG_KERNEL_ARM_PMU=y
+          CONFIG_KERNEL_BLK_CGROUP=y
+          CONFIG_KERNEL_BLK_DEV_THROTTLING=y
+          CONFIG_KERNEL_CGROUPS=y
+          CONFIG_KERNEL_CGROUP_CPUACCT=y
+          CONFIG_KERNEL_CGROUP_DEVICE=y
+          CONFIG_KERNEL_CGROUP_FREEZER=y
+          CONFIG_KERNEL_CGROUP_PERF=y
+          CONFIG_KERNEL_CGROUP_PIDS=y
+          CONFIG_KERNEL_CGROUP_SCHED=y
+          CONFIG_KERNEL_CPUSETS=y
+          CONFIG_KERNEL_DEVPTS_MULTIPLE_INSTANCES=y
+          CONFIG_KERNEL_FAIR_GROUP_SCHED=y
+          CONFIG_KERNEL_FREEZER=y
+          CONFIG_KERNEL_IPC_NS=y
+          CONFIG_KERNEL_LXC_MISC=y
+          CONFIG_KERNEL_MEMCG=y
+          CONFIG_KERNEL_MEMCG_KMEM=y
+          CONFIG_KERNEL_MEMCG_SWAP=y
+          CONFIG_KERNEL_MEMCG_SWAP_ENABLED=y
+          CONFIG_KERNEL_MM_OWNER=y
+          CONFIG_KERNEL_NAMESPACES=y
+          CONFIG_KERNEL_NETPRIO_CGROUP=y
+          CONFIG_KERNEL_NET_CLS_CGROUP=y
+          CONFIG_KERNEL_NET_NS=y
+          CONFIG_KERNEL_PERF_EVENTS=y
+          CONFIG_KERNEL_PID_NS=y
+          CONFIG_KERNEL_POSIX_MQUEUE=y
+          CONFIG_KERNEL_PROC_PID_CPUSET=y
+          CONFIG_KERNEL_RESOURCE_COUNTERS=y
+          CONFIG_KERNEL_RT_GROUP_SCHED=y
+          CONFIG_KERNEL_SECCOMP=y
+          CONFIG_KERNEL_SECCOMP_FILTER=y
+          CONFIG_KERNEL_USER_NS=y
+          CONFIG_KERNEL_UTS_NS=y
