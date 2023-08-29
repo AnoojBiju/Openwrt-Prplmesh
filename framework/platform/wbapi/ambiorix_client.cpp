@@ -14,7 +14,7 @@ namespace wbapi {
 
 bool AmbiorixClient::connect(const std::string &amxb_backend, const std::string &bus_uri)
 {
-    m_connection = AmbiorixConnectionManager::get_connection(amxb_backend, bus_uri);
+    m_connection = AmbiorixConnectionManager::get_instance()->get_connection(amxb_backend, bus_uri);
     if (!m_connection) {
         LOG(ERROR) << "Failed to connect to the " << bus_uri.c_str() << " bus";
         return false;
@@ -130,7 +130,7 @@ bool AmbiorixClient::init_event_loop(std::shared_ptr<EventLoop> event_loop)
     };
 
     if (event_loop->remove_handlers(ambiorix_fd)) {
-        LOG(WARNING) << "Replacing old handlers for the Amx fd " << std::to_string(ambiorix_fd);
+        LOG(WARNING) << "Replacing old handlers for the Amx fd " << ambiorix_fd;
     }
     if (!event_loop->register_handlers(ambiorix_fd, handlers)) {
         LOG(ERROR) << "Couldn't register event handlers for the Ambiorix fd in the event loop.";
@@ -176,7 +176,7 @@ bool AmbiorixClient::init_signal_loop(std::shared_ptr<EventLoop> event_loop)
     };
 
     if (event_loop->remove_handlers(ambiorix_fd)) {
-        LOG(WARNING) << "Replacing old handlers for the Amx sig fd " << std::to_string(ambiorix_fd);
+        LOG(WARNING) << "Replacing old handlers for the Amx sig fd " << ambiorix_fd;
     }
     if (!event_loop->register_handlers(ambiorix_fd, handlers)) {
         LOG(ERROR) << "Couldn't register event handlers for the Ambiorix signals in the "

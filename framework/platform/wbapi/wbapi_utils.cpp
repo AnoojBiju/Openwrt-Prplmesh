@@ -302,7 +302,7 @@ std::string wbapi_utils::get_path_ap_iface(const std::string &ap_path)
 std::string wbapi_utils::get_path_radio_reference(const AmbiorixVariant &obj)
 {
     std::string value;
-    if (obj.read_child<>(value, "RadioReference")) {
+    if (obj.read_child(value, "RadioReference")) {
         value += ".";
     }
     return value;
@@ -311,7 +311,7 @@ std::string wbapi_utils::get_path_radio_reference(const AmbiorixVariant &obj)
 std::string wbapi_utils::get_path_ssid_reference(const AmbiorixVariant &obj)
 {
     std::string value;
-    if (obj.read_child<>(value, "SSIDReference")) {
+    if (obj.read_child(value, "SSIDReference")) {
         value += ".";
     }
     return value;
@@ -320,21 +320,21 @@ std::string wbapi_utils::get_path_ssid_reference(const AmbiorixVariant &obj)
 std::string wbapi_utils::get_ap_iface(const AmbiorixVariant &obj)
 {
     std::string value;
-    obj.read_child<>(value, "Alias");
+    obj.read_child(value, "Alias");
     return value;
 }
 
 std::string wbapi_utils::get_ap_status(const AmbiorixVariant &obj)
 {
     std::string value;
-    obj.read_child<>(value, "Status");
+    obj.read_child(value, "Status");
     return value;
 }
 
 std::string wbapi_utils::get_ssid_mac(const AmbiorixVariant &obj)
 {
     std::string macLc;
-    if (obj.read_child<>(macLc, "MACAddress")) {
+    if (obj.read_child(macLc, "MACAddress")) {
         std::transform(macLc.begin(), macLc.end(), macLc.begin(), ::tolower);
     }
     return macLc;
@@ -343,21 +343,21 @@ std::string wbapi_utils::get_ssid_mac(const AmbiorixVariant &obj)
 std::string wbapi_utils::get_radio_iface(const AmbiorixVariant &obj)
 {
     std::string value;
-    obj.read_child<>(value, "Name");
+    obj.read_child(value, "Name");
     return value;
 }
 
 std::string wbapi_utils::get_ssid_iface(const AmbiorixVariant &obj)
 {
     std::string value;
-    obj.read_child<>(value, "Name");
+    obj.read_child(value, "Name");
     return value;
 }
 
 std::string wbapi_utils::get_ep_iface(const AmbiorixVariant &obj)
 {
     std::string value;
-    obj.read_child<>(value, "IntfName");
+    obj.read_child(value, "IntfName");
     return value;
 }
 
