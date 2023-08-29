@@ -20,7 +20,9 @@ using namespace wbapi;
 
 namespace bwl {
 
-nl80211_client_whm::nl80211_client_whm() : m_connection(AmbiorixConnectionManager::get_connection())
+nl80211_client_whm::nl80211_client_whm()
+    : m_connection(AmbiorixConnectionManager::get_instance()->get_connection(
+          AMBIORIX_USP_BACKEND_PATH, AMBIORIX_PWHM_USP_BACKEND_URI))
 {
 }
 

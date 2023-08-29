@@ -22,8 +22,17 @@
 #ifndef AMBIORIX_WBAPI_BACKEND_PATH
 #define AMBIORIX_WBAPI_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-ubus.so"
 #endif
+
 #ifndef AMBIORIX_WBAPI_BUS_URI
-#define AMBIORIX_WBAPI_BUS_URI "ubus:/var/run/ubus.sock"
+#define AMBIORIX_WBAPI_BUS_URI "ubus:/var/run/ubus/ubus.sock"
+#endif
+
+#ifndef AMBIORIX_USP_BACKEND_PATH
+#define AMBIORIX_USP_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-usp.so"
+#endif
+
+#ifndef AMBIORIX_PWHM_USP_BACKEND_URI
+#define AMBIORIX_PWHM_USP_BACKEND_URI "usp:/var/run/pwhm_usp.sock"
 #endif
 
 namespace beerocks {
@@ -42,7 +51,7 @@ public:
      * @brief Class constructor.
      *
      * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
+     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus/ubus.sock").
      */
     AmbiorixConnection(const std::string &amxb_backend, const std::string &bus_uri);
 
@@ -69,7 +78,7 @@ public:
      * (created and initialized)
      *
      * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
+     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus/ubus.sock").
      * @return shared_ptr for newly established AmbiorixConnection object
      * or empty in case of error
      */
@@ -211,6 +220,7 @@ public:
 private:
     std::recursive_mutex m_mutex;
     std::string m_amxb_backend;
+    amxc_var_t* m_config = nullptr;
     std::string m_bus_uri;
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     int m_fd                  = -1;

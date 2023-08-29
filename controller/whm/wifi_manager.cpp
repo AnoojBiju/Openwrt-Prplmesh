@@ -33,8 +33,8 @@ WifiManager::WifiManager(std::shared_ptr<beerocks::EventLoop> event_loop, son::d
 
     m_ambiorix_cl = std::make_shared<beerocks::wbapi::AmbiorixClient>();
     LOG_IF(!m_ambiorix_cl, FATAL) << "Unable to create ambiorix client object!";
-
-    LOG_IF(!m_ambiorix_cl->connect(), FATAL) << "Unable to connect to the ambiorix backend!";
+    LOG_IF(!m_ambiorix_cl->connect(AMBIORIX_USP_BACKEND_PATH, AMBIORIX_PWHM_USP_BACKEND_URI), FATAL)
+        << "Unable to connect to the ambiorix backend!";
 
     m_ambiorix_cl->init_event_loop(m_event_loop);
     m_ambiorix_cl->init_signal_loop(m_event_loop);

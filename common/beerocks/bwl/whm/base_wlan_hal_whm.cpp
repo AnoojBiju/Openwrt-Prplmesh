@@ -93,8 +93,11 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
             return;
         }
         auto &vapsExtInfo = hal->m_vapsExtInfo;
-        auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                         [&](const std::pair<std::string, VAPExtInfo> &element) {
+        if (vapsExtInfo.empty()) {
+            hal->refresh_vaps_info(beerocks::IFACE_RADIO_ID);
+        }
+        auto vap_it = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -153,8 +156,11 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
         auto &vapsExtInfo   = hal->m_vapsExtInfo;
-        auto vap_it         = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                           [&](const std::pair<std::string, VAPExtInfo> &element) {
+        if (vapsExtInfo.empty()) {
+            hal->refresh_vaps_info(beerocks::IFACE_RADIO_ID);
+        }
+        auto vap_it = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
@@ -289,7 +295,11 @@ bool base_wlan_hal_whm::reassociate() { return true; }
 
 bool base_wlan_hal_whm::refresh_radio_info()
 {
-    auto radio = m_ambiorix_cl->get_object(m_radio_path);
+    if (m_radio_path.empty()) {
+        m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(m_radio_info.iface_name),
+                                   m_radio_path);
+    }
+    auto radio = m_ambiorix_cl.get_object(m_radio_path);
     if (!radio) {
         LOG(ERROR) << " cannot refresh radio info, radio object missing ";
         return false;

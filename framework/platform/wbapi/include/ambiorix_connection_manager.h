@@ -21,27 +21,45 @@ namespace wbapi {
 class AmbiorixConnectionManager {
 public:
     /**
-     * @brief: find or create ONE shared ambiorix bus connection per URI.
+     * @brief: get single instance
      */
-    static AmbiorixConnectionSmartPtr
+    static AmbiorixConnectionManager *get_instance()
+    {
+        static AmbiorixConnectionManager instance{};
+        return &instance;
+    }
+
+    AmbiorixConnectionManager(const AmbiorixConnectionManager &obj) = delete;
+    AmbiorixConnectionManager &operator=(AmbiorixConnectionManager const &) = delete;
+    ~AmbiorixConnectionManager() {}
+    /**
+     * @brief: get a connection to the uri
+     * @return new connection if no connection has already been created using the passed uri
+     * @return existing connection  if a connection to the uri has been previously created
+     */
+    AmbiorixConnectionSmartPtr
     get_connection(const std::string &amxb_backend = {AMBIORIX_WBAPI_BACKEND_PATH},
                    const std::string &bus_uri      = {AMBIORIX_WBAPI_BUS_URI});
 
     /**
      * @brief: fetch created ambiorix bus connection per file descriptor
      */
-    static const AmbiorixConnectionSmartPtr fetch_connection(int fd);
+    const AmbiorixConnectionSmartPtr fetch_connection(int fd);
 
 private:
+    explicit AmbiorixConnectionManager(){};
+
+    /**
+     * @brief: create  a  new connection to the uri bus_uri
+     */
+    AmbiorixConnectionSmartPtr create(const std::string &amxb_backend, const std::string &bus_uri);
+
     /**
      * @brief List amx bus connections per URI
      */
-    static std::vector<AmbiorixConnectionSmartPtr> connections;
+    std::vector<AmbiorixConnectionSmartPtr> m_connections;
 
-    /**
-     * @brief Mutex to protect list of connections in case of multi-threaded clients
-     */
-    static std::recursive_mutex connections_mutex;
+    std::recursive_mutex m_connections_mutex;
 };
 
 } // namespace wbapi

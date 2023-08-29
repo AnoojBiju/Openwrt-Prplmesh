@@ -35,7 +35,7 @@ public:
      * @brief connect to an ambiorix backend: load backend, connect to the bus
      *
      * @param[in] amxb_backend: path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
+     * @param[in] bus_uri: path to the bus in uri form (ex: "ubus:/var/run/ubus/ubus.sock").
      * @return True on success and false otherwise.
      * 
     */
