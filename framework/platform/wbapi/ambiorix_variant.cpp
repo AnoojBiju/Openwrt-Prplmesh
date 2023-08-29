@@ -256,7 +256,7 @@ bool AmbiorixVariant::get_children(AmbiorixVariantListSmartPtr &result, bool ext
 bool AmbiorixVariant::get_children(AmbiorixVariantMapSmartPtr &result, bool extract)
 {
     if (!result) {
-        result = std::move(std::make_unique<AmbiorixVariantMap>());
+        result = std::make_unique<AmbiorixVariantMap>();
     } else {
         result->clear();
     }
