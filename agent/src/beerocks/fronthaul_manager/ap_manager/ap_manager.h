@@ -119,6 +119,13 @@ private:
     void handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx);
 
     /**
+     * @brief Handles Virtual BSS Move Cancel Message
+     *
+     * @param cmdu_rx Received CMDU to be handled.
+     */
+    void handle_virtual_bss_move_cancel_request(ieee1905_1::CmduMessageRx &cmdu_rx);
+
+    /**
      * @brief Handles the request for the security context of a given vbss client
      * @param cmdu_rx Received CMDU to be handled.
      */
@@ -181,6 +188,15 @@ private:
                  std::string &bridge, bool vbss);
 
     /**
+     * @brief Remove a BSS and its external event handlers.
+     *
+     * @param ifname the interface name.
+     *
+     * @return true on success, false otherwise.
+     */
+    bool remove_bss(std::string &ifname);
+
+    /**
      * @brief Get the interface name to be used for a VBSS, based on its BSSID.
      *
      * @param bssid the BSSID of the VBSS.
@@ -231,6 +247,12 @@ private:
     std::vector<int> m_ap_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
 
     /**
+     * Maps dynamically created interfaces to their external events
+     * queue file descriptor.
+     */
+    std::unordered_map<std::string, int> m_dynamic_bss_ext_events_fds;
+
+    /**
      * File descriptor to the internal events queue.
      */
     int m_ap_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
@@ -270,6 +292,11 @@ private:
      * File descriptor of the timer to run the Finite State Machine.
      */
     int m_fsm_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+
+    /**
+     * File descriptor of the timer to resume deauthenticating unknown stations.
+     */
+    int m_vbss_deauth_unknown_stas_timer = beerocks::net::FileDescriptor::invalid_descriptor;
 
     /**
      * CMDU client connected to the the CMDU server running in slave.

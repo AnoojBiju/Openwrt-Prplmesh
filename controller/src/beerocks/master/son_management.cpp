@@ -1722,11 +1722,15 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 // Because preference is still valid, we need to check the channel's preference
                 int8_t channel_preference = database.get_channel_preference(
                     request->radio_mac(), operating_class, request->channel());
-                if (channel_preference <= 0) {
+                if (channel_preference <=
+                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE) {
                     LOG(ERROR) << "channel #" << request->channel() << " and bandwidth "
                                << beerocks::utils::convert_bandwidth_to_int(request->bandwidth())
                                << ", are "
-                               << ((channel_preference == 0) ? "Non-Operable" : "Invalid");
+                               << ((channel_preference ==
+                                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE)
+                                       ? "Non-Operable"
+                                       : "Invalid");
 
                     response->code() = uint8_t(eChannelSwitchStatus::INOPERABLE_CHANNEL);
                     controller_ctx->send_cmdu(sd, cmdu_tx);
@@ -2219,7 +2223,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // If client doesn't have node in runtime DB - add node to runtime DB.
         if (!database.has_node(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
-            if (!database.add_node_station(client_mac)) {
+            if (!database.add_node_station(network_utils::ZERO_MAC, client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
                 send_response(false);
                 break;
@@ -2526,7 +2530,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             auto &out_stat               = std::get<1>(response->sta_list(count));
             out_stat.sta_mac             = tlvf::mac_from_string(un_station.first);
             out_stat.uplink_rcpi_dbm_enc = un_station.second->uplink_rcpi_dbm_enc;
-            strncpy(out_stat.time_stamp, un_station.second->time_stamp.c_str(), 40);
+            snprintf(out_stat.time_stamp, sizeof(out_stat.time_stamp), "%s",
+                     un_station.second->time_stamp.c_str());
             //Also logging it
             LOG(TRACE) << " Station with mac address : " << out_stat.sta_mac
                        << " has a signal strength of " << out_stat.uplink_rcpi_dbm_enc

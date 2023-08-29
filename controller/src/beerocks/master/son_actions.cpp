@@ -97,7 +97,7 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
         gw_lan_switch = *gw_lan_switches.begin();
     }
 
-    if (!database.add_node_station(tlvf::mac_from_string(client_mac),
+    if (!database.add_node_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
                                    tlvf::mac_from_string(gw_lan_switch))) {
         LOG(ERROR) << "add_node_to_default_location - add_node failed";
         return false;
@@ -258,7 +258,7 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
 }
 
 void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
-                                   ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks)
+                                   task_pool &tasks)
 {
     beerocks::eType mac_type = database.get_node_type(mac);
     auto node_state          = database.get_node_state(mac);

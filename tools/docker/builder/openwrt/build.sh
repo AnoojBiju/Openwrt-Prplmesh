@@ -1,4 +1,5 @@
 #!/bin/bash -e
+# shellcheck disable=SC2076
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 # SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
@@ -106,7 +107,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips"
+    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips haze urx_osp"
 
     while true; do
         case "$1" in
@@ -142,6 +143,12 @@ main() {
         axepoint|intel_mips|nec-wx3000hp)
             TARGET_SYSTEM=intel_mips
             ;;
+        haze)
+            TARGET_SYSTEM=ipq807x
+            ;;
+        urx_osp)
+            TARGET_SYSTEM=mxl_x86_osp_tb341
+            ;;
         *)
             err "Unknown target device: $TARGET_DEVICE"
             info "Currently supported targets are:"
@@ -152,9 +159,13 @@ main() {
             ;;
     esac
 
-    if [ "$TARGET_DEVICE" == "turris-omnia" ] ; then
-        OPENWRT_TOOLCHAIN_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
-        OPENWRT_VERSION='750d3b48630c35dadf510dd2f2beddbbf4bf240b'
+    legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
+    if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
+        dbg "Legacy platform, building on prplOS-old"
+        OPENWRT_TOOLCHAIN_VERSION='f437a188242e0904456f507e0d2682dd4383f73a'
+        OPENWRT_VERSION='f437a188242e0904456f507e0d2682dd4383f73a'
+    else
+        dbg "Building on prplOS-next"
     fi
 
     dbg "OPENWRT_REPOSITORY=$OPENWRT_REPOSITORY"
@@ -201,8 +212,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-OPENWRT_TOOLCHAIN_VERSION='c09edd49049afb1b826b1f61647036ac22294ce0'
-OPENWRT_VERSION='c09edd49049afb1b826b1f61647036ac22294ce0'
+# prplOS-next for reference platforms
+OPENWRT_TOOLCHAIN_VERSION='ec5ee48507a4c2c75838044ce9bc0e674c32c337'
+OPENWRT_VERSION='ec5ee48507a4c2c75838044ce9bc0e674c32c337'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false

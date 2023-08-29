@@ -2238,7 +2238,7 @@ bool BackhaulManager::select_bssid()
     std::string best_24_sta_iface, best_5_high_sta_iface, best_5_low_sta_iface, best_5_sta_iface;
 
     // Support up to 256 scan results
-    std::vector<bwl::SScanResult> scan_results;
+    std::vector<bwl::sScanResult> scan_results;
 
     auto db = AgentDB::get();
 
@@ -2445,7 +2445,7 @@ bool BackhaulManager::select_bssid()
 void BackhaulManager::get_scan_measurement()
 {
     // Support up to 256 scan results
-    std::vector<bwl::SScanResult> scan_results;
+    std::vector<bwl::sScanResult> scan_results;
     auto db = AgentDB::get();
 
     LOG(DEBUG) << "get_scan_measurement: SSID = " << db->device_conf.back_radio.ssid;
@@ -2924,11 +2924,16 @@ bool BackhaulManager::set_mbo_assoc_disallow(const sMacAddr &radio_mac, const sM
 
 std::shared_ptr<bwl::sta_wlan_hal> BackhaulManager::get_selected_backhaul_sta_wlan_hal()
 {
-    auto selected_backhaul_it =
-        std::find_if(m_radios_info.begin(), m_radios_info.end(),
-                     [&](const std::shared_ptr<sRadioInfo> &radio_info) {
-                         return tlvf::mac_from_string(m_selected_backhaul) == radio_info->radio_mac;
-                     });
+    // If backhaul is wired or not set
+    if (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH) {
+        LOG(DEBUG) << "Empty or wired backhaul";
+        return nullptr;
+    }
+    auto backhaulStr          = tlvf::mac_from_string(m_selected_backhaul);
+    auto selected_backhaul_it = std::find_if(m_radios_info.begin(), m_radios_info.end(),
+                                             [&](const std::shared_ptr<sRadioInfo> &radio_info) {
+                                                 return backhaulStr == radio_info->radio_mac;
+                                             });
     if (selected_backhaul_it == m_radios_info.end()) {
         LOG(ERROR) << "Invalid backhaul";
         return nullptr;

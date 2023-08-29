@@ -42,6 +42,7 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     subscribe_to_ep_events();
     subscribe_to_ep_wps_events();
+    subscribe_to_scan_complete_events();
 }
 
 sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
@@ -62,7 +63,7 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
         if (!parameters || parameters->empty()) {
             return;
         }
-        auto params_map = parameters->read_childs<AmbiorixVariantMapSmartPtr>();
+        auto params_map = parameters->read_children<AmbiorixVariantMapSmartPtr>();
         if (!params_map) {
             return;
         }
@@ -139,11 +140,35 @@ void sta_wlan_hal_whm::subscribe_to_ep_wps_events()
     m_ambiorix_cl->subscribe_to_object_event(wifi_wps_path, event_handler, filter);
 }
 
+bool sta_wlan_hal_whm::process_scan_complete_event(const std::string &result)
+{
+
+    if (result == "error") {
+        LOG(DEBUG) << " received ScanComplete event with Error indication!";
+        m_scan_active = false;
+        return false;
+    }
+    if (result == "done" && m_scan_active) {
+        event_queue_push(Event::ScanResults);
+        m_scan_active = false;
+    }
+    return true;
+}
+
 bool sta_wlan_hal_whm::start_wps_pbc()
 {
+    // MultiAPEnable default value may be false, do not rely only on
+    // an outside entity to configure the EndPoint correctly
+    AmbiorixVariant enable_map(AMXC_VAR_ID_HTABLE);
+    enable_map.add_child("MultiAPEnable", true);
+    bool ret = m_ambiorix_cl->update_object(m_ep_path, enable_map);
+    if (!ret) {
+        LOG(WARNING) << "failed to enable multi ap mode for" << m_ep_path;
+    }
+
     AmbiorixVariant args, result;
     std::string wps_path = m_ep_path + "WPS.";
-    bool ret             = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
+    ret                  = m_ambiorix_cl->call(wps_path, "pushButton", args, result);
 
     if (!ret) {
         LOG(ERROR) << "start_wps_pbc() failed!";
@@ -154,19 +179,132 @@ bool sta_wlan_hal_whm::start_wps_pbc()
 
 bool sta_wlan_hal_whm::detach() { return true; }
 
-bool sta_wlan_hal_whm::initiate_scan() { return true; }
+bool sta_wlan_hal_whm::initiate_scan()
+{
+
+    //scan is already active, as per spec, cancel the old one and start new one
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan Failed!";
+        }
+        m_scan_active =
+            false; // if for some reasons, no scan is active, stopScan will return error, thus the need to reset m_scan_active
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
+    m_scan_active = true;
+    return true;
+}
 
 bool sta_wlan_hal_whm::scan_bss(const sMacAddr &bssid, uint8_t channel,
                                 beerocks::eFreqType freq_type)
 {
+    if (bssid == beerocks::net::network_utils::ZERO_MAC || channel == 0) {
+        LOG(ERROR) << "Invalid parameters";
+        return false;
+    }
+
+    //scan is already active, as per spec, cancel the old one and start new one
+    if (m_scan_active) {
+        AmbiorixVariant result_abort;
+        AmbiorixVariant args_abort(AMXC_VAR_ID_HTABLE);
+        if (!m_ambiorix_cl->call(m_radio_path, "stopScan", args_abort, result_abort)) {
+            LOG(INFO) << " remote function stopScan Failed!";
+        }
+        m_scan_active =
+            false; // if for some reasons, no scan is active, stopScan will return error, thus the need to reset m_scan_active
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    args.add_child("BSSID", tlvf::mac_to_string(bssid));
+    args.add_child("channels", channel);
+    if (!m_ambiorix_cl->call(m_radio_path, "startScan", args, result)) {
+        LOG(ERROR) << " remote function call startScan Failed!";
+        return false;
+    }
+    m_scan_active = true;
     return true;
 }
 
-int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
+int sta_wlan_hal_whm::get_scan_results(const std::string &ssid, std::vector<sScanResult> &list,
                                        bool parse_vsie)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return 0;
+    AmbiorixVariant result;
+    list.clear();
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl->call(m_radio_path, "getScanResults", args, result)) {
+        LOG(ERROR) << " remote function call getScanResults Failed!";
+        return 0;
+    }
+    AmbiorixVariantListSmartPtr scan_results_list =
+        result.read_children<AmbiorixVariantListSmartPtr>();
+    if (!scan_results_list) {
+        LOG(ERROR) << "failed reading scan_results!";
+        return 0;
+    }
+
+    if (scan_results_list->empty()) {
+        LOG(ERROR) << "scan_results are empty";
+        return 0;
+    }
+
+    auto results_as_wrapped_list = scan_results_list->front();
+
+    auto ssid_results_as_list =
+        results_as_wrapped_list.read_children<AmbiorixVariantListSmartPtr>();
+
+    for (auto &ssid_results_map : *ssid_results_as_list) {
+        auto data_map = ssid_results_map.read_children<AmbiorixVariantMapSmartPtr>();
+        auto &map     = *data_map;
+
+        if (map.find("BSSID") == map.end()) {
+            LOG(DEBUG) << " no BSSID, skipping...";
+            continue;
+        }
+
+        sScanResult ap;
+
+        std::string bssid;
+        map["BSSID"].get(bssid);
+        ap.bssid = tlvf::mac_from_string(bssid);
+
+        int32_t center_channel(0);
+        if (map.find("CentreChannel") != map.end()) {
+            map["CentreChannel"].get(center_channel);
+        }
+        int32_t bandwidth(0);
+        if (map.find("Bandwidth") != map.end()) {
+            map["Bandwidth"].get(bandwidth);
+        }
+        if (map.find("Channel") != map.end()) {
+            int32_t channel(0);
+            map["Channel"].get(channel);
+            ap.channel = (uint8_t)channel;
+            if (bandwidth != 0 && center_channel != 0) {
+                WifiChannel wifi_chan(channel, center_channel,
+                                      utils::convert_bandwidth_to_enum(bandwidth));
+                ap.freq_type = wifi_chan.get_freq_type();
+            }
+        }
+
+        if (map.find("RSSI") != map.end()) {
+            int32_t rssi(UINT8_MAX);
+            map["RSSI"].get(rssi);
+            ap.rssi = (int8_t)rssi;
+        }
+
+        list.push_back(ap);
+    }
+
+    return list.size();
 }
 
 bool sta_wlan_hal_whm::connect(const std::string &ssid, const std::string &pass, WiFiSec sec,
@@ -278,7 +416,30 @@ bool sta_wlan_hal_whm::disconnect()
     return true;
 }
 
-bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel) { return true; }
+bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel)
+{
+
+    if (!is_connected()) {
+        LOG(ERROR) << get_iface_name() << " Not connected, can't roam";
+        return false;
+    }
+
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    args.add_child("bssid", tlvf::mac_to_string(bssid));
+    args.add_child("tries", 2);        //arbitrary choice
+    args.add_child("timeoutInSec", 5); //arbitrary choice
+    if (!m_ambiorix_cl->call(m_ep_path, "roamTo", args, result)) {
+        LOG(ERROR) << " remote function call roamTo Failed!";
+        return false;
+    }
+
+    // Update the active channel and bssid
+    m_active_bssid   = tlvf::mac_to_string(bssid);
+    m_active_channel = channel.first;
+
+    return true;
+}
 
 bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
 

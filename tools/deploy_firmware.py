@@ -29,7 +29,7 @@ def main():
                                      or using sysupgrade, depending on the target device.""")
     parser.add_argument('-d', '--device',
                         help="""Device to upgrade. Currently supported targets are: nec-wx3000hp
-                        glinet-b1300 turris-omnia axepoint""", required=True)
+                        glinet-b1300 turris-omnia axepoint haze urx_osp""", required=True)
     parser.add_argument(
         '-t',
         '--target-name',

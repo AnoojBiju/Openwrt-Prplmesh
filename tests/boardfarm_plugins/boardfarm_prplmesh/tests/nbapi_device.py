@@ -59,7 +59,7 @@ class NbapiDevice(PrplMeshBaseTest):
                 mac = controller.nbapi_get_parameter(interface.path, "MACAddress")
                 assert status == "Up", f"Interface {mac} is {status}"
                 media_type = controller.nbapi_get_parameter(interface.path, "MediaType")
-                assert 0 < int(media_type), f"Interface {mac} media type is {media_type} ."
+                assert not media_type.isdigit(), f"Interface {mac} media type is {media_type} ."
                 stats_path = interface.path + ".Stats"
                 bytes_sent = controller.nbapi_get_parameter(stats_path, "BytesSent")
                 bytes_received = controller.nbapi_get_parameter(stats_path, "BytesReceived")

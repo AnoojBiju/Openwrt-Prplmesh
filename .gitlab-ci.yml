@@ -55,6 +55,7 @@ platform:
   stage: platform
   needs:
     - build-in-docker
+    - build-in-docker-legacy
     - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
@@ -149,7 +150,7 @@ nbapi-docgen:
       - build/html
     when: always
   needs:
-  - job: build-in-docker
+    - job: build-in-docker
 
 # Updates gitlab pages with the NBAPI documentation:
 # https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
@@ -224,12 +225,12 @@ pytest:
 build-in-docker:
   extends: .build-in-docker
   variables:
-    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
+    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DUSE_PRPLMESH_WHM=ON"
 
-build-in-docker-whm:
+build-in-docker-legacy:
   extends: .build-in-docker
   variables:
-    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DUSE_PRPLMESH_WHM=ON"
+    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
 
 build-in-docker-alpine:
   extends: .build-in-docker
@@ -248,7 +249,7 @@ build-in-docker-static:
 tlvf_test:
   extends: .run-test-in-docker
 
-bwl_dummy_unit_tests:
+bwl_whm_unit_tests:
   extends: .run-test-in-docker
 
 bcl_unit_tests:
@@ -272,13 +273,14 @@ db_unit_tests:
 test-gw-repeater:
   stage: test
   script:
-    - tests/test_gw_repeater.sh --rm --unique-id $CI_JOB_ID
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - tests/test_gw_repeater.sh --rm --unique-id $CI_JOB_ID --tag $CI_PIPELINE_ID
   artifacts:
     paths:
       - logs
     when: always
   needs:
-    - job: build-in-docker
+    - job: build-in-docker-legacy
   tags:
     - docker-test
 
@@ -292,7 +294,7 @@ boardfarm-tests:
       - logs
     when: always
   needs:
-    - job: build-in-docker
+    - job: build-in-docker-legacy
     - job: image-build-boardfarm-ci
   tags:
     - boardfarm-compose
@@ -302,7 +304,7 @@ boardfarm-stability-tests:
   extends: boardfarm-tests
   parallel: 10
   rules:
-    - if: '$STABILITY_TESTS'
+    - if: "$STABILITY_TESTS"
 
 run-certification-tests-R1-prplmesh-essensium:
   extends: .run-certification-tests-R1

@@ -38,12 +38,13 @@ struct VAPExtInfo {
     bool operator!=(const VAPExtInfo &other) const { return !(*this == other); }
 };
 
-struct STAExtInfo {
+struct sStationInfo {
+    explicit sStationInfo(const std::string &path_in) : path(path_in) {}
     std::string path;
 
-    bool operator==(const STAExtInfo &other) const { return (path == other.path); }
+    bool operator==(const sStationInfo &other) const { return (path == other.path); }
 
-    bool operator!=(const STAExtInfo &other) const { return !(*this == other); }
+    bool operator!=(const sStationInfo &other) const { return !(*this == other); }
 };
 
 /*!
@@ -97,17 +98,28 @@ protected:
     std::unique_ptr<nl80211_client> m_iso_nl80211_client; //impl nl80211 client apis with whm dm
     std::string m_radio_path;
     std::unordered_map<std::string, VAPExtInfo> m_vapsExtInfo; // key = vap_ifname
-    std::unordered_map<std::string, STAExtInfo> m_stations;    // key = sta_mac
+    std::unordered_map<std::string, sStationInfo> m_stations;  // key = sta_mac
     void subscribe_to_radio_events();
-    void subscribe_to_ap_events();
-    void subscribe_to_sta_events();
     virtual bool process_radio_event(const std::string &interface, const std::string &key,
                                      const beerocks::wbapi::AmbiorixVariant *value);
+
+    void subscribe_to_ap_events();
     virtual bool process_ap_event(const std::string &interface, const std::string &key,
                                   const beerocks::wbapi::AmbiorixVariant *value);
+
+    void subscribe_to_sta_events();
     virtual bool process_sta_event(const std::string &interface, const std::string &sta_mac,
                                    const std::string &key,
                                    const beerocks::wbapi::AmbiorixVariant *value);
+
+    /**
+     * @brief subscribe to WiFi.Radio. ScanComplete dm notification
+     */
+    void subscribe_to_scan_complete_events();
+    /**
+     * @brief Process the event "ScanComplete" when received from the dm
+     */
+    virtual bool process_scan_complete_event(const std::string &result);
 
     // Private data-members:
 private:

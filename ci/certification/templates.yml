@@ -18,8 +18,8 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R1/turris-omnia.sh
-    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-turris-omnia
   tags:
@@ -32,13 +32,27 @@
   variables:
     RUN_ON_DEVICE: "glinet-b1300"
   before_script:
-    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --whm --full --configuration ci/configuration/certification/R1/whm/glinet-b1300.sh
+    - tools/deploy_firmware.py --device glinet-b1300 --target-name "$RUN_ON_DEVICE" --image "$GLINET_B1300_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/glinet-b1300.sh
     - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
-    - job: build-for-glinet-b1300-whm
+    - job: build-for-glinet-b1300
   tags:
     - certs-tests
     - glinet-b1300
+
+.certification:R1:haze:
+  stage: certification-R1-haze
+  extends: .certification-generic-R1
+  variables:
+    RUN_ON_DEVICE: "haze"
+  before_script:
+    - tools/deploy_firmware.py --device haze --target-name "$RUN_ON_DEVICE" --image "$HAZE_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/haze.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-haze
+  tags:
+    - certs-tests
+    - haze
 
 .certification:R4:axepoint:
   stage: certification-R4-axepoint
@@ -60,24 +74,62 @@
   variables:
     RUN_ON_DEVICE: "turris-omnia"
   before_script:
-    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --configuration ci/configuration/certification/R4/turris-omnia.sh
-    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE build/$RUN_ON_DEVICE/prplmesh.ipk
+    - tools/deploy_firmware.py --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --whm --configuration ci/configuration/certification/R4/whm/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   needs:
     - job: build-for-turris-omnia
   tags:
     - certs-tests-R4
     - turris-omnia
 
+.certification:R4:haze:
+  stage: certification-R4-haze
+  extends: .certification-generic-R4
+  variables:
+    RUN_ON_DEVICE: "haze"
+  before_script:
+    - tools/deploy_firmware.py --device haze --target-name "$RUN_ON_DEVICE" --image "$HAZE_FULLIMAGE" --whm --configuration ci/configuration/certification/R4/whm/haze.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-haze
+  tags:
+    - certs-tests-R4
+    - haze
+
+.certification:R4:urx_osp:
+  stage: certification-R4-OSP
+  extends: .certification-generic-R4
+  variables:
+    RUN_ON_DEVICE: "urx_osp"
+  before_script:
+    - tools/deploy_firmware.py --device urx_osp --target-name "$RUN_ON_DEVICE" --image "$URX_OSP_FULLIMAGE" --whm --configuration ci/configuration/certification/R4/whm/urx_osp.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
+  needs:
+    - job: build-for-osp
+  tags:
+    - certs-tests-R4
+    - osp
+
 include:
   - local: "ci/certification/R1/axepoint.yml"
   - local: "ci/certification/R1/turris-omnia.yml"
   - local: "ci/certification/R1/glinet-b1300.yml"
+  - local: "ci/certification/R1/haze.yml"
   - local: "ci/certification/R4/axepoint.yml"
   - local: "ci/certification/R4/turris-omnia.yml"
-
+  - local: "ci/certification/R4/haze.yml"
+  - local: "ci/certification/R4/urx_osp.yml"
 
 # Merge train tests
 ##################
+
+merge-train:R1:glinet-b1300:MAP-4.2.3_ETH_FH24G:
+  extends: .certification:R1:glinet-b1300
+  rules:
+    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
+      when: on_success
+      allow_failure: true
+  retry: 1
 
 merge-train:R1:turris-omnia:MAP-4.2.1:
   extends: .certification:R1:turris-omnia

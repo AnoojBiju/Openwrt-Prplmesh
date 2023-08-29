@@ -175,7 +175,8 @@ protected:
             radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
         }
 
-        EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+        EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
+                                  g_bssid_1, g_ssid_1, false));
     }
 };
 
@@ -242,7 +243,8 @@ protected:
             .WillRepeatedly(Return(true));
 
         //prepare scenario
-        EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
+        EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_bridge_mac),
+                                           tlvf::mac_from_string(g_client_mac),
                                            tlvf::mac_from_string(g_bssid_1)));
         EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
         EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
@@ -292,7 +294,8 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_FALSE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
 
     //must fail because radio does not exist
-    EXPECT_FALSE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_FALSE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
+                               g_bssid_1, g_ssid_1, false));
 
     //expectations for add_node_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
@@ -343,7 +346,8 @@ TEST_F(DbTest, test_add_vap)
         radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
     }
 
-    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
+                              g_bssid_1, g_ssid_1, false));
     //BSS node and path must exist
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_bssid_1)));
 }
@@ -732,7 +736,8 @@ TEST_F(DbTest, test_set_vap_stats_info)
         radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
     }
 
-    EXPECT_TRUE(m_db->add_vap(g_radio_mac_1, g_vap_id_1, g_bssid_1, g_ssid_1, false));
+    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
+                              g_bssid_1, g_ssid_1, false));
 
     //expectations for set_vap_stats_info
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillRepeatedly(Return(1));
@@ -774,9 +779,10 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
     //expectations for set_node_stats_info
     beerocks::message::sRadioCapabilities sta_cap;
     //hint: set ht_bw and vht_bw to add HT and VHT mibs
-    sta_cap.ht_bw  = beerocks::BANDWIDTH_20;
-    sta_cap.vht_bw = beerocks::BANDWIDTH_80;
-    sta_cap.he_bw  = beerocks::BANDWIDTH_160;
+    sta_cap.ht_bw         = beerocks::BANDWIDTH_20;
+    sta_cap.vht_bw        = beerocks::BANDWIDTH_80;
+    sta_cap.he_bw         = beerocks::BANDWIDTH_160;
+    sta_cap.wifi_standard = beerocks::STANDARD_N | beerocks::STANDARD_AC | beerocks::STANDARD_AX;
 
     EXPECT_CALL(*m_ambiorix, remove_optional_subobject(g_sta_path_1 + '.', "HTCapabilities"))
         .WillOnce(Return(true));
@@ -1033,6 +1039,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
         .WillRepeatedly(Return(true));
     //prepare scenario
     EXPECT_TRUE(m_db->add_node_station(tlvf::mac_from_string(g_client_mac),
+                                       tlvf::mac_from_string(g_client_mac),
                                        tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
     EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",

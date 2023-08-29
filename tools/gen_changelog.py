@@ -69,6 +69,8 @@ def main():
                         help="Display the changelog since this version")
     parser.add_argument('-l', '--latest-version', action='store_true',
                         help="Only show the changes in the latest version (since latest-1)")
+    parser.add_argument('-P', '--no-preamble', action='store_true',
+                        help="Disable the preamble, just print the raw changelog")
     parser.add_argument('-U', '--no-unreleased', action='store_true',
                         help="By default, we start with 'unreleased' changes."
                              "This option suppresses that.")
@@ -130,7 +132,8 @@ def main():
         output.append(o)
         prev = version
 
-    print(preamble)
+    if not args.no_preamble:
+        print(preamble)
     print('\n'.join(reversed(output)))
 
 

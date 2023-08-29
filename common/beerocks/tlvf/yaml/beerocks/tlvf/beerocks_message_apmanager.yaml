@@ -227,6 +227,12 @@ cACTION_APMANAGER_STEERING_EVENT_AUTH_FAIL_NOTIFICATION:
 
 cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST:
   _type: class
+  bridge_ifname_length:
+    _type: uint8_t
+    _length_var: True
+  bridge_ifname:
+    _type: char
+    _length: [bridge_ifname_length]
   wifi_credentials_size:
     _type: uint8_t
     _length_var: True

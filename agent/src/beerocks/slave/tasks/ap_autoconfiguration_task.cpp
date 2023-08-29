@@ -185,6 +185,18 @@ void ApAutoConfigurationTask::work()
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
         LOG(DEBUG) << "Link to the controller is established";
+
+        // Send pre-associated sta notification request to all radio
+        for (const auto &radios_conf_param_kv : m_radios_conf_params) {
+            const auto &radio_iface = radios_conf_param_kv.first;
+            if (!send_ap_connected_sta_notifications_request(radio_iface)) {
+                LOG(ERROR) << "send_ap_connected_sta_notifications_request failed for "
+                           << radio_iface;
+                continue;
+            }
+            LOG(DEBUG) << "Pre-associated station notification request send done for radio iface "
+                       << radio_iface;
+        }
     }
 }
 
@@ -312,6 +324,9 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
 void ApAutoConfigurationTask::configuration_complete_wait_action(const std::string &radio_iface)
 {
     auto &radio_conf_params = m_radios_conf_params[radio_iface];
+#if !USE_PRPLMESH_WHM
+    // counting BSSes that are actually active is a faux-pas for whm; see PPM-2531 for discussion
+    // if after onboarding the agent is not operating correctly, debug by reading the datamodel
 
     // num_of_bss_available updates on ACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_RESPONSE handler
     if (!radio_conf_params.num_of_bss_available) {
@@ -331,6 +346,11 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
             return;
         }
     }
+#endif
+
+    LOG(INFO) << "num_of_bss_available " << radio_conf_params.num_of_bss_available
+              << " enabled_bssids " << radio_conf_params.enabled_bssids.size() << " radio_iface "
+              << radio_iface;
 
     // Arbitrary value
     constexpr uint8_t WAIT_IFACES_INSIDE_THE_BRIDGE_TIMEOUT_SECONDS = 30;
@@ -339,6 +359,8 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         if (!send_ap_bss_info_update_request(radio_iface)) {
             LOG(ERROR) << "send_ap_bss_info_update_request has failed";
             return;
+        } else {
+            LOG(INFO) << "send ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_REQUEST " << radio_iface;
         }
         radio_conf_params.sent_vaps_list_update = true;
 
@@ -350,6 +372,9 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
     if (!radio_conf_params.received_vaps_list_update) {
         return;
     }
+    LOG(INFO) << "received_vaps_list_update is true";
+
+#if !USE_PRPLMESH_WHM
 
     // Check if all reported interfaces are in the bridge
     auto db               = AgentDB::get();
@@ -360,7 +385,13 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
         return;
     }
     for (const auto &bssid : radio->front.bssids) {
+
         if (bssid.iface_name.empty()) {
+            continue;
+        }
+
+        if (!bssid.active) {
+            LOG(INFO) << "skip bssid " << bssid.iface_name << " since it is disabled";
             continue;
         }
         auto found = std::find(ifaces_in_bridge.begin(), ifaces_in_bridge.end(), bssid.iface_name);
@@ -385,6 +416,10 @@ void ApAutoConfigurationTask::configuration_complete_wait_action(const std::stri
             return;
         }
     }
+    /* these checks do not make any sense when using bwl::whm;
+    if after onboarding the agent is not operating correctly,
+    debug by reading the datamodel */
+#endif
 
     FSM_MOVE_STATE(radio_iface, eState::CONFIGURED);
 
@@ -918,6 +953,11 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
     auto tlvProfile2MultiApProfile = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (tlvProfile2MultiApProfile) {
         db->controller_info.profile_support = tlvProfile2MultiApProfile->profile();
+        if (db->controller_info.profile_support ==
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+            db->controller_info.profile_support =
+                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1_AS_OF_R4;
+        }
     }
 
     auto tlvSupportedService = cmdu_rx.getClass<wfa_map::tlvSupportedService>();
@@ -942,11 +982,6 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(WARNING)
             << "Invalid tlvSupportedService - supported service is not MULTI_AP_CONTROLLER";
         return;
-    }
-
-    auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
-    if (multiap_profile_tlv) {
-        db->controller_info.profile_support = multiap_profile_tlv->profile();
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.
@@ -1471,7 +1506,6 @@ bool ApAutoConfigurationTask::handle_wsc_m2_tlv(
 
             // Multi-AP standard requires to tear down any misconfigured BSS.
             config.bss_type = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
-
         } else if (db->controller_info.profile_support !=
                        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
                    bBSS && !bBSS_p1_disallowed && !bBSS_p2_disallowed) {
@@ -1643,8 +1677,9 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 
     const auto &fronthaul_iface = radio->front.iface_name;
 
+    auto &radio_conf_params = m_radios_conf_params[radio_iface];
     LOG(INFO) << "received ACTION_APMANAGER_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION "
-              << fronthaul_iface;
+              << fronthaul_iface << " waiting for it? " << radio_conf_params.sent_vaps_list_update;
 
     m_btl_ctx.update_vaps_info(fronthaul_iface, notification_in->params().vaps);
 
@@ -1656,7 +1691,7 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
     }
 
     notification_out->params() = notification_in->params();
-    LOG(TRACE) << "send ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
+    LOG(TRACE) << "handle ACTION_CONTROL_HOSTAP_VAPS_LIST_UPDATE_NOTIFICATION " << fronthaul_iface;
     m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
 
     // This probably changed the "AP Operational BSS" list in topology, so send a notification
@@ -1673,8 +1708,6 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 
     tlvAlMacAddress->mac() = db->bridge.mac;
     m_btl_ctx.send_cmdu_to_controller(fronthaul_iface, m_cmdu_tx);
-
-    auto &radio_conf_params = m_radios_conf_params[radio_iface];
 
     radio_conf_params.received_vaps_list_update = true;
 
@@ -2063,6 +2096,10 @@ bool ApAutoConfigurationTask::send_ap_bss_configuration_message(
         LOG(ERROR) << "Failed building message!";
         return false;
     }
+
+    auto db = AgentDB::get();
+    request->set_bridge_ifname(db->bridge.iface_name);
+
     std::stringstream ss;
     for (const auto &config : configs) {
         auto c = request->create_wifi_credentials();
@@ -2197,11 +2234,6 @@ bool ApAutoConfigurationTask::handle_ap_autoconfiguration_wsc_vs_extension_tlv(
 
     if (!send_monitor_son_config(radio_iface, joined_response->config())) {
         LOG(ERROR) << "send_monitor_son_config failed";
-        return false;
-    }
-
-    if (!send_ap_connected_sta_notifications_request(radio_iface)) {
-        LOG(ERROR) << "send_ap_connected_sta_notifications_request failed";
         return false;
     }
 

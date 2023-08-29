@@ -987,11 +987,11 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
 
         string_utils::copy_string(ifr.ifr_name, iface.c_str(), sizeof(ifr.ifr_name));
 #ifdef ETHTOOL_GLINKSETTINGS
-        struct {
-            struct ethtool_link_settings req;
-            __u32 link_mode_data[3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32];
-        } ecmd;
-        ifr.ifr_data = reinterpret_cast<char *>(&ecmd);
+        char ecmd[sizeof(struct ethtool_link_settings) +
+                  3 * ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 * sizeof(__u32)] = {};
+        struct ethtool_link_settings *req = reinterpret_cast<struct ethtool_link_settings *>(ecmd);
+        __u32 *link_mode_data             = reinterpret_cast<__u32 *>(req + 1);
+        ifr.ifr_data                      = ecmd;
 
         /* Handshake with kernel to determine number of words for link
          * mode bitmaps. When requested number of bitmap words is not
@@ -999,38 +999,36 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
          * opposite of what it is expecting. We request length 0 below
          * (aka. invalid bitmap length) to get this info.
          */
-        memset(&ecmd, 0, sizeof(ecmd));
-        ecmd.req.cmd = ETHTOOL_GLINKSETTINGS;
-        rc           = ioctl(sock, SIOCETHTOOL, &ifr);
+        req->cmd = ETHTOOL_GLINKSETTINGS;
+        rc       = ioctl(sock, SIOCETHTOOL, &ifr);
         if (0 == rc) {
             /**
              * See above: we expect a strictly negative value from kernel.
              */
-            if ((ecmd.req.link_mode_masks_nwords >= 0) || (ETHTOOL_GLINKSETTINGS != ecmd.req.cmd)) {
+            if ((req->link_mode_masks_nwords >= 0) || (ETHTOOL_GLINKSETTINGS != req->cmd)) {
                 LOG(ERROR) << "ETHTOOL_GLINKSETTINGS handshake failed";
             } else {
                 /**
-                 * Got the real ecmd.req.link_mode_masks_nwords, now send the real request
+                 * Got the real req->link_mode_masks_nwords, now send the real request
                  */
-                ecmd.req.cmd                    = ETHTOOL_GLINKSETTINGS;
-                ecmd.req.link_mode_masks_nwords = -ecmd.req.link_mode_masks_nwords;
-                rc                              = ioctl(sock, SIOCETHTOOL, &ifr);
-                if ((0 != rc) || (ecmd.req.link_mode_masks_nwords <= 0) ||
-                    (ecmd.req.cmd != ETHTOOL_GLINKSETTINGS)) {
+                req->cmd                    = ETHTOOL_GLINKSETTINGS;
+                req->link_mode_masks_nwords = -req->link_mode_masks_nwords;
+                rc                          = ioctl(sock, SIOCETHTOOL, &ifr);
+                if ((0 != rc) || (req->link_mode_masks_nwords <= 0) ||
+                    (req->cmd != ETHTOOL_GLINKSETTINGS)) {
                     LOG(ERROR) << "ETHTOOL_GLINKSETTINGS request failed";
                 } else {
-                    link_speed = ecmd.req.speed;
+                    link_speed = req->speed;
 
                     /* layout of link_mode_data fields:
                      * __u32 map_supported[link_mode_masks_nwords];
                      * __u32 map_advertising[link_mode_masks_nwords];
                      * __u32 map_lp_advertising[link_mode_masks_nwords];
                      */
-                    max_advertised_speed = link_speed;
-                    const __u32 *map_advertising =
-                        &ecmd.link_mode_data[ecmd.req.link_mode_masks_nwords];
+                    max_advertised_speed         = link_speed;
+                    const __u32 *map_advertising = &link_mode_data[req->link_mode_masks_nwords];
                     linux_iface_get_max_speed_from_link_modes(
-                        map_advertising, ecmd.req.link_mode_masks_nwords, max_advertised_speed);
+                        map_advertising, req->link_mode_masks_nwords, max_advertised_speed);
                     result = true;
                 }
             }

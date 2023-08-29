@@ -99,10 +99,21 @@ int cfg_get_wifi_params(const char iface[BPL_IFNAME_LEN], struct BPL_WLAN_PARAMS
         return RETURN_ERR;
     }
 
-    radio_obj->read_child<>(wlan_params->enabled, "Enable");
-    radio_obj->read_child<>(wlan_params->channel, "Channel");
+    radio_obj->read_child(wlan_params->enabled, "Enable");
+    radio_obj->read_child(wlan_params->channel, "Channel");
 
-    // TODO: read sub_band_dfs + country_code wifi params (PPM-2108).
+    bool ieee80211h_supported = false;
+    radio_obj->read_child(ieee80211h_supported, "IEEE80211hSupported");
+    bool ieee80211h_enabled = false;
+    radio_obj->read_child(ieee80211h_enabled, "IEEE80211hEnabled");
+    wlan_params->sub_band_dfs = ieee80211h_supported && ieee80211h_enabled;
+
+    std::string country_code;
+    if (radio_obj->read_child(country_code, "RegulatoryDomain")) {
+        wlan_params->country_code[0] = country_code.at(0);
+        wlan_params->country_code[1] = country_code.at(1);
+        wlan_params->country_code[2] = '\0';
+    }
 
     return RETURN_OK;
 }
@@ -125,14 +136,14 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
         auto radio_obj = bpl_cfg_get_wifi_radio_object(ap);
         if (radio_obj) {
             std::string band_str;
-            if (radio_obj->read_child<>(band_str, "OperatingFrequencyBand")) {
+            if (radio_obj->read_child(band_str, "OperatingFrequencyBand")) {
                 band_str = wbapi_utils::band_short_name(band_str);
             }
             configuration.operating_class = son::wireless_utils::string_to_wsc_oper_class(band_str);
         }
 
         std::string multi_ap_type_str;
-        if (ap.read_child<>(multi_ap_type_str, "MultiAPType")) {
+        if (ap.read_child(multi_ap_type_str, "MultiAPType")) {
             if (multi_ap_type_str.find("FronthaulBSS") != std::string::npos) {
                 configuration.fronthaul = true;
             }
@@ -140,9 +151,14 @@ bool bpl_cfg_get_wireless_settings(std::list<son::wireless_utils::sBssInfoConf> 
                 configuration.backhaul = true;
             }
         }
-
-        if (bpl_cfg_get_wifi_credentials(iface, configuration)) {
+        bool ap_enable = false;
+        ap.read_child(ap_enable, "Enable");
+        if (ap_enable && bpl_cfg_get_wifi_credentials(iface, configuration)) {
+            LOG(DEBUG) << "add " << configuration.ssid << " to wireless settings size "
+                       << wireless_settings.size() << " path " << it.first;
             wireless_settings.push_back(configuration);
+        } else {
+            LOG(DEBUG) << " ap " << it.first << " is disabled";
         }
     }
 
@@ -164,20 +180,20 @@ bool bpl_cfg_get_wifi_credentials(const std::string &iface,
     }
 
     configuration.bssid = tlvf::mac_from_string(wbapi_utils::get_ssid_mac(*ssid_obj));
-    ssid_obj->read_child<>(configuration.ssid, "SSID");
+    ssid_obj->read_child(configuration.ssid, "SSID");
 
     std::string mode_enabled;
-    if (ap_sec_obj->read_child<>(mode_enabled, "ModeEnabled")) {
+    if (ap_sec_obj->read_child(mode_enabled, "ModeEnabled")) {
         configuration.authentication_type = wbapi_utils::security_mode_from_string(mode_enabled);
     }
 
     std::string encryption_mode;
-    if (ap_sec_obj->read_child<>(encryption_mode, "EncryptionMode")) {
+    if (ap_sec_obj->read_child(encryption_mode, "EncryptionMode")) {
         configuration.encryption_type = wbapi_utils::encryption_type_from_string(encryption_mode);
     }
 
     std::string key_pass_phrase;
-    if (ap_sec_obj->read_child<>(key_pass_phrase, "KeyPassPhrase")) {
+    if (ap_sec_obj->read_child(key_pass_phrase, "KeyPassPhrase")) {
         configuration.network_key = key_pass_phrase;
     }
 
@@ -253,7 +269,7 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
         if ((ep.empty()) ||
             !(m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ep),
                                           ep_radio_path)) ||
-            (ep_radio_path != radio_path) || !(ep.read_child<>(ep_ifname, "IntfName"))) {
+            (ep_radio_path != radio_path) || !(ep.read_child(ep_ifname, "IntfName"))) {
             continue;
         }
 

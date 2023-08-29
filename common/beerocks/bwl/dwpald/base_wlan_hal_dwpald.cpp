@@ -24,9 +24,17 @@ extern "C" {
 
 #define UNHANDLED_EVENTS_LOGS 20
 #define MAX_FAILED_NL_MSG_GET 3
+int DWPALD_ATTACH_MAX_RETRY = 5;
+int CONN_STATE_MAX_RETRY    = 5;
 
 namespace bwl {
 namespace dwpal {
+
+/*
+ * Global mutex to call critical DWPALD APIs between ApManager and Monitor thread to avoid
+ * race conditions.
+ */
+std::mutex base_wlan_hal_dwpal::m_lock;
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Functions ////////////////////////////
@@ -126,15 +134,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
         })
 
         // Handle "Detach" event
-        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach,
-            [&](TTransition &transition, const void *args) -> bool {
-                bool detach = false;
-                if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                    detach = true;
-                    LOG(DEBUG) << "Disconnected dwpald";
-                }
-                return detach;
-            })
+        .on(dwpal_fsm_event::Detach, dwpal_fsm_state::Detach)
 
         // Handle "Attach" event
         .on(dwpal_fsm_event::Attach,
@@ -159,10 +159,19 @@ bool base_wlan_hal_dwpal::fsm_setup()
                     }
                     return true;
                 } else {
-                    LOG(ERROR) << "Failed attaching to the hostapd control interface of "
-                               << m_radio_info.iface_name;
-                    conn_state[get_iface_name().c_str()] = false;
-                    return (transition.change_destination(dwpal_fsm_state::Detach));
+                    if (m_dwpald_attach_retry_counter < DWPALD_ATTACH_MAX_RETRY) {
+                        LOG(INFO)
+                            << "Incrementing m_dwpald_attach_retry_counter and returning false";
+                        ++m_dwpald_attach_retry_counter;
+                        return false;
+                    } else {
+                        LOG(ERROR) << "Failed attaching to the hostapd control interface of "
+                                   << m_radio_info.iface_name;
+                        conn_state[get_iface_name().c_str()] = false;
+                        m_dwpald_attach_retry_counter        = 0;
+                        LOG(INFO) << "dwpald_attach_retry_counter reached maximum retry";
+                        return (transition.change_destination(dwpal_fsm_state::Detach));
+                    }
                 }
 
                 // Stay in the current state
@@ -187,7 +196,18 @@ bool base_wlan_hal_dwpal::fsm_setup()
         .on(dwpal_fsm_event::Attach, {dwpal_fsm_state::AttachVaps, dwpal_fsm_state::Detach},
             [&](TTransition &transition, const void *args) -> bool {
                 // Attempt to read radio info
-                if (!refresh_radio_info()) {
+                if (m_conn_state_retry_counter < CONN_STATE_MAX_RETRY) {
+                    if ((conn_state[get_iface_name().c_str()]) && (refresh_radio_info())) {
+                        LOG(DEBUG) << "Refresh radio information successfull";
+                        m_conn_state_retry_counter = 0;
+                    } else {
+                        LOG(DEBUG) << "Incrementing m_conn_state_retry_counter and return false";
+                        ++m_conn_state_retry_counter;
+                        return false;
+                    }
+                } else {
+                    LOG(DEBUG) << "conn_state_max_retry reached";
+                    m_conn_state_retry_counter = 0;
                     return (transition.change_destination(dwpal_fsm_state::Detach));
                 }
 
@@ -358,17 +378,9 @@ bool base_wlan_hal_dwpal::fsm_setup()
         //////////////////////////////////////////////////////////////////////////
 
         .state(dwpal_fsm_state::Detach)
-
         .entry([&](const void *args) -> bool {
-            bool success        = false;
-            m_fds_ext_events[0] = -1;
-            m_fd_nl_events      = -1;
             LOG(DEBUG) << "dwpal_fsm_state::Detach";
-            if (dwpald_disconnect() == DWPALD_SUCCESS) {
-                success = true;
-                LOG(DEBUG) << "Disconnected dwpald";
-            }
-            return success;
+            return true;
         })
 
         // Handle "Attach" event
@@ -494,8 +506,12 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
         //LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
         result = DWPALD_DISCONNECTED;
         if ((conn_state[get_iface_name().c_str()] == true)) {
+            buff_size_copy = m_wpa_ctrl_buffer_size;
+            // Lock acquired to avoid parallel activity with dwpald_stop_listener.
+            std::unique_lock<std::mutex> lock(m_lock);
             result = dwpald_hostap_cmd(get_iface_name().c_str(), cmd.c_str(), cmd.length(), buffer,
                                        &buff_size_copy);
+            lock.unlock();
             if (result != 0) {
                 LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
             }
@@ -1070,6 +1086,10 @@ bool base_wlan_hal_dwpal::update_conn_status(char *ifname, std::vector<int> &vap
                 return false;
             }
             break;
+        }
+        if (tmp_str == nullptr) {
+            //Ignore if tmp_str is null
+            continue;
         }
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(tmp_str);
         if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {

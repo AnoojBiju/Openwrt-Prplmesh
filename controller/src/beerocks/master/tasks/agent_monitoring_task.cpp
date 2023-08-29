@@ -128,6 +128,7 @@ void agent_monitoring_task::handle_event(int event_type, void *obj)
 bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
                                                    ieee1905_1::CmduMessageRx &cmdu_rx)
 {
+    LOG(DEBUG) << "Starting agent monitoring for agent " << src_mac;
     auto tlvDeviceInformation = cmdu_rx.getClass<ieee1905_1::tlvDeviceInformation>();
     if (!tlvDeviceInformation) {
         LOG(ERROR) << "ieee1905_1::tlvDeviceInformation not found";
@@ -148,6 +149,7 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
 
         if (radio_entry.radio_bss_list_length() != bsses_from_m2.size()) {
 
+            LOG(WARNING) << "Not all BSSes from M2 configured by agent";
             // Not all BSSes from M2 configured by Agents radio
             return false;
         }
@@ -279,24 +281,9 @@ bool agent_monitoring_task::send_multi_ap_policy_config_request(const sMacAddr &
         return false;
     }
 
-    auto ruid                  = radio_basic_caps->radio_uid();
-    auto al_mac                = m1->mac_addr();
-    const auto &bss_info_confs = database.get_bss_info_configuration(m1->mac_addr());
-    uint8_t num_bsss           = 0;
-
-    for (const auto &bss_info_conf : bss_info_confs) {
-        // Check if the radio supports it
-        if (!son_actions::has_matching_operating_class(*radio_basic_caps, bss_info_conf)) {
-            continue;
-        }
-        if (num_bsss >= radio_basic_caps->maximum_number_of_bsss_supported()) {
-            LOG(INFO) << "Configured BSSes exceed maximum for " << al_mac << " radio " << ruid;
-            break;
-        }
-        m_bss_configured[ruid].push_back(bss_info_conf);
-        num_bsss++;
-    }
-
+    auto ruid              = radio_basic_caps->radio_uid();
+    m_bss_configured[ruid] = database.get_configured_bss_info(ruid);
+    uint8_t num_bsss       = m_bss_configured[ruid].size();
     if (!cmdu_tx.create(0, ieee1905_1::eMessageType::MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE)) {
         LOG(ERROR) << "Failed building MULTI_AP_POLICY_CONFIG_REQUEST_MESSAGE ! ";
         return false;
@@ -554,9 +541,8 @@ bool agent_monitoring_task::add_profile_2default_802q_settings_tlv(
 bool agent_monitoring_task::add_traffic_policy_tlv(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                                    std::shared_ptr<WSC::m1> m1)
 {
-    auto traffic_separation_configs =
-        database.get_traffic_separataion_configuration(m1->mac_addr());
-    auto al_mac = m1->mac_addr();
+    auto traffic_separation_configs = database.get_traffic_separation_configuration(m1->mac_addr());
+    auto al_mac                     = m1->mac_addr();
 
     auto agent = database.m_agents.get(al_mac);
     if (!agent) {

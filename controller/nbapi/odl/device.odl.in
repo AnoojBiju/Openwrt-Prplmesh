@@ -169,7 +169,7 @@
             }
             %read-only string MACAddress = "00:00:00:00:00:00";
             %read-only string Name = "NoName";
-            %read-only uint16 MediaType = 0;
+            %read-only string MediaType = "UNKNOWN_MEDIA";
 
             object Stats {
                 %read-only uint64 BytesSent = 0;

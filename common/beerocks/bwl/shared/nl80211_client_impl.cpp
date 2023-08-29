@@ -267,7 +267,7 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
 	     * Multiple BSSID capability is set in the 6th bit of 3rd byte of the
 	     * @WLAN_EID_EXT_CAPABILITY information element.
 	     */
-            uint8_t ext_capability[15];
+            uint8_t ext_capability[15] = {};
             if (tb[NL80211_ATTR_EXT_CAPA]) {
                 size_t actual_length = nla_len(tb[NL80211_ATTR_EXT_CAPA]);
                 if (radio_info.bands.empty()) {
@@ -476,21 +476,15 @@ bool nl80211_client_impl::get_radio_info(const std::string &interface_name, radi
                                 band.he_capability    = band.he_capability | (1 << 7);
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 39);
                             }
-
-                            switch (band.he.he_phy_capab_info[4] & 3) {
-                            case 3:
+                            if (band.he.he_phy_capab_info[4] & 2) {
                                 //set the bit if mu_beamformer is supported.
                                 band.he_capability    = band.he_capability | (1 << 6);
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 37);
-                                break;
-                            case 1:
+                            }
+                            if (band.he.he_phy_capab_info[4] & 1) {
                                 //set the bit if su_beamformee is supported.
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 38);
-                                break;
-                            default:
-                                break;
                             }
-
                             if ((band.he.he_phy_capab_info[4] >> 2) & 3) {
                                 //set the bit if beamformee_sts_less_80mhz is supported.
                                 band.wifi6_capability = band.wifi6_capability | ((uint64_t)1 << 36);
@@ -1257,6 +1251,92 @@ bool nl80211_client_impl::send_delba(const std::string &interface_name, const sM
 
         return false;
     }
+
+    // Try to set the aggregation mode to manual through debugfs and
+    // send a delba, so that the source AP does not re-negociate block
+    // acks until the station had a chance to move. We have to do it
+    // through debugfs until we get the next kernel from prplos-next
+    // (see PPM-2191).
+
+    uint32_t wiphy;
+
+    // get the wiphy:
+    int ret = m_socket->send_receive_msg(
+        NL80211_CMD_GET_INTERFACE, 0,
+        [&](struct nl_msg *msg) -> bool {
+            nla_put_u32(msg, NL80211_ATTR_IFINDEX, iface_index);
+
+            return true;
+        },
+        [&](struct nl_msg *msg) {
+            struct nlattr *tb[NL80211_ATTR_MAX + 1];
+            struct genlmsghdr *gnlh = (struct genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+
+            // Parse the netlink message
+            if (nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0),
+                          NULL)) {
+                LOG(ERROR) << "Failed to parse netlink message!";
+                return;
+            }
+
+            if (tb[NL80211_ATTR_WIPHY]) {
+                wiphy = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+            } else {
+                LOG(DEBUG) << "NL80211_ATTR_WIPHY attribute is missing";
+            }
+        });
+
+    if (!ret) {
+        LOG(ERROR) << "Failed to get the wiphy!";
+        return false;
+    }
+
+    std::string station = tlvf::mac_to_string(dst);
+    // As mac_to_string doesn't give any guarantee that the mac is
+    // lowercase (which means it could change in the future), make
+    // sure it is:
+    std::transform(station.begin(), station.end(), station.begin(), ::tolower);
+    std::string debugfs_dir = std::string("/sys/kernel/debug/ieee80211/phy") +
+                              std::to_string(wiphy) + "/netdev:" + interface_name + "/stations/" +
+                              station;
+    std::string aggr_mode_path = debugfs_dir + "/aggr_mode";
+    std::ofstream aggr_mode_entry(aggr_mode_path);
+
+    if (!aggr_mode_entry) {
+        LOG(ERROR) << "Failed to open debugfs entry '" << aggr_mode_path << "'!";
+        return false;
+    }
+
+    aggr_mode_entry << 1 << std::endl;
+    aggr_mode_entry.close();
+
+    if (aggr_mode_entry.fail()) {
+        LOG(ERROR) << "Failed to write to " << aggr_mode_path << ": " << strerror(errno);
+        return false;
+    }
+
+    std::string delba_path = debugfs_dir + "/delba";
+
+    // Send a delba with reason code 1 (unknown) for all TIDs:
+    for (int tid = 0; tid < 16; tid++) {
+        std::ofstream delba_entry(delba_path);
+
+        if (!delba_entry) {
+            LOG(ERROR) << "Failed to open debugfs entry '" << delba_path << "'!";
+            return false;
+        }
+
+        delba_entry << std::to_string(tid) + " 1 1" << std::endl;
+        delba_entry.close();
+
+        if (delba_entry.fail()) {
+            LOG(ERROR) << "Failed to write to " << delba_path << ": " << strerror(errno);
+            return false;
+        }
+    }
+
+    // Next, we send a delba frame manually anyway in case the debugfs
+    // entry didn't work as expected.
 
     // Create the MAC header that we will include as an attribute:
     uint8_t tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];

@@ -65,7 +65,7 @@ void network_health_check_task::work()
                                 << " hostap = " << backhaul_manager_hostap
                                 << " backhaul = " << backhaul
                                 << " last_seen_delta=" << int(last_seen_delta);
-                son_actions::handle_dead_node(backhaul, true, database, cmdu_tx, tasks);
+                son_actions::handle_dead_node(backhaul, true, database, tasks);
             }
         }
         state = CLIENT_HEALTH_CHECK;
@@ -203,7 +203,7 @@ void network_health_check_task::handle_responses_timeout(
                 //TASK_LOG(DEBUG) << "suspected_dis_clients.erase " << pending_node;
                 LOG(WARNING) << "CLIENT is not responding!! handle dead client mac = "
                              << pending_node;
-                son_actions::handle_dead_node(pending_node, true, database, cmdu_tx, tasks);
+                son_actions::handle_dead_node(pending_node, true, database, tasks);
                 pending_node.clear();
                 return;
             }

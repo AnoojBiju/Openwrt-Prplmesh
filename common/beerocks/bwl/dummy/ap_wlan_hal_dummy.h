@@ -40,8 +40,11 @@ public:
     virtual bool
     set_channel(int chan, beerocks::eWiFiBandwidth bw = beerocks::eWiFiBandwidth::BANDWIDTH_UNKNOWN,
                 int center_channel = 0) override;
-    virtual bool sta_allow(const std::string &mac, const std::string &bssid) override;
-    virtual bool sta_deny(const std::string &mac, const std::string &bssid) override;
+    virtual bool sta_allow(const sMacAddr &mac, const sMacAddr &bssid) override;
+    virtual bool sta_deny(const sMacAddr &mac, const sMacAddr &bssid) override;
+    virtual bool sta_acceptlist_modify(const sMacAddr &mac, const sMacAddr &bssid,
+                                       bwl::sta_acl_action action) override;
+    virtual bool set_macacl_type(const eMacACLType &acl_type, const sMacAddr &bssid) override;
     virtual bool sta_disassoc(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_deauth(int8_t vap_id, const std::string &mac, uint32_t reason = 0) override;
     virtual bool sta_bss_steer(int8_t vap_id, const std::string &mac, const std::string &bssid,
@@ -50,7 +53,8 @@ public:
     virtual bool
     update_vap_credentials(std::list<son::wireless_utils::sBssInfoConf> &bss_info_conf_list,
                            const std::string &backhaul_wps_ssid,
-                           const std::string &backhaul_wps_passphrase) override;
+                           const std::string &backhaul_wps_passphrase,
+                           const std::string &bridge_ifname) override;
     virtual bool sta_unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                               int vht_center_frequency, int delay,
                                               int window_size) override;
@@ -102,20 +106,23 @@ public:
     virtual bool set_primary_vlan_id(uint16_t primary_vlan_id) override;
     virtual bool set_cce_indication(uint16_t advertise_cce) override;
 
-    virtual bool add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
-                         std::string &bridge, bool vbss) override;
+    virtual int add_bss(std::string &ifname, son::wireless_utils::sBssInfoConf &bss_conf,
+                        std::string &bridge, bool vbss) override;
     virtual bool remove_bss(std::string &ifname) override;
     virtual bool add_key(const std::string &ifname, const sKeyInfo &key_info) override;
     virtual bool add_station(const std::string &ifname, const sMacAddr &mac,
-                             assoc_frame::AssocReqFrame &assoc_req) override;
+                             std::vector<uint8_t> &raw_assoc_req) override;
     virtual bool get_key(const std::string &ifname, sKeyInfo &key_info) override;
     virtual bool send_delba(const std::string &ifname, const sMacAddr &dst, const sMacAddr &src,
                             const sMacAddr &bssid) override;
+    virtual bool set_beacon_da(const std::string &ifname, const sMacAddr &mac) override;
+    virtual bool update_beacon(const std::string &ifname) override;
 
     virtual void send_unassoc_sta_link_metric_query(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsQuery> &query) override;
     virtual bool prepare_unassoc_sta_link_metrics_response(
         std::shared_ptr<wfa_map::tlvUnassociatedStaLinkMetricsResponse> &response) override;
+    virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
 
     // Protected methods:
 protected:

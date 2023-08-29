@@ -167,6 +167,12 @@ protected:
      */
     std::unordered_map<std::string, bool> conn_state;
 
+    /*
+    * Mutex to call critical dwpald APIs between ApManager and Monitor thread to avoid
+    * race conditions.
+    */
+    static std::mutex m_lock;
+
     // Private data-members:
 private:
     bool get_vap_type(const std::string &ifname, bool &fronthaul, bool &backhaul);
@@ -206,6 +212,19 @@ private:
      */
     int m_dwpal_event_pfd[2] = {0};
     int m_nl_event_pfd[2]    = {0};
+
+    /**
+     * @brief Retry Counters
+     * m_conn_state_retry_counter is used to hold
+     * the number of times the monitor thread can
+     * retry to get the radio information.
+     *
+     * m_dwpald_attach_retry_counter is used to hold
+     * the number of times the monitor thread can
+     * retry to attach with dwpald interface.
+     */
+    int m_conn_state_retry_counter    = 0;
+    int m_dwpald_attach_retry_counter = 0;
 };
 
 } // namespace dwpal

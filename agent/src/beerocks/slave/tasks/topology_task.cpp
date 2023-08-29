@@ -179,17 +179,19 @@ void TopologyTask::handle_topology_discovery(ieee1905_1::CmduMessageRx &cmdu_rx,
     sMacAddr local_receiving_iface_mac = tlvf::mac_from_string(local_receiving_iface_mac_str);
 
     // Check if it is a new device so if it does, we will send a Topology Notification.
-    bool new_device = false;
+    bool new_device = true;
     for (auto &neighbors_on_local_iface_entry : db->neighbor_devices) {
         auto &neighbors_on_local_iface = neighbors_on_local_iface_entry.second;
         auto &local_iface_mac          = neighbors_on_local_iface_entry.first;
+
+        new_device &=
+            neighbors_on_local_iface.find(tlvAlMac->mac()) == neighbors_on_local_iface.end();
+
         // Remove old device from other interfaces
         if (local_iface_mac != local_receiving_iface_mac) {
             neighbors_on_local_iface.erase(tlvAlMac->mac());
             continue;
         }
-        new_device =
-            neighbors_on_local_iface.find(tlvAlMac->mac()) == neighbors_on_local_iface.end();
     }
 
     LOG(DEBUG) << "sender iface_mac=" << tlvMac->mac()
@@ -227,26 +229,32 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     }
 
     if (!add_device_information_tlv()) {
+        LOG(ERROR) << "Failed to add device information TLV";
         return;
     }
 
     if (!add_1905_neighbor_device_tlv()) {
+        LOG(ERROR) << "Failed to add neighbor device TLV";
         return;
     }
 
     if (!add_supported_service_tlv()) {
+        LOG(ERROR) << "Failed to add supported service TLV";
         return;
     }
 
     if (!add_ap_operational_bss_tlv()) {
+        LOG(ERROR) << "Failed to add AP operational BSS TLV";
         return;
     }
 
     if (!add_associated_clients_tlv()) {
+        LOG(ERROR) << "Failed to add associated clients TLV";
         return;
     }
 
     if (!add_vs_tlv_bssid_iface_mapping()) {
+        LOG(ERROR) << "Failed to add VS TLV BSSID iface mapping";
         return;
     }
 
@@ -255,6 +263,11 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
     auto multiap_profile_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2MultiApProfile>();
     if (multiap_profile_tlv) {
         db->controller_info.profile_support = multiap_profile_tlv->profile();
+        if (db->controller_info.profile_support ==
+            wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+            db->controller_info.profile_support =
+                wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1_AS_OF_R4;
+        }
 
         auto tlvProfile2MultiApProfile = m_cmdu_tx.addClass<wfa_map::tlvProfile2MultiApProfile>();
         if (!tlvProfile2MultiApProfile) {
@@ -758,6 +771,7 @@ bool TopologyTask::add_associated_clients_tlv()
     }
 
     if (include_associated_clients_tlv) {
+        LOG(DEBUG) << "At least one client is associated, Associated Clients TLV will be added";
         auto tlvAssociatedClients = m_cmdu_tx.addClass<wfa_map::tlvAssociatedClients>();
         if (!tlvAssociatedClients) {
             LOG(ERROR) << "addClass wfa_map::tlvAssociatedClients failed";
@@ -798,6 +812,7 @@ bool TopologyTask::add_associated_clients_tlv()
 
                     client_info->mac()                             = associated_client_entry.first;
                     client_info->time_since_last_association_sec() = elapsed;
+                    LOG(DEBUG) << "Adding client_info for client " << client_info->mac();
 
                     bss_list->add_clients_associated_list(client_info);
                 }

@@ -35,9 +35,11 @@
 #include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
+#include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <queue>
 #include <vector>
@@ -448,12 +450,14 @@ public:
     std::shared_ptr<Agent::sRadio> get_radio_by_uid(const sMacAddr &radio_uid);
 
     /**
-     * @brief Finds and returns sBss with a specified BSSID.
+     * @brief Finds and returns sBss with a specified BSSID (and optionaly al_mac).
      *
      * @param bssid BSSID of searched BSS.
+     * @param al_mac the AL MAC of the agent on which to search for the BSS.
      * @return The sBss object, or nullptr if it doesn't exist.
      */
-    std::shared_ptr<Agent::sRadio::sBss> get_bss(const sMacAddr &bssid);
+    std::shared_ptr<Agent::sRadio::sBss>
+    get_bss(const sMacAddr &bssid, const sMacAddr &al_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief Get radio containing a BSS with a specific BSSID
@@ -595,12 +599,13 @@ public:
      *
      * Adds a station node and a Station object if they don't exist.
      *
+     * @param al_mac the AL-MAC under which to add the client.
      * @param mac MAC address of the client.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
-    add_node_station(const sMacAddr &mac,
+    add_node_station(const sMacAddr &al_mac, const sMacAddr &mac,
                      const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
@@ -1087,6 +1092,16 @@ public:
                                 const wfa_map::tlvApHtCapabilities::sFlags &flags);
 
     /**
+     * @brief Set the SoftwareVersion value in DM
+     *
+     * @param[in] agent Pointer to the Agent to update
+     * @param[in] sw_version Value to set
+     *
+     * @return true if the value has been set successfully, false otherwise
+     */
+    bool set_software_version(std::shared_ptr<Agent> agent, const std::string &sw_version);
+
+    /**
      * @brief Add 'VHTCapabilities' data element, set values to its parameters.
      * Example of full path to object:
      * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.Capabilities.VHTCapabilities"
@@ -1211,20 +1226,21 @@ public:
      */
     bool remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss);
 
-    bool add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
-                 const std::string &ssid, bool backhaul);
+    bool add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
+                 const std::string &bssid, const std::string &ssid, bool backhaul);
 
     /** Update VAP information
      *
-     * Add or update the VAP information for the given BSSID on the given radio. If the VAP exists
-     * already, it is updated. If no VAP with the given BSSID exists, a new one is created with
-     * a unique vap_id.
+     * Add or update the VAP information for the given BSSID on the
+     * given radio on a specific agent. If the VAP exists already, it
+     * is updated. If no VAP with the given BSSID exists, a new one is
+     * created with a unique vap_id.
      *
      * For prplMesh agents, this function should be called after the VAPs were created (with
      * add_vap) so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
      */
-    bool update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
-                    bool backhaul);
+    bool update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                    const std::string &ssid, bool backhaul);
 
     std::string get_hostap_ssid(const sMacAddr &mac);
     /**
@@ -1966,8 +1982,25 @@ public:
      * @brief Return bss_infos_global list with BSS information.
      */
     std::list<wireless_utils::sBssInfoConf> &get_bss_info_configuration();
+
+    /**
+     * @brief Store a BSS configured on the given radio.
+     */
+    void add_configured_bss_info(const sMacAddr &ruid,
+                                 const wireless_utils::sBssInfoConf &bss_info);
+
+    /**
+     * @brief Get the list of BSS configured on a given radio.
+     */
+    std::list<wireless_utils::sBssInfoConf> &get_configured_bss_info(const sMacAddr &ruid);
+
     void clear_bss_info_configuration();
     void clear_bss_info_configuration(const sMacAddr &al_mac);
+
+    /**
+     * @brief Clear the list of BSSs configured on a given radio.
+     */
+    void clear_configured_bss_info(const sMacAddr &ruid);
 
     /**
      * @brief Store traffic separation policy for agent.
@@ -1975,9 +2008,8 @@ public:
      * @param[in] al_mac AL MAC address of agent.
      * @param[in] config Traffic separation policy configuration.
      */
-    void
-    add_traffic_separataion_configuration(const sMacAddr &al_mac,
-                                          const wireless_utils::sTrafficSeparationSsid &config);
+    void add_traffic_separation_configuration(const sMacAddr &al_mac,
+                                              const wireless_utils::sTrafficSeparationSsid &config);
     /**
      * @brief Store default 802.1Q settings for agent.
      *
@@ -1995,7 +2027,7 @@ public:
      * @return List of policies for the AL mac. If not found, return empty list.
      */
     const std::list<wireless_utils::sTrafficSeparationSsid>
-    get_traffic_separataion_configuration(const sMacAddr &al_mac);
+    get_traffic_separation_configuration(const sMacAddr &al_mac);
 
     /**
      * @brief Get default 802.1Q settings for agent.
@@ -2353,6 +2385,8 @@ public:
     bool dm_add_radio_cac_capabilities(
         const Agent::sRadio &radio, const wfa_map::eCacMethod &method, const uint8_t &duration,
         const std::unordered_map<uint8_t, std::vector<uint8_t>> &oc_channels);
+
+    bool dm_save_radio_cac_completion_report(wfa_map::cCacCompletionReportRadio &radioReport);
 
     /**
      * @brief Adds instances for AKMFrontHaul and AKMBackhaul objects and fullfills them.
@@ -2916,11 +2950,12 @@ private:
      *
      * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.2.STA.3"
      *
+     * @param al_mac the AL MAC of the agent to which the BSSID belongs.
      * @param bssid BSS mac address.
      * @param station Station object
      * @return True on success, false otherwise.
      */
-    bool dm_add_sta_element(const sMacAddr &bssid, Station &station);
+    bool dm_add_sta_element(const sMacAddr &al_mac, const sMacAddr &bssid, Station &station);
 
     /**
      * @brief Set clients (device) multi ap capabilities
@@ -2957,8 +2992,8 @@ private:
      * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
      * @param is_vbss Whether this is a Virtual BSS or not
      */
-    bool dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
-                          bool is_vbss = false);
+    bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                          const std::string &ssid, bool is_vbss = false);
 
     /**
      * @brief Set data model path member of a node
@@ -3037,6 +3072,12 @@ private:
     std::shared_ptr<uint8_t> certification_tx_buffer;
     std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>> bss_infos; // key=al_mac
     std::list<wireless_utils::sBssInfoConf> bss_infos_global;
+
+    /**
+     * @brief List of BSSs currently configured on the radio
+     */
+    std::unordered_map<sMacAddr, std::list<wireless_utils::sBssInfoConf>>
+        configured_bss_infos; // key=ruid
 
     /**
      * @brief This map holds traffic separation policy per Agent sMacAddr.

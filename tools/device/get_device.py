@@ -16,6 +16,8 @@ import device.glinet_b1300
 import device.prplos
 import device.turris_prplos
 import device.turris_rdk_b
+import device.haze
+import device.urx_osp
 
 
 def device_from_name(name: str, target_name: str, image: Union[str, None] = None
@@ -39,6 +41,10 @@ def device_from_name(name: str, target_name: str, image: Union[str, None] = None
         dev = device.turris_prplos.TurrisPrplOS(name, target_name, image)
     elif name == "glinet-b1300":
         dev = device.glinet_b1300.GlinetB1300(name, target_name, image)
+    elif name == "haze":
+        dev = device.haze.Haze(name, target_name, image)
+    elif name == "urx_osp":
+        dev = device.urx_osp.URXOSP(name, target_name, image)
     else:
         # if no device matched, try the generic prplOS (sysupgrade)
         print("No specific device matched, using GenericPrplOS.")

@@ -1364,7 +1364,8 @@ bool dynamic_channel_selection_r2_task::remove_invalid_channel_selection_request
                 }
                 const auto channel_preference = database.get_channel_preference(
                     radio_mac, operating_class, channel_number, true);
-                if (channel_preference <= 0) {
+                if (channel_preference <=
+                    (int8_t)beerocks::eChannelPreferenceRankingConsts::NON_OPERABLE) {
                     LOG(ERROR) << "Channel Selection request for channel: " << channel_number
                                << " & operating class: " << operating_class << " is invalid";
                     invalid_channel_selection_requests.push_back(
@@ -1743,9 +1744,12 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_repor
         }
 
         auto &cac_radio = std::get<1>(cac_completion_report_tlv->cac_radios(i));
-        // TODO: PPM-2197
         ss << "Radio " << cac_radio.radio_uid() << " with status "
            << cac_radio.cac_completion_status() << std::endl;
+
+        // Store report to database
+        if (!database.dm_save_radio_cac_completion_report(cac_radio))
+            LOG(ERROR) << "tlvProfile2CacCompletionReport storing error";
 
         if (cac_radio.cac_completion_status() !=
             wfa_map::cCacCompletionReportRadio::eCompletionStatus::NOT_PERFORMED) {
@@ -1821,6 +1825,7 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
            << ", seconds: " << int(non_occupancy_channel.duration) << "]" << std::endl;
     }
 
+    uint32_t channelCountdown = 0;
     for (size_t i = 0; i < cac_status_report_tlv->number_of_active_cac_pairs(); i++) {
 
         if (!std::get<0>(cac_status_report_tlv->active_cac_pairs(i))) {
@@ -1830,9 +1835,10 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_status_report(
 
         const auto &active_channel = std::get<1>(cac_status_report_tlv->active_cac_pairs(i));
         active_channels.push_back(active_channel);
+        memcpy(&channelCountdown, active_channel.countdown, sizeof(active_channel.countdown));
         ss << "Active: [OC: " << int(active_channel.operating_class_active_cac)
-           << ", channel: " << int(active_channel.channel_active_cac) << "]" << std::endl;
-        // TODO: Add debug print for duration parameter (need value conversion - PPM-2302)
+           << ", channel: " << int(active_channel.channel_active_cac)
+           << ", countdown: " << channelCountdown << "]" << std::endl;
     }
 
     if (!database.dm_add_cac_status_report(agent, available_channels, non_occupancy_channels,

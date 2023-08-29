@@ -312,8 +312,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
                     LOG(DEBUG) << "Non-Prplmesh Agent";
-                    if (!database.update_vap(radio_entry.radio_uid(), bss_entry.radio_bssid(),
-                                             bss_entry.ssid_str(), false)) {
+                    if (!database.update_vap(src_mac, radio_entry.radio_uid(),
+                                             bss_entry.radio_bssid(), bss_entry.ssid_str(),
+                                             false)) {
                         LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
                                    << " BSS " << bss_entry.radio_bssid() << " SSID "
                                    << bss_entry.ssid_str();
@@ -322,8 +323,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     LOG(DEBUG) << "Prplmesh Agent";
                     // update BSS vap_id if still undefined
                     bss->update_vap_id(vap_id);
-                    if (!database.add_vap(tlvf::mac_to_string(radio_entry.radio_uid()), int(vap_id),
-                                          tlvf::mac_to_string(bss_entry.radio_bssid()),
+                    if (!database.add_vap(al_mac, tlvf::mac_to_string(radio_entry.radio_uid()),
+                                          int(vap_id), tlvf::mac_to_string(bss_entry.radio_bssid()),
                                           bss_entry.ssid_str(), false)) {
                         LOG(ERROR)
                             << "Failed to add VAP for radio " << radio_entry.radio_uid() << " BSS "
@@ -337,10 +338,11 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 auto client_list = database.get_node_children(tlvf::mac_to_string(bss->bssid),
                                                               beerocks::TYPE_CLIENT);
                 for (auto &client : client_list) {
-                    son_actions::handle_dead_node(client, true, database, cmdu_tx, tasks);
+                    son_actions::handle_dead_node(client, true, database, tasks);
                 }
 
                 // Remove the vap from DB
+                LOG(DEBUG) << "Removing BSS with path " << bss->dm_path << " from DB";
                 database.remove_vap(*radio, *bss);
             }
         }
@@ -563,7 +565,7 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
 
         LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                    << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-        son_actions::handle_dead_node(backhhaul_mac, true, database, cmdu_tx, tasks);
+        son_actions::handle_dead_node(backhhaul_mac, true, database, tasks);
     }
 }
 
@@ -611,13 +613,14 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
     if (client_connected) {
         //add or update node parent
-        auto client = database.add_node_station(client_mac, bssid);
+        auto client = database.add_node_station(src_mac, client_mac, bssid);
         if (!client) {
             LOG(ERROR) << "client " << client_mac << " not created";
             return false;
         }
 
-        LOG(INFO) << "client connected, mac=" << client_mac_str << ", bssid=" << bssid_str;
+        LOG(INFO) << "client connected, al_mac=" << src_mac << " mac=" << client_mac_str
+                  << ", bssid=" << bssid_str;
 
         auto wifi_channel = database.get_node_wifi_channel(bssid_str);
         if (wifi_channel.is_empty()) {
@@ -742,7 +745,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // TODO: Validate usages of reported_by_parent flag usages (PPM-1948)
-        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, cmdu_tx, tasks);
+        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, tasks);
     }
 
     return true;

@@ -64,7 +64,12 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
 
         # UCI BPL
         file(GLOB_RECURSE bpl_platform_sources 
-            ${MODULE_PATH}/*/uci/*.c*
+            ${MODULE_PATH}/arp/linux/*.c*
+            ${MODULE_PATH}/board/uci/*.c*
+            ${MODULE_PATH}/cfg/uci/*.c*
+            ${MODULE_PATH}/common/uci/*.c*
+            ${MODULE_PATH}/db/uci/*.c*
+            ${MODULE_PATH}/dhcp/uci/*.c*
             ${MODULE_PATH}/cfg/vendor/*.c*
         )
 

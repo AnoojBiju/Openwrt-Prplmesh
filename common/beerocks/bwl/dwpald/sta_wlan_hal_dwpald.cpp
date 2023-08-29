@@ -155,7 +155,7 @@ bool sta_wlan_hal_dwpal::scan_bss(const sMacAddr &bssid, uint8_t channel,
     return true;
 }
 
-int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SScanResult> &list,
+int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<sScanResult> &list,
                                          bool parse_vsie)
 {
     LOG(TRACE) << __func__ << " entered for " << get_iface_name();
@@ -218,7 +218,7 @@ int sta_wlan_hal_dwpal::get_scan_results(const std::string &ssid, std::vector<SS
             continue;
         }
 
-        SScanResult ap;
+        sScanResult ap;
         ap.bssid     = tlvf::mac_from_string(scan_results[i].bssid);
         ap.channel   = son::wireless_utils::freq_to_channel(scan_results[i].frequency);
         ap.freq_type = son::wireless_utils::which_freq_type(scan_results[i].frequency);

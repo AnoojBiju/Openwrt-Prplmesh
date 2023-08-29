@@ -30,7 +30,7 @@ public:
     void add_request(uint16_t id, uint8_t sync,
                      const sMacAddr &mac = beerocks::net::network_utils::ZERO_MAC);
 
-    void process();
+    void process(bool instant_handling = false);
 
     /** Collect AP metrics and create AP Metrics TLV */
     bool add_ap_metrics(ieee1905_1::CmduMessageTx &cmdu_tx, const monitor_vap_node &vap_node,

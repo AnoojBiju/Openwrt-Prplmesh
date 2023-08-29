@@ -381,6 +381,9 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
         LOG(ERROR) << "Failed to set Manufacturer OUI";
     }
 
+    m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "EasyMeshAgentOperationMode",
+                              std::string{"RUNNING"});
+
     return agent;
 }
 
@@ -523,14 +526,19 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
     return dm_add_radio_element(*radio, *agent);
 }
 
-std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_node_station(const sMacAddr &al_mac, const sMacAddr &mac,
+                                              const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
-    auto bss     = get_bss(parent_mac);
+    auto bss     = get_bss(parent_mac, al_mac);
+    LOG(DEBUG) << "Adding Station node "
+               << " for AL-MAC " << al_mac << " station mac " << mac
+               << " parent mac: " << parent_mac;
 
     if (!bss) {
         LOG(ERROR) << "Failed to get sBss: " << parent_mac;
     } else {
+        LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
         station->set_bss(bss);
     }
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
@@ -545,7 +553,7 @@ std::shared_ptr<Station> db::add_node_station(const sMacAddr &mac, const sMacAdd
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFi client)
-    if (!dm_add_sta_element(parent_mac, *station)) {
+    if (!dm_add_sta_element(al_mac, parent_mac, *station)) {
         LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
     }
 
@@ -1411,6 +1419,25 @@ bool db::set_ap_he_capabilities(wfa_map::tlvApHeCapabilities &he_caps_tlv)
     return ret_val;
 }
 
+bool db::set_software_version(std::shared_ptr<Agent> agent, const std::string &sw_version)
+{
+    if (!agent) {
+        LOG(ERROR) << "Invalid agent pointer provided";
+        return false;
+    }
+
+    if (agent->dm_path.empty()) {
+        return true;
+    }
+
+    if (!m_ambiorix_datamodel->set(agent->dm_path, "SoftwareVersion", sw_version)) {
+        LOG(ERROR) << "Failed to set " << agent->dm_path << ".SoftwareVersion: " << sw_version;
+        return false;
+    }
+
+    return true;
+}
+
 const beerocks::message::sRadioCapabilities *
 db::get_station_current_capabilities(const std::string &mac)
 {
@@ -1830,7 +1857,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
         LOG(ERROR) << "Failed to set station VHT Capabilities";
         return false;
     }
-    if (sta_cap.he_bw != beerocks::BANDWIDTH_UNKNOWN &&
+    if ((sta_cap.wifi_standard & beerocks::STANDARD_AX) &&
         !dm_set_sta_he_capabilities(path_to_sta, sta_cap)) {
         LOG(ERROR) << "Failed to set station HE Capabilities";
         return false;
@@ -2373,8 +2400,8 @@ bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
     return dm_remove_bss(bss);
 }
 
-bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bssid,
-                 const std::string &ssid, bool backhaul)
+bool db::add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
+                 const std::string &bssid, const std::string &ssid, bool backhaul)
 {
     if (!has_node(tlvf::mac_from_string(bssid)) &&
         !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
@@ -2386,11 +2413,12 @@ bool db::add_vap(const std::string &radio_mac, int vap_id, const std::string &bs
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhaul;
 
-    return dm_set_radio_bss(tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid), ssid);
+    return dm_set_radio_bss(al_mac, tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid),
+                            ssid);
 }
 
-bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
-                    bool backhaul)
+bool db::update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                    const std::string &ssid, bool backhaul)
 {
     if (!has_node(bssid) && !add_virtual_node(bssid, radio_mac)) {
         return false;
@@ -2411,12 +2439,12 @@ bool db::update_vap(const sMacAddr &radio_mac, const sMacAddr &bssid, const std:
                 return a.first < b.first;
             });
         int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
-        return add_vap(tlvf::mac_to_string(radio_mac), new_vap_id, tlvf::mac_to_string(bssid), ssid,
-                       backhaul);
+        return add_vap(al_mac, tlvf::mac_to_string(radio_mac), new_vap_id,
+                       tlvf::mac_to_string(bssid), ssid, backhaul);
     }
     it->second.ssid         = ssid;
     it->second.backhaul_vap = backhaul;
-    return dm_set_radio_bss(radio_mac, bssid, ssid);
+    return dm_set_radio_bss(al_mac, radio_mac, bssid, ssid);
 }
 
 std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
@@ -5392,6 +5420,11 @@ void db::add_bss_info_configuration(const wireless_utils::sBssInfoConf &bss_info
     bss_infos_global.push_back(bss_info);
 }
 
+void db::add_configured_bss_info(const sMacAddr &ruid, const wireless_utils::sBssInfoConf &bss_info)
+{
+    configured_bss_infos[ruid].push_back(bss_info);
+}
+
 std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration(const sMacAddr &al_mac)
 {
     // If al_mac not exist, it will be added, and return empty list
@@ -5407,6 +5440,11 @@ std::list<wireless_utils::sBssInfoConf> &db::get_bss_info_configuration()
     return bss_infos_global;
 }
 
+std::list<wireless_utils::sBssInfoConf> &db::get_configured_bss_info(const sMacAddr &ruid)
+{
+    return configured_bss_infos[ruid];
+}
+
 void db::clear_bss_info_configuration()
 {
     bss_infos.clear();
@@ -5415,8 +5453,10 @@ void db::clear_bss_info_configuration()
 
 void db::clear_bss_info_configuration(const sMacAddr &al_mac) { bss_infos[al_mac].clear(); }
 
-void db::add_traffic_separataion_configuration(const sMacAddr &al_mac,
-                                               const wireless_utils::sTrafficSeparationSsid &config)
+void db::clear_configured_bss_info(const sMacAddr &ruid) { configured_bss_infos[ruid].clear(); }
+
+void db::add_traffic_separation_configuration(const sMacAddr &al_mac,
+                                              const wireless_utils::sTrafficSeparationSsid &config)
 {
     traffic_separation_policy_configurations[al_mac].push_back(config);
 }
@@ -5428,7 +5468,7 @@ void db::add_default_8021q_settings(const sMacAddr &al_mac,
 }
 
 const std::list<wireless_utils::sTrafficSeparationSsid>
-db::get_traffic_separataion_configuration(const sMacAddr &al_mac)
+db::get_traffic_separation_configuration(const sMacAddr &al_mac)
 {
     auto config = traffic_separation_policy_configurations.find(al_mac);
     if (config != traffic_separation_policy_configurations.end()) {
@@ -5579,9 +5619,12 @@ std::shared_ptr<Agent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
     return {};
 }
 
-std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid)
+std::shared_ptr<Agent::sRadio::sBss> db::get_bss(const sMacAddr &bssid, const sMacAddr &al_mac)
 {
     for (const auto &agent : m_agents) {
+        if (al_mac != beerocks::net::network_utils::ZERO_MAC && al_mac != agent.second->al_mac) {
+            continue;
+        }
         for (const auto &radio : agent.second->radios) {
             auto bss = radio.second->bsses.get(bssid);
             if (bss) {
@@ -6019,7 +6062,9 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
     auto client_mac = client_db_entry_to_mac(client_entry);
 
     // Add client node with defaults and in default location
-    if (!add_node_station(client_mac)) {
+    LOG(DEBUG) << "Adding station node from data: " << client_mac;
+
+    if (!add_node_station(network_utils::ZERO_MAC, client_mac)) {
         LOG(ERROR) << "Failed to add client node for client_entry " << client_entry;
         result.first = 1;
         return;
@@ -6159,15 +6204,16 @@ bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
     return return_val;
 }
 
-bool db::dm_add_sta_element(const sMacAddr &bssid, Station &station)
+bool db::dm_add_sta_element(const sMacAddr &al_mac, const sMacAddr &bssid, Station &station)
 {
 
-    auto bss = get_bss(bssid);
+    auto bss = get_bss(bssid, al_mac);
     if (!bss) {
         LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
     }
     if (bss->dm_path.empty()) {
+        LOG(DEBUG) << __func__ << " ignoring empty datamodel path for BSS " << bssid;
         return true;
     }
 
@@ -6494,42 +6540,9 @@ bool db::remove_hostap_supported_operating_classes(const sMacAddr &radio_mac)
 
 bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 {
-
-    std::string bssid_string = tlvf::mac_to_string(bssid);
-
-    auto find_node = std::find_if(
-        std::begin(nodes), std::end(nodes),
-        [&bssid_string](const std::unordered_map<std::string, std::shared_ptr<son::node>> &map) {
-            return map.find(bssid_string) != map.end();
-        });
-
-    if (find_node == std::end(nodes)) {
-        LOG(ERROR) << "Failed to get radio node for bssid: " << bssid_string;
-        return false;
-    }
-
-    auto radio_node = find_node->at(bssid_string);
-
-    auto radio_path = radio_node->dm_path;
-    if (radio_path.empty()) {
-        return true;
-    }
-
-    // Path to the object example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Utilization
-    if (!m_ambiorix_datamodel->set(radio_path, "Utilization", utilization)) {
-        LOG(ERROR) << "Failed to set " << radio_path << ".Utilization: " << utilization;
-        return false;
-    }
-
-    return true;
-}
-
-bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, const std::string &ssid,
-                          bool is_vbss)
-{
-    auto radio = get_radio_by_uid(radio_mac);
+    auto radio = get_radio_by_bssid(bssid);
     if (!radio) {
-        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
+        LOG(ERROR) << "Failed to get radio for bssid: " << bssid;
         return false;
     }
 
@@ -6537,7 +6550,33 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
         return true;
     }
 
-    auto bss = get_bss(bssid);
+    // Path to the object example: Device.WiFi.DataElements.Network.Device.1.Radio.1.Utilization
+    if (!m_ambiorix_datamodel->set(radio->dm_path, "Utilization", utilization)) {
+        LOG(ERROR) << "Failed to set " << radio->dm_path << ".Utilization: " << utilization;
+        return false;
+    }
+
+    return true;
+}
+
+bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                          const std::string &ssid, bool is_vbss)
+{
+    LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid << " al_mac "
+               << al_mac;
+
+    auto radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
+        return false;
+    }
+
+    if (radio->dm_path.empty()) {
+        LOG(DEBUG) << __func__ << "Ignoring empty datamodel path for radio " << radio_mac;
+        return true;
+    }
+
+    auto bss = get_bss(bssid, al_mac);
     if (!bss) {
         LOG(ERROR) << "Failed to get BSS with BSSID: " << bssid;
         return false;
@@ -6545,13 +6584,15 @@ bool db::dm_set_radio_bss(const sMacAddr &radio_mac, const sMacAddr &bssid, cons
 
     if (bss->dm_path.empty()) {
 
-        auto bss_path     = radio->dm_path + ".BSS";
+        auto bss_path = radio->dm_path + ".BSS";
+        LOG(DEBUG) << "Adding new BSS instance for radio MAC " << radio_mac << " bssid " << bssid;
         auto bss_instance = m_ambiorix_datamodel->add_instance(bss_path);
         if (bss_instance.empty()) {
             LOG(ERROR) << "Failed to add " << bss_path << " instance.";
             return false;
         }
         bss->dm_path = bss_instance;
+        LOG(DEBUG) << "New BSS instance successfully added. Path: " << bss_instance;
     }
 
     auto ret_val = true;
@@ -6745,7 +6786,9 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
     }
 
     // Prepare path to the Interface object MediaType, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MediaType
-    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type)) {
+    auto media_type_str =
+        std::string(ieee1905_1::eMediaType_str(ieee1905_1::eMediaType(media_type)));
+    if (!m_ambiorix_datamodel->set(iface->m_dm_path, "MediaType", media_type_str)) {
         LOG(ERROR) << "Failed to set " << iface->m_dm_path << ".MediaType: " << media_type;
         return false;
     }
@@ -7683,6 +7726,7 @@ bool db::dm_remove_radio(Agent::sRadio &radio)
 
 bool db::dm_remove_bss(Agent::sRadio::sBss &bss)
 {
+    LOG(DEBUG) << "Removing BSS with path " << bss.dm_path << " from the datamodel";
     if (bss.dm_path.empty()) {
         return true;
     }
@@ -7750,6 +7794,52 @@ bool db::dm_add_radio_cac_capabilities(
 
             ret_val &= m_ambiorix_datamodel->set(channels_path, "Channel", channel);
         }
+    }
+
+    return ret_val;
+}
+
+bool db::dm_save_radio_cac_completion_report(wfa_map::cCacCompletionReportRadio &radioReport)
+{
+    auto radioMac = radioReport.radio_uid();
+    auto pRadio   = get_radio_by_uid(radioMac);
+    if (nullptr == pRadio) {
+        return false;
+    }
+    if (pRadio->dm_path.empty()) {
+        return true;
+    }
+
+    const auto CAC_completion_path       = pRadio->dm_path + ".CACCompletion";
+    const auto CAC_completion_pairs_path = CAC_completion_path + ".Pairs";
+    bool ret_val                         = true;
+
+    // Clear old pairs instances
+    if (!m_ambiorix_datamodel->remove_all_instances(CAC_completion_pairs_path)) {
+        return false;
+    }
+
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "OperatingClass",
+                                         radioReport.operating_class());
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "Channel", radioReport.channel());
+    ret_val &= m_ambiorix_datamodel->set(CAC_completion_path, "Status",
+                                         static_cast<uint8_t>(radioReport.cac_completion_status()));
+
+    for (size_t i = 0; i < radioReport.number_of_detected_pairs(); i++) {
+        if (!std::get<0>(radioReport.detected_pairs(i))) {
+            continue;
+        }
+
+        auto pair_path = m_ambiorix_datamodel->add_instance(CAC_completion_pairs_path);
+        if (pair_path.empty()) {
+            return false;
+        }
+
+        auto &detected_pair = std::get<1>(radioReport.detected_pairs(i));
+        ret_val &= m_ambiorix_datamodel->set(pair_path, "OperatingClassDetected",
+                                             detected_pair.operating_class_detected);
+        ret_val &=
+            m_ambiorix_datamodel->set(pair_path, "ChannelDetected", detected_pair.channel_detected);
     }
 
     return ret_val;

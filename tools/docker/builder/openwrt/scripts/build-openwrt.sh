@@ -22,12 +22,17 @@ args=("$TARGET_SYSTEM")
 # additional packages that are useful when developing:
 args+=("debug")
 
-if [ "$TARGET_SYSTEM" = "intel_mips" ]; then
+if [ "$TARGET_SYSTEM" = "intel_mips" ] || [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
     # intel_mips depends on iwlwav-iw, which clashes with iw-full:
     sed -i '/iw-full$/d' "profiles/debug.yml"
 fi
 
-args+=("webui")
+if [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
+    # add open source hostap introduced in MXL 9.1.15 code base
+    args+=("mxl_wlan_hostap_ng")
+fi
+
+# args+=("webui")
 
 # feed-prpl is in the prpl profile:
 if [ -n "$WHM_ENABLE" ] ; then

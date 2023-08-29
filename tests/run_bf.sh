@@ -99,4 +99,8 @@ if [[ -n "${failed[*]/$'\n'/}" ]]; then
     exit_code=1
 fi
 
+# Give others read access to (device) logs
+# The gitlab user needs at least reads access
+chmod -R o+r "${resultdir}"
+
 exit $exit_code

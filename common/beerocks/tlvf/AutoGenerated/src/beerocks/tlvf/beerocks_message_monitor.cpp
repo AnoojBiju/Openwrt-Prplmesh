@@ -1124,10 +1124,6 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::~cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST() {
 }
-uint8_t& cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::sync() {
-    return (uint8_t&)(*m_sync);
-}
-
 sMacAddr& cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::sta_mac() {
     return (sMacAddr&)(*m_sta_mac);
 }
@@ -1168,7 +1164,6 @@ bool cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::finalize()
 size_t cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
-    class_size += sizeof(uint8_t); // sync
     class_size += sizeof(sMacAddr); // sta_mac
     return class_size;
 }
@@ -1177,11 +1172,6 @@ bool cACTION_MONITOR_CLIENT_ASSOCIATED_STA_LINK_METRIC_REQUEST::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
-        return false;
-    }
-    m_sync = reinterpret_cast<uint8_t*>(m_buff_ptr__);
-    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
-        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     m_sta_mac = reinterpret_cast<sMacAddr*>(m_buff_ptr__);

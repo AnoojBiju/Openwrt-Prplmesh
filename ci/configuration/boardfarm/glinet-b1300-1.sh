@@ -173,7 +173,8 @@ sleep 10
 ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 12)
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.1.2 || (/etc/init.d/ip-manager restart && sleep 15)
 
 # Restart the ssh server
 /etc/init.d/ssh-server restart

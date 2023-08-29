@@ -308,6 +308,7 @@ bool Controller::start()
             ieee1905_1::eMessageType::CLIENT_SECURITY_CONTEXT_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::VIRTUAL_BSS_RESPONSE_MESSAGE,
+            ieee1905_1::eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE,
             ieee1905_1::eMessageType::TRIGGER_CHANNEL_SWITCH_ANNOUNCEMENT_RESPONSE_MESSAGE,
         })) {
         LOG(ERROR) << "Failed subscribing to the Bus";
@@ -758,6 +759,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
             LOG(ERROR) << "addClass wfa_map::tlvProfile2MultiApProfile failed";
             return false;
         }
+
+        tlvProfile2MultiApProfileController->profile() = wfa_map::tlvProfile2MultiApProfile::
+            eMultiApProfile::MULTIAP_PROFILE_1; // Profile-1 of EasyMesh R4
+        auto profile2_ap_capability_tlv = cmdu_tx.addClass<wfa_map::tlvProfile2ApCapability>();
+        if (profile2_ap_capability_tlv) {
+            profile2_ap_capability_tlv->capabilities_bit_field().byte_counter_units =
+                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES;
+        }
     }
 
     auto beerocks_header = beerocks::message_com::parse_intel_vs_message(cmdu_rx);
@@ -1172,7 +1181,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
     uint8_t num_bsss     = 0;
 
     // Update BSSes in the Agent
-    if (!database.has_node(ruid)) {
+    if (agent->radios.find(ruid) == agent->radios.end()) {
         database.add_node_radio(ruid, al_mac);
     }
     auto radio = agent->radios.get(ruid);
@@ -1180,6 +1189,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << al_mac;
         return false;
     }
+
+    database.clear_configured_bss_info(ruid);
 
     for (auto &bss_info_conf : bss_info_confs) {
         // Check if the radio supports it
@@ -1230,10 +1241,11 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         bss->fronthaul          = bss_info_conf.fronthaul;
         bss->backhaul           = bss_info_conf.backhaul;
         bss->byte_counter_units = agent->byte_counter_units;
-        if (!database.update_vap(ruid, bss->bssid, bss->ssid, bss->backhaul)) {
+        if (!database.update_vap(src_mac, ruid, bss->bssid, bss->ssid, bss->backhaul)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
         }
+        database.add_configured_bss_info(ruid, bss_info_conf);
         num_bsss++;
     }
 
@@ -1941,7 +1953,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
             continue;
         }
         son_actions::handle_dead_node(tlvf::mac_to_string(removed_radio->radio_uid), true, database,
-                                      cmdu_tx, m_task_pool);
+                                      m_task_pool);
     }
 
     bool all_radio_capabilities_saved_successfully = true;
@@ -2856,6 +2868,10 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
+    // An AP Capability Report will always be received after the M1, and thus
+    // this OS Version value will be overriden by the more complete
+    // SoftwareVersion value from the Device Inventory TLV if present
+    database.set_software_version(agent, std::to_string(m1.os_version()));
 
     // Update existing node, or add a new one
     if (database.has_node(radio_mac)) {
@@ -2988,7 +3004,7 @@ bool Controller::handle_cmdu_control_message(
             database.get_node_children(tlvf::mac_to_string(disabled_bssid), beerocks::TYPE_CLIENT);
 
         for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
+            son_actions::handle_dead_node(client, true, database, m_task_pool);
         }
 
         // Update BSSes in the Agent
@@ -3004,6 +3020,7 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
+        LOG(DEBUG) << "Removing vap from DB: " << bss->dm_path;
         database.remove_vap(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
@@ -3046,7 +3063,7 @@ bool Controller::handle_cmdu_control_message(
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
 
-        database.add_vap(radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
+        database.add_vap(src_mac, radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
                          notification->vap_info().backhaul_vap);
 
         // update bml listeners
@@ -3150,7 +3167,7 @@ bool Controller::handle_cmdu_control_message(
                   << vaps_list;
 
         for (auto vap : vaps_info) {
-            if (!database.update_vap(radio_mac, tlvf::mac_from_string(vap.second.mac),
+            if (!database.update_vap(src_mac, radio_mac, tlvf::mac_from_string(vap.second.mac),
                                      vap.second.ssid, vap.second.backhaul_vap)) {
                 LOG(ERROR) << "Failed to update VAP for radio " << radio_mac << " BSS "
                            << vap.second.mac << " SSID " << vap.second.ssid;
@@ -3166,10 +3183,12 @@ bool Controller::handle_cmdu_control_message(
             auto client_list =
                 database.get_node_children(tlvf::mac_to_string(bss->bssid), beerocks::TYPE_CLIENT);
             for (auto &client : client_list) {
-                son_actions::handle_dead_node(client, true, database, cmdu_tx, m_task_pool);
+                son_actions::handle_dead_node(client, true, database, m_task_pool);
             }
 
             // Remove the vap from DB
+            LOG(DEBUG) << "Removing BSS " << bss->bssid << " with path " << bss->dm_path
+                       << " from DB";
             database.remove_vap(*radio, *bss);
         }
 
@@ -3481,8 +3500,7 @@ bool Controller::handle_cmdu_control_message(
                       << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
             bool reported_by_parent = radio_mac_str == database.get_node_parent(client_mac);
-            son_actions::handle_dead_node(client_mac, reported_by_parent, database, cmdu_tx,
-                                          m_task_pool);
+            son_actions::handle_dead_node(client_mac, reported_by_parent, database, m_task_pool);
         }
         break;
     }
@@ -3502,7 +3520,7 @@ bool Controller::handle_cmdu_control_message(
 
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_node_station(tlvf::mac_from_string(client_mac));
+            database.add_node_station(src_mac, tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 
@@ -4220,6 +4238,7 @@ bool Controller::handle_tlv_profile2_cac_capabilities(Agent &agent,
 
     std::stringstream ss;
 
+    agent.device_info.country_code.clear();
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(0));
     agent.device_info.country_code += static_cast<char>(*cac_capabilities_tlv->country_code(1));
     ss << "Country code: " << agent.device_info.country_code << std::endl;

@@ -217,9 +217,9 @@ void monitor_stats::send_associated_sta_link_metrics(const sMeasurementsRequest 
     m_slave_client->send_cmdu(cmdu_tx);
 }
 
-void monitor_stats::process()
+void monitor_stats::process(bool instant_handling)
 {
-    if (!mon_db->is_last_poll()) {
+    if (!mon_db->is_last_poll() && !instant_handling) {
         return;
     }
 

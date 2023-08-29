@@ -273,13 +273,161 @@ bool prplmesh_cli::prpl_conn_map()
     return true;
 }
 
-bool prplmesh_cli::print_help()
+void prplmesh_cli::print_help()
 {
-    std::cout << "Usage: prplmesh_cli -c <command>" << std::endl
-              << "Next commands are available : " << std::endl
-              << "help      \t\t: get supported commands" << std::endl
-              << "conn_map  \t\t: dump the latest network map" << std::endl;
-    return true;
+    std::cerr << R"help!(Usage: prplmesh_cli -c <command> [command_arguments]
+Next commands are available :
+help      		: get supported commands
+version   		: get current prplMesh version
+show_ap   		: show AccessPoints
+set_ssid  		: set SSID
+  -o .<ap_object_number>|<ap_ssid>	Use .. if <ap_ssid> starts with .
+  -n <new_ssid_name>
+set_security		: set security
+  -o .<ap_object_number>|<ap_ssid>	Same as for set_ssid
+  -m None|WPA2-Personal
+  -p <passphrase>			For the WPA2-Personal mode
+conn_map  		: dump the latest network map
+)help!";
+}
+
+void prplmesh_cli::print_version()
+{
+    std::cerr << "prplMesh version: " << BEEROCKS_VERSION << std::endl;
+}
+
+std::string prplmesh_cli::get_ap_path(std::string ap)
+{
+    std::stringstream path;
+    path << CONTROLLER_ROOT_DM << ".Network.AccessPoint.";
+
+    if (ap[0] == '.' and ap[1] != '.') {
+        path << ap.substr(1) << '.';
+        return path.str();
+    }
+
+    if (ap[0] == '.' and ap[1] == '.') {
+        ap = ap.substr(1);
+    }
+
+    std::string ap_ht_path     = path.str() + "*.";
+    const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
+    amxc_htable_iterate(ap_it, ht_ap)
+    {
+        std::string ap_path_i = amxc_htable_it_get_key(ap_it);
+        amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
+        std::string ap_ssid   = GET_CHAR(ap_obj, "SSID");
+
+        if (strcasecmp(ap.c_str(), ap_ssid.c_str()) == 0) {
+            return ap_path_i;
+        }
+    }
+
+    return "";
+}
+
+void prplmesh_cli::show_ap()
+{
+    std::cout << "Show AccessPoints:" << std::endl;
+    std::string ap_ht_path     = CONTROLLER_ROOT_DM ".Network.AccessPoint.*.";
+    const amxc_htable_t *ht_ap = m_amx_client->get_htable_object(ap_ht_path);
+    if (!ht_ap) {
+        // No access points defined?
+        // Or error retrieving object?
+        std::cerr << "Unable to access object at path " << ap_ht_path << std::endl;
+        return;
+    }
+    auto flags = std::cout.flags();
+    boolalpha(std::cout);
+    int ap_index = 0;
+    amxc_htable_iterate(ap_it, ht_ap)
+    {
+        ap_index++;
+        std::string ap_path_i = amxc_htable_it_get_key(ap_it);
+        amxc_var_t *ap_obj    = m_amx_client->get_object(ap_path_i);
+        // AP[1]: ssid: PrplCli, MultiApMode: Fronthaul
+        //     Band 2.4G: true, Band 5G-L: true, Band 5G-H: true, Band 6G: false
+        std::cout << "AP[" << ap_index << "]:";
+        std::string ap_ssid = GET_CHAR(ap_obj, "SSID");
+        std::cout << " ssid: " << ap_ssid;
+        std::string ap_multi_ap_mode = GET_CHAR(ap_obj, "MultiApMode");
+        std::cout << ", MultiAPMode: " << ap_multi_ap_mode << std::endl;
+        std::cout << "    Band 2.4G: " << GET_BOOL(ap_obj, "Band2_4G");
+        std::cout << ", Band 5G-L: " << GET_BOOL(ap_obj, "Band5GL");
+        std::cout << ", Band 5G-H: " << GET_BOOL(ap_obj, "Band5GH");
+        std::cout << ", Band 6G: " << GET_BOOL(ap_obj, "Band6G") << std::endl;
+    }
+    std::cout.flags(flags);
+    if (ap_index == 0) {
+        std::cout << "(None defined)" << std::endl;
+    }
+}
+
+bool prplmesh_cli::set_ssid(const std::string &ap, const std::string &ssid)
+{
+    std::string ap_path = get_ap_path(ap);
+    if (ap_path.empty()) {
+        std::cerr << "No AP found with id " << ap << std::endl;
+        return false;
+    }
+
+    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path);
+    if (!ap_obj) {
+        std::cerr << "Unable to access object at path " << ap_path << std::endl;
+        return false;
+    }
+
+    amxc_var_set(cstring_t, GET_ARG(ap_obj, "SSID"), ssid.c_str());
+    auto status = m_amx_client->set_object(ap_path, ap_obj);
+
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Setting new SSID failed with: " << amxb_get_error(status) << std::endl;
+    } else {
+        std::cerr << "Successfully set " << ap_path << " SSID to " << ssid << std::endl;
+    }
+
+    return status == AMXB_STATUS_OK;
+}
+
+bool prplmesh_cli::set_security(const std::string &ap, const std::string &mode,
+                                const std::string &passphrase)
+{
+    std::string ap_path = get_ap_path(ap);
+    if (ap_path.empty()) {
+        std::cerr << "No AP found with id " << ap << std::endl;
+        return false;
+    }
+
+    amxc_var_t *ap_obj = m_amx_client->get_object(ap_path += "Security.");
+    if (!ap_obj) {
+        std::cerr << "Unable to access object at path " << ap_path << std::endl;
+        return false;
+    }
+
+    amxc_var_set(cstring_t, GET_ARG(ap_obj, "ModeEnabled"), mode.c_str());
+    auto status = m_amx_client->set_object(ap_path, ap_obj, ap_obj);
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Changing security params failed with: " << amxb_get_error(status) << '\n';
+        return false;
+    }
+
+    if (mode == "WPA2-Personal") {
+        ap_obj = amxc_var_get_first(amxc_var_get_first(ap_obj));
+        if (GET_ARG(ap_obj, "KeyPassphrase")) {
+            amxc_var_set(cstring_t, GET_ARG(ap_obj, "KeyPassphrase"), passphrase.c_str());
+        } else {
+            amxc_var_add_key(cstring_t, ap_obj, "KeyPassphrase", passphrase.c_str());
+        }
+        status = m_amx_client->set_object(ap_path, ap_obj, ap_obj);
+    }
+
+    if (status != AMXB_STATUS_OK) {
+        std::cerr << "Changing security params failed with: " << amxb_get_error(status) << '\n';
+    } else {
+        std::cerr << "Successfully set " << ap_path << " params" << std::endl;
+    }
+
+    return status == AMXB_STATUS_OK;
 }
 
 } // namespace prplmesh_api
