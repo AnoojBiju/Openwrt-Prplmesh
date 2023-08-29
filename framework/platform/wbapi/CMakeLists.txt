@@ -18,6 +18,8 @@ list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_connection_manager.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/ambiorix_client.cpp)
 list(APPEND wbapi_sources ${MODULE_PATH}/wbapi_utils.cpp)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WBAPI_SOCK}")
+
 find_package(amxb REQUIRED)
 find_package(amxc REQUIRED)
 find_package(amxd REQUIRED)
@@ -43,4 +45,3 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
-
