@@ -86,7 +86,7 @@ public:
      *        register data model in the bus.
      *
      * @param amxb_backend Path to the ambiorix backend (ex: "/usr/bin/mods/amxb/mod-amxb-ubus.so").
-     * @param bus_uri Path to the bus in uri form (ex: "ubus:/var/run/ubus.sock").
+     * @param bus_uri Path to the bus in uri form (ex: "ubus:/var/run/ubus/ubus.sock").
      * @param datamodel_path Path to the data model definition ODL file.
      * @return True on success and false otherwise.
      */

@@ -20,8 +20,6 @@ bool AmbiorixClient::connect(const std::string &amxb_backend, const std::string 
         return false;
     }
 
-    LOG(DEBUG) << "The bus connection initialized successfully.";
-
     return true;
 }
 
@@ -110,7 +108,7 @@ bool AmbiorixClient::init_event_loop(std::shared_ptr<EventLoop> event_loop)
         .name = "ambiorix_events",
         .on_read =
             [&](int fd, EventLoop &loop) {
-                auto &cnx = AmbiorixConnectionManager::fetch_connection(fd);
+                auto &cnx = AmbiorixConnectionManager::get_instance()->fetch_connection(fd);
                 if (cnx) {
                     cnx->read();
                 }
@@ -157,7 +155,7 @@ bool AmbiorixClient::init_signal_loop(std::shared_ptr<EventLoop> event_loop)
         .name = "ambiorix_signal",
         .on_read =
             [&](int fd, EventLoop &loop) {
-                auto &cnx = AmbiorixConnectionManager::fetch_connection(fd);
+                auto &cnx = AmbiorixConnectionManager::get_instance()->fetch_connection(fd);
                 if (cnx) {
                     cnx->read_signal();
                 }
