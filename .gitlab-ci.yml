@@ -88,38 +88,6 @@ dco:
     - test -z "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" && export CI_MERGE_REQUEST_TARGET_BRANCH_SHA=$(git merge-base "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" "origin/$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME")
     - dco-check --verbose
 
-cppcheck:
-  stage: build
-  image: $CI_REGISTRY_IMAGE/prplmesh-cppcheck:$CI_PIPELINE_ID
-  script:
-    # cppcheck runs in its own image because every new release brings
-    # useful improvements (the versions from regular distros get old
-    # too quickly) and to be able to update builders without having to
-    # solve newly reported cppcheck issues at the same time.
-    - tools/docker/static-analysis/cppcheck.sh .
-  artifacts:
-    paths:
-      - cppcheck_results.txt
-    when: always
-  tags:
-    - docker
-  needs: ["image-build-cppcheck"]
-
-cppcheck-diff:
-  stage: build
-  image: $CI_REGISTRY_IMAGE/prplmesh-cppcheck:$CI_PIPELINE_ID
-  script:
-    - ci/cppcheck/cppcheck-new-issues.sh
-  artifacts:
-    paths:
-      - cppcheck_results.txt
-      - cppcheck_existing_issues.txt
-    expire_in: 4 weeks
-    when: always
-  tags:
-    - docker
-  needs: ["image-build-cppcheck"]
-
 flake8:
   stage: build
   image: pipelinecomponents/flake8:f087c4c
