@@ -62,9 +62,9 @@ public:
     /**
      * @brief Reads and returns the value of the paramater from the given object.
      * 
-     * @param[in] obj_path Path to object.
-     * @param[in] param_name Name of the parameter.
-     * @param[out] param_val Value of parameter.
+     * @param[in] obj_path Path to the object in datamodel (example: "Device.WiFi.DataElements.Network").
+     * @param[in] param_name The parameter to be read (example: "ID").
+     * @param[out] param_val The value of the parameter.
      * @return True on success, false otherwise.
     */
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
@@ -176,12 +176,6 @@ public:
      * @return True if date and time successfully set, false otherwise.
      */
     virtual bool set_time(const std::string &path_to_object, const std::string &time_stamp) = 0;
-
-    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint64_t *param_val) = 0;
-
-    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            std::string *param_val) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

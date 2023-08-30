@@ -186,11 +186,6 @@ public:
      * @param[out] param_val Value of parameter.
      * @return True on success, false otherwise.
     */
-    bool read_param(const std::string &obj_path, const std::string &param_name,
-                    uint64_t *param_val) override;
-
-    bool read_param(const std::string &obj_path, const std::string &param_name,
-                    std::string *param_val) override;
 
 private:
     // Methods
