@@ -32,6 +32,11 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
 
     m_ambiorix_cl->resolve_path(wbapi_utils::search_path_ep_by_iface(iface_name), m_ep_path);
 
+    std::string radRef;
+    if (m_ambiorix_cl->get_param<>(radRef, m_ep_path, "RadioReference")) {
+        m_ambiorix_cl->resolve_path(radRef + ".", m_radio_path);
+    }
+
     if (!m_ep_path.empty() && hal_conf.is_repeater) {
         // Enable the endpoint instance
         AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
@@ -455,8 +460,30 @@ bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan
 
 bool sta_wlan_hal_whm::reassociate()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
-    return true;
+    Endpoint endpoint;
+    if (read_status(endpoint)) {
+        update_status(endpoint);
+        if (is_connected(endpoint.connection_status)) {
+            LOG(TRACE) << "reassociate: - EP already connected";
+            auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+            auto msg = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+            event_queue_push(Event::Connected, msg_buff);
+        } else {
+            LOG(TRACE) << "reassociate: - Toggle EP";
+            AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
+            params.add_child<bool>("Enable", false);
+            params.add_child<bool>("Enable", true);
+            bool ret = m_ambiorix_cl->update_object(m_ep_path, params);
+            if (!ret) {
+                LOG(ERROR) << "Failed to toggle endpoint " << get_iface_name();
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 bool sta_wlan_hal_whm::is_connected()
@@ -729,10 +756,11 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
     }
     LOG(WARNING) << "WPS end, interface:" << interface << ", reason: " << reason;
     if (reason == "Success") {
-        std::string ssid, key, mode;
+        std::string ssid, key, mode, bssid;
         data->read_child<>(ssid, "SSID");
         data->read_child<>(key, "KeyPassPhrase");
         data->read_child<>(mode, "securitymode");
+        data->read_child<>(bssid, "macAddress");
         if (ssid.empty() || key.empty() || mode.empty()) {
             return false;
         }
@@ -745,7 +773,7 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
             LOG(ERROR) << "failed to get endpoint object, path:" << ep_path;
             return false;
         }
-        std::string ssid_ref, ssid_path, bssid;
+        std::string ssid_ref, ssid_path;
         ChannelFreqPair channel;
         if (endpoint_obj->read_child<>(ssid_ref, "SSIDReference") &&
             m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
@@ -754,7 +782,6 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
                 LOG(ERROR) << "failed to get ssid object";
                 return false;
             }
-            ssid_obj->read_child<>(bssid, "BSSID");
             std::string radio_path;
             if (ssid_obj->read_child<>(radio_path, "LowerLayers")) {
                 if (!m_ambiorix_cl->get_param<>(channel.first, radio_path, "Channel")) {

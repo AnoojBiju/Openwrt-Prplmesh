@@ -710,7 +710,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
     };
     event_handler->context = this;
     std::string filter     = "(path matches '" + m_radio_path +
-                         "$')"
+                         "[0-9]+.$')"
                          " && (notification == '" +
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 
