@@ -122,6 +122,8 @@ public:
     virtual bool update_beacon(const std::string &ifname) override;
     virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) override;
 
+    virtual bool configure_service_priority(const uint8_t *data) override;
+
     // Protected methods:
 protected:
     // Overload for AP events

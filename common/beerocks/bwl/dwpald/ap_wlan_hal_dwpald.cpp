@@ -3818,6 +3818,20 @@ bool ap_wlan_hal_dwpal::set_no_deauth_unknown_sta(const std::string &ifname, boo
     return false;
 }
 
+bool ap_wlan_hal_dwpal::configure_service_priority(const uint8_t *data)
+{
+    std::stringstream ss;
+    for (auto i = 0; i < 21; i++) {
+        if (i != 0) {
+            ss << ",";
+        }
+        ss << i << "," << int(data[i]);
+    }
+    // sadly, std::move has no effect prio to C++17
+    LOG(DEBUG) << "Setting QOS_MAP_SET " << std::move(ss).str();
+    return true;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,

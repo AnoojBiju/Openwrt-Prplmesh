@@ -569,6 +569,15 @@ public:
      */
     virtual bool set_no_deauth_unknown_sta(const std::string &ifname, bool value) = 0;
 
+    /**
+     * @brief Configure HostAP/Drivers as per the current service prioritization config
+     *
+     * @param data array consists of DSCP-PCP mapping table.
+     *
+     * @return true if success else false.
+     */
+    virtual bool configure_service_priority(const uint8_t *data) = 0;
+
 private:
     static const int frame_body_idx = (sizeof(s80211MgmtFrame::sHeader) * 2);
 
