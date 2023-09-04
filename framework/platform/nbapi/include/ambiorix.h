@@ -59,6 +59,39 @@ public:
     virtual bool set(const std::string &relative_path, const std::string &parameter,
                      const sMacAddr &value)    = 0;
 
+    /**
+     * @brief Reads and returns the value of the paramater from the given object.
+     * 
+     * @param[in] obj_path Path to the object in datamodel (example: "Device.WiFi.DataElements.Network").
+     * @param[in] param_name The parameter to be read (example: "ID").
+     * @param[out] param_val The value of the parameter.
+     * @return True on success, false otherwise.
+    */
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            int8_t *param_val)      = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            int16_t *param_val)     = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            int32_t *param_val)     = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            int64_t *param_val)     = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint8_t *param_val)     = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint16_t *param_val)    = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint32_t *param_val)    = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            uint64_t *param_val)    = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            double *param_val)      = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            bool *param_val)        = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            std::string *param_val) = 0;
+    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
+                            sMacAddr *param_val)    = 0;
+
     /* @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (example: "Device.WiFi.DataElements.Network.Device").
@@ -143,12 +176,6 @@ public:
      * @return True if date and time successfully set, false otherwise.
      */
     virtual bool set_time(const std::string &path_to_object, const std::string &time_stamp) = 0;
-
-    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            uint64_t *param_val) = 0;
-
-    virtual bool read_param(const std::string &obj_path, const std::string &param_name,
-                            std::string *param_val) = 0;
 };
 
 inline Ambiorix::~Ambiorix() {}

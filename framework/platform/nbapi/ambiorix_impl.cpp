@@ -7,6 +7,7 @@
  */
 #include "ambiorix_impl.h"
 #include "tlvf/tlvftypes.h"
+#include <bcl/network/network_utils.h>
 
 namespace beerocks {
 namespace nbapi {
@@ -612,6 +613,255 @@ bool AmbiorixImpl::set(const std::string &relative_path, const std::string &para
     return set(relative_path, parameter, tlvf::mac_to_string(value));
 }
 
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              int8_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(int8_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              int16_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(int16_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              int32_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(int32_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              int64_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(int64_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              uint8_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(uint8_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              uint16_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(uint16_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              uint32_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(uint32_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              uint64_t *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(uint64_t, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              double *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(double, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              bool *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = 0;
+        return false;
+    }
+    *param_val = amxc_var_constcast(bool, &ret_val);
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              std::string *param_val)
+{
+    amxc_var_t ret_val;
+    amxd_object_t *obj = find_object(obj_path);
+    if (!obj) {
+        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
+        return false;
+    }
+    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
+
+    if (status != amxd_status_ok) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
+        *param_val = "";
+        return false;
+    }
+    *param_val = std::string(amxc_var_constcast(cstring_t, &ret_val));
+    amxc_var_clean(&ret_val);
+    return true;
+}
+
+bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
+                              sMacAddr *param_val)
+{
+    std::string mac_string;
+    bool str_ret_val = read_param(obj_path, param_name, &mac_string);
+    if (!str_ret_val) {
+        *param_val = beerocks::net::network_utils::ZERO_MAC;
+        return false;
+    }
+    bool mac_is_valid = tlvf::mac_from_string(param_val->oct, mac_string);
+    if (!mac_is_valid) {
+        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path
+                   << ". Object is not a MAC Address";
+        *param_val = beerocks::net::network_utils::ZERO_MAC;
+        return false;
+    }
+    return true;
+}
+
 std::string AmbiorixImpl::add_instance(const std::string &relative_path)
 {
     amxd_trans_t transaction;
@@ -763,53 +1013,6 @@ bool AmbiorixImpl::remove_all_instances(const std::string &relative_path)
     }
 
     LOG(DEBUG) << "All instances removed for: " << relative_path;
-    return true;
-}
-
-bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
-                              uint64_t *param_val)
-{
-    auto obj = find_object(obj_path);
-    if (!obj) {
-        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
-        return false;
-    }
-
-    amxc_var_t ret_val;
-    amxc_var_init(&ret_val);
-    amxd_status_t status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
-    if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
-        *param_val = 0;
-        amxc_var_clean(&ret_val);
-        return false;
-    }
-
-    *param_val = amxc_var_constcast(uint64_t, &ret_val);
-    amxc_var_clean(&ret_val);
-    return true;
-}
-
-bool AmbiorixImpl::read_param(const std::string &obj_path, const std::string &param_name,
-                              std::string *param_val)
-{
-    auto obj = find_object(obj_path);
-    if (!obj) {
-        LOG(ERROR) << "Failed to find \"" << obj_path << "\"";
-        return false;
-    }
-
-    amxc_var_t ret_val;
-    amxc_var_init(&ret_val);
-    auto status = amxd_object_get_param(obj, param_name.c_str(), &ret_val);
-    if (status != amxd_status_ok) {
-        LOG(ERROR) << "Failed to get param [" << param_name << "] of object: " << obj_path;
-        amxc_var_clean(&ret_val);
-        return false;
-    }
-
-    *param_val = amxc_var_constcast(cstring_t, &ret_val);
-    amxc_var_clean(&ret_val);
     return true;
 }
 

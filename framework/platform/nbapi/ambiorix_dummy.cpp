@@ -71,6 +71,66 @@ bool AmbiorixDummy::set(const std::string &relative_path, const std::string &par
 {
     return true;
 }
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               int8_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               int16_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               int32_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               int64_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint8_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint16_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint32_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               uint64_t *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               double *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               bool *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               std::string *param_val)
+{
+    return true;
+}
+bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
+                               sMacAddr *param_val)
+{
+    return true;
+}
 std::string AmbiorixDummy::add_instance(const std::string &relative_path) { return {}; }
 bool AmbiorixDummy::remove_instance(const std::string &relative_path, uint32_t index)
 {
@@ -103,18 +163,6 @@ bool AmbiorixDummy::set_current_time(const std::string &path_to_object, const st
 }
 
 bool AmbiorixDummy::set_time(const std::string &path_to_object, const std::string &time_stamp)
-{
-    return true;
-}
-
-bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
-                               uint64_t *param_val)
-{
-    return true;
-}
-
-bool AmbiorixDummy::read_param(const std::string &obj_path, const std::string &param_name,
-                               std::string *param_val)
 {
     return true;
 }

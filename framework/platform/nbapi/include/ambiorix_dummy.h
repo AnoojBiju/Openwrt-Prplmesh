@@ -44,6 +44,30 @@ public:
              const double &value) override;
     bool set(const std::string &relative_path, const std::string &parameter,
              const sMacAddr &value) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int8_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int16_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int32_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    int64_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint8_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint16_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint32_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    uint64_t *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    double *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    bool *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    std::string *param_val) override;
+    bool read_param(const std::string &obj_path, const std::string &param_name,
+                    sMacAddr *param_val) override;
     std::string add_instance(const std::string &relative_path) override;
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
@@ -56,10 +80,6 @@ public:
     bool set_current_time(const std::string &path_to_object,
                           const std::string &param = "TimeStamp") override;
     bool set_time(const std::string &path_to_object, const std::string &time_stamp) final;
-    bool read_param(const std::string &obj_path, const std::string &param_name,
-                    uint64_t *param_val) override;
-    bool read_param(const std::string &obj_path, const std::string &param_name,
-                    std::string *param_val) override;
 };
 
 } // namespace nbapi
