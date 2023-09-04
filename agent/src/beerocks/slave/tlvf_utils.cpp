@@ -228,6 +228,12 @@ bool tlvf_utils::create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu
     auto wifi6_caps =
         reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
 
+    // Missing wifi6_caps->spatial_reuse. PPM-2602.
+    if (!wifi6_caps->spatial_reuse) {
+        LOG(WARNING) << "Missing spatial_reuse in WiFi 6 capabilities";
+        wifi6_caps->spatial_reuse = true;
+    }
+
     if (wifi6_caps->spatial_reuse) {
         auto spatial_reuse_report_tlv = cmdu_tx.addClass<wfa_map::tlvSpatialReuseReport>();
         if (!spatial_reuse_report_tlv) {

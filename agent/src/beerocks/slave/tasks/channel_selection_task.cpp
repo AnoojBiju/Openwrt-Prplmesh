@@ -325,9 +325,10 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
         auto wifi6_caps =
             reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
         if (!wifi6_caps->spatial_reuse) {
-            LOG(ERROR) << "WiFi 6 capabilities does not support spatial reuse params for radio: "
-                       << spatial_reuse_request_tlv->radio_uid();
-            continue;
+            LOG(WARNING) << "WiFi 6 capabilities does not support spatial reuse params for radio: "
+                         << spatial_reuse_request_tlv->radio_uid();
+            // Missing wifi6_caps->spatial_reuse. PPM-2602.
+            // continue;
         }
         if (!handle_spatial_reuse_tlv(spatial_reuse_request_tlv)) {
             LOG(ERROR) << "Failed to handle spatial reuse request params";
@@ -380,8 +381,12 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
                 spatial_reuse_config_response_tlv->response_code() =
                     wfa_map::tlvSpatialReuseConfigResponse::ACCEPT;
             } else {
+                // Missing wifi6_caps->spatial_reuse. PPM-2602.
+                //spatial_reuse_config_response_tlv->response_code() =
+                //   wfa_map::tlvSpatialReuseConfigResponse::DECLINE;
+                LOG(WARNING) << "WiFi 6 capabilities does not support spatial reuse params";
                 spatial_reuse_config_response_tlv->response_code() =
-                    wfa_map::tlvSpatialReuseConfigResponse::DECLINE;
+                    wfa_map::tlvSpatialReuseConfigResponse::ACCEPT;
             }
         }
     }
