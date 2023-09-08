@@ -47,8 +47,8 @@ fi
 ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"lan\"].IPv4Address.[Alias == \"lan\"].", "parameters": { "IPAddress": "192.168.1.110" } }'
 
 # enable Wi-Fi radios
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
@@ -80,8 +80,8 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 # allows to verify that the device actually switches channel as part
 # of the test).
 # See also PPM-1928.
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Channel": "1" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Channel": "48" } }'
 
 # secondary vaps and backhaul are not supported yet (WIP)
 

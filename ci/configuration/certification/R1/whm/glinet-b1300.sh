@@ -144,8 +144,8 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 # allows to verify that the device actually switches channel as part
 # of the test).
 # See also PPM-1928.
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Channel": "1" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Channel": "48" } }'
 
 # Restrict channel bandwidth or the certification test will force the device on a channel that isn't sniffed
 # (see PPM-258)

@@ -31,13 +31,11 @@ ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
 if ubus call DHCPv4 _list ; then
-  ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv4 service not active!"
 fi
 if ubus call DHCPv6 _list ; then
-  ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv6 service not active!"
@@ -65,10 +63,9 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Alias == \"wan\"].", "parameters
 # Wired backhaul interface:
 uci set prplmesh.config.backhaul_wire_iface='eth0_5'
 
-# wireless.radio0.band='2.4GHz'
-# wireless.radio2.band='5GHz'
-# wireless.radio4.band='6GHz'
-# wireless.radio6.band='5GHz'
+# enable Wi-Fi radios
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # Restart the ssh server
 /etc/init.d/ssh-server restart
@@ -114,17 +111,11 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"
 ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan4.1\"]." }' && {
     ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan4.1\"]." }'
 }
-ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan4.2\"]." }' && {
-    ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan4.2\"]." }'
-}
 ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan4.1\"]." }' && {
     ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan4.1\"]." }'
 }
-ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan4.2\"]." }' && {
-    ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan4.2\"]." }'
-}
-ubus call WiFi.Radio _get '{ "rel_path": ".[Name == \"wlan4\"]." }' && {
-    ubus call WiFi.Radio _del '{ "rel_path": ".[Name == \"wlan4\"]." }'
+ubus call WiFi.Radio _get '{ "rel_path": ".[OperatingFrequencyBand == \"6GHz\"]." }' && {
+    ubus call WiFi.Radio _del '{ "rel_path": ".[OperatingFrequencyBand == \"6GHz\"]." }'
 }
 
 sleep 10
@@ -149,13 +140,13 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # sleep 5
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
-# Restart the ssh server
-/etc/init.d/ssh-server restart
+# Stop the default ssh server on the lan-bridge
+/etc/init.d/ssh-server stop
 sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.120:22 &"
+SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.250.120:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Stop and disable the firewall:

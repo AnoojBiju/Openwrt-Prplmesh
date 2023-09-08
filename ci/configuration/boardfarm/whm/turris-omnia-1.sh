@@ -63,8 +63,8 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.
 uci set prplmesh.config.backhaul_wire_iface='eth2'
 
 # enable Wi-Fi radios
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
@@ -97,8 +97,8 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 # allows to verify that the device actually switches channel as part
 # of the test).
 # See also PPM-1928.
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Channel": "1" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Channel": "48" } }'
 
 # secondary vaps and backhaul are not supported yet (WIP)
 
@@ -131,6 +131,6 @@ BOOTSCRIPT="/etc/rc.local"
 SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.1.100:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
-# Start an ssh server on the control interfce
+# Stop the default ssh server on the lan-bridge
 /etc/init.d/ssh-server stop
 dropbear -F -T 10 -p192.168.1.100:22 &
