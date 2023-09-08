@@ -161,9 +161,17 @@ main() {
 
     legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
-        dbg "Legacy platform, building on prplOS-old"
-        OPENWRT_TOOLCHAIN_VERSION='f437a188242e0904456f507e0d2682dd4383f73a'
-        OPENWRT_VERSION='f437a188242e0904456f507e0d2682dd4383f73a'
+        dbg "Legacy platform, building on prplOS(-old)"
+        OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
+        OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
+    elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
+        dbg "Haze platform, build on prplos-M1-2023/haze"
+        OPENWRT_TOOLCHAIN_VERSION='1104dbe222f4e8942ea75ba42330934b8c46027a'
+        OPENWRT_VERSION='1104dbe222f4e8942ea75ba42330934b8c46027a'
+    elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
+        dbg "OSP platform, build on feature/PPM-2598-bump-pwhm-and-lib"
+        OPENWRT_TOOLCHAIN_VERSION='e89d489e5d08640c8f8aed7d736d25e6419b9df4'
+        OPENWRT_VERSION='e89d489e5d08640c8f8aed7d736d25e6419b9df4'
     else
         dbg "Building on prplOS-next"
     fi
@@ -213,8 +221,8 @@ VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
 # prplOS-next for reference platforms
-OPENWRT_TOOLCHAIN_VERSION='ec5ee48507a4c2c75838044ce9bc0e674c32c337'
-OPENWRT_VERSION='ec5ee48507a4c2c75838044ce9bc0e674c32c337'
+OPENWRT_TOOLCHAIN_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
+OPENWRT_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
