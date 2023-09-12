@@ -25,7 +25,7 @@ sleep 20
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-/etc/init.d/ip-manager restart && sleep 15
+sh /etc/init.d/ip-manager restart && sleep 15
 
 ubus wait_for IP.Interface
 
@@ -68,7 +68,7 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz
 ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # Restart the ssh server
-/etc/init.d/ssh-server restart
+sh /etc/init.d/ssh-server restart
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -123,11 +123,11 @@ sleep 10
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 # Check the status of the LAN bridge
-ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && sh /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
 
 # Remove the default lan/wan SSH servers if they exist
 # ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
@@ -141,16 +141,16 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Stop the default ssh server on the lan-bridge
-/etc/init.d/ssh-server stop
+sh /etc/init.d/ssh-server stop
 sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.250.120:22 &"
+SERVER_CMD="sleep 20 && sh /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.250.120:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
+sh /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
