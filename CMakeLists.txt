@@ -32,7 +32,7 @@ option (ENABLE_VBSS "Build with Virtual BSS support" ON)
 
 option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" OFF)
 
-option(REGENERATE_TLVS "Generate C code from YAML files to make TLV classes" ON)
+option(REGENERATE_TLVS "Generate C code from YAML files to make TLV classes" OFF)
 
 ## Generic checks and defaults
 

@@ -10,6 +10,11 @@ set(TLVF_COMMAND ${Python3_EXECUTABLE} ${PythonTlvf} ${TLVF_DIR}/src ${TLVF_DIR}
 set(ENUM_AUTO_PRINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../external/enumAutoPrint)
 set(ENUM_AUTO_PRINT_COMMAND ${ENUM_AUTO_PRINT_DIR}/enum_auto_print.py)
 
+execute_process(COMMAND ${ENUM_AUTO_PRINT_COMMAND})
+if(NOT RET EQUAL 0)
+    message(FATAL_ERROR "-- Running enum_auto_print.py failed!")
+endif()
+
 if (REGENERATE_TLVS)
 	message("-- Running ${TLVF_COMMAND} --print-dependencies...")
 	execute_process(
@@ -31,11 +36,6 @@ if (REGENERATE_TLVS)
 	    message(FATAL_ERROR "-- ${TLVF_COMMAND} --print-outputs failed!")
 	endif()
 	#message("TLVF_OUTPUTS\n${TLVF_OUTPUTS}")
-
-	execute_process(COMMAND ${ENUM_AUTO_PRINT_COMMAND})
-	if(NOT RET EQUAL 0)
-	    message(FATAL_ERROR "-- Running enum_auto_print.py failed!")
-	endif()
 
 	add_custom_command(
 	    COMMAND ${TLVF_COMMAND}
