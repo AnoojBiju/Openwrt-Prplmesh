@@ -53,6 +53,7 @@ class tlvSpatialReuseReport : public BaseClass
         typedef struct sFlags2 {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t psr_disallowed : 1;
+            uint8_t reserved : 1;
             uint8_t non_srg_offset_valid : 1;
             uint8_t srg_information_valid : 1;
             uint8_t hesiga_spatial_reuse_value15_allowed : 1;
@@ -60,6 +61,7 @@ class tlvSpatialReuseReport : public BaseClass
             uint8_t hesiga_spatial_reuse_value15_allowed : 1;
             uint8_t srg_information_valid : 1;
             uint8_t non_srg_offset_valid : 1;
+            uint8_t reserved : 1;
             uint8_t psr_disallowed : 1;
             #else
             #error "Bitfield macros are not defined"
