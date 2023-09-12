@@ -31,7 +31,7 @@ rm -f /etc/rc.d/S25tr181-dhcpv6client
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-/etc/init.d/ip-manager restart
+/etc/init.d/ip-manager restart && sleep 15
 
 ubus wait_for IP.Interface
 
@@ -191,8 +191,9 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 
 # Add iptables rule to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-IPTABLES_CMD="iptables -P INPUT ACCEPT"
+IPTABLES_CMD="sleep 20 && iptables -P INPUT ACCEPT && dropbear -F -T 10 -p192.168.250.170:22 &"
 if ! grep -q "$IPTABLES_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$IPTABLES_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Restart the ssh server
 # /etc/init.d/ssh-server restart
+dropbear -F -T 10 -p192.168.250.170:22 &

@@ -193,7 +193,7 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # Add iptables rule to rc.local to allow SSH access after reboot
 # (Necessary because the prplOS version of Turris-omnia is held back)
 BOOTSCRIPT="/etc/rc.local"
-IPTABLES_CMD="iptables -P INPUT ACCEPT"
+IPTABLES_CMD="sleep 20 && iptables -P INPUT ACCEPT && dropbear -F -T 10 -p192.168.250.190:22 &"
 if ! grep -q "$IPTABLES_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$IPTABLES_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Restart the ssh server
@@ -204,4 +204,4 @@ if ! grep -q "$IPTABLES_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; ech
 # Start an ssh server on the control interfce
 # The ssh server that is already running will only accept connections from 
 # the IP interface that was configured with the IP-Manager
-# dropbear -F -T 10 -p192.168.250.190:22 &
+dropbear -F -T 10 -p192.168.250.190:22 &

@@ -25,7 +25,7 @@ sleep 20
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-/etc/init.d/ip-manager restart && sleep 15
+sh /etc/init.d/ip-manager restart && sleep 15
 
 ubus wait_for IP.Interface
 
@@ -62,13 +62,13 @@ uci set prplmesh.config.backhaul_wire_iface='lan3'
 uci commit
 
 # enable Wi-Fi radios
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Enable": "true" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
 # Restart the ssh server
-/etc/init.d/ssh-server restart
+sh /etc/init.d/ssh-server restart
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -97,19 +97,24 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 # allows to verify that the device actually switches channel as part
 # of the test).
 # See also PPM-1928.
-ubus call "WiFi.Radio.1" _set '{ "parameters": { "Channel": "1" } }'
-ubus call "WiFi.Radio.2" _set '{ "parameters": { "Channel": "48" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Channel": "1" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Channel": "48" } }'
+
+# Restrict channel bandwidth or the certification test could miss beacons
+# (see PPM-258)
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "OperatingChannelBandwidth": "20MHz" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "OperatingChannelBandwidth": "20MHz" } }'
 
 sleep 10
 
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 # Check the status of the LAN bridge
-ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && sh /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
 
 # Remove the default lan/wan SSH servers if they exist
 # ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
@@ -122,17 +127,17 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # sleep 5
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
-# Restart the ssh server
-/etc/init.d/ssh-server restart
+# Stop the default ssh server on the lan-bridge
+sh /etc/init.d/ssh-server stop
 sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
 BOOTSCRIPT="/etc/rc.local"
-SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.130:22 &"
+SERVER_CMD="sleep 20 && sh /etc/init.d/ssh-server stop && dropbear -F -T 10 -p192.168.250.130:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
+sh /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
