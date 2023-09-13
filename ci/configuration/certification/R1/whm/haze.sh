@@ -31,13 +31,11 @@ ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
 if ubus call DHCPv4 _list ; then
-  ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv4 service not active!"
 fi
 if ubus call DHCPv6 _list ; then
-  ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv6 service not active!"
