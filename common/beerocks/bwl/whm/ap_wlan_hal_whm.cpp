@@ -1258,8 +1258,37 @@ bool ap_wlan_hal_whm::set_spatial_reuse_config(
 bool ap_wlan_hal_whm::get_spatial_reuse_config(
     son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
-    return false;
+    std::string path_to_80211ax = m_radio_path + "IEEE80211ax.";
+    std::string string_bss_color_bitmap;
+    std::string string_partial_bssid_bitmap;
+
+    LOG(WARNING) << "get_spatial_reuse_config. path_to_80211ax" << path_to_80211ax;
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.bss_color, path_to_80211ax, "BssColor");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.partial_bss_color, path_to_80211ax,
+                               "BssColorPartial");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.hesiga_spatial_reuse_value15_allowed,
+                               path_to_80211ax, "HESIGASpatialReuseValue15Allowed");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_information_valid, path_to_80211ax,
+                               "SRGInformationValid");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.non_srg_offset_valid, path_to_80211ax,
+                               "NonSRGOffsetValid");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.psr_disallowed, path_to_80211ax,
+                               "PSRDisallowed");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.non_srg_obsspd_max_offset, path_to_80211ax,
+                               "NonSRGOBSSPDMaxOffset");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_obsspd_min_offset, path_to_80211ax,
+                               "SRGOBSSPDMinOffset");
+    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_obsspd_max_offset, path_to_80211ax,
+                               "SRGOBSSPDMaxOffset");
+    m_ambiorix_cl->get_param<>(string_bss_color_bitmap, path_to_80211ax, "SRGBSSColorBitmap");
+    m_ambiorix_cl->get_param<>(string_partial_bssid_bitmap, path_to_80211ax,
+                               "SRGPartialBSSIDBitmap");
+
+    LOG(WARNING) << "Get spatial reuse parameters. bss_color: " << spatial_reuse_params.bss_color
+                 << " partial_bss_color: " << spatial_reuse_params.partial_bss_color
+                 << " string_bss_color_bitmap: " << string_bss_color_bitmap
+                 << " string_partial_bssid_bitmap: " << string_partial_bssid_bitmap;
+    return true;
 }
 
 } // namespace whm
