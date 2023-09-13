@@ -76,6 +76,8 @@ build-for-haze:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "haze"
+  rules:
+    - when: manual
 
 trigger-build-for-osp:
   stage: build
@@ -94,6 +96,8 @@ trigger-build-for-osp:
   needs: []
   tags:
     - osp-build-fetch
+  rules:
+    - when: manual
 
 build-for-osp:
   stage: build
@@ -136,6 +140,8 @@ build-for-osp:
   timeout: 3h
   tags:
     - osp-build-fetch
+  rules:
+    - when: manual
 
 build-for-cgr:
   stage: build
@@ -308,7 +314,6 @@ run-certification-tests-R1-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
     - job: build-for-glinet-b1300
-    - job: build-for-haze
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
     - when: manual
@@ -345,8 +350,6 @@ run-certification-tests-R4-platform-essensium:
   needs:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
-    - job: build-for-haze
-    - job: build-for-osp
 
 run-certification-tests-R1-platform-isr:
   extends: .run-certification-tests-R1

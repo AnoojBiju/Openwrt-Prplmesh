@@ -159,7 +159,7 @@ main() {
             ;;
     esac
 
-    legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
+    legacy_platforms=("glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
         dbg "Legacy platform, building on prplOS(-old)"
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
@@ -170,8 +170,12 @@ main() {
         OPENWRT_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
-        OPENWRT_TOOLCHAIN_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
-        OPENWRT_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
+        OPENWRT_TOOLCHAIN_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
+        OPENWRT_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
+    elif [[ "turris-omnia" == "$TARGET_DEVICE" ]] ; then
+        dbg "Turris platform, build on prplos-next"
+        OPENWRT_TOOLCHAIN_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
+        OPENWRT_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
     else
         dbg "Building on prplOS-next"
     fi
