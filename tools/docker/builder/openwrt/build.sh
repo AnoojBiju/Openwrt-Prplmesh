@@ -165,13 +165,13 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos-M1-2023/haze-next"
-        OPENWRT_TOOLCHAIN_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
-        OPENWRT_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
+        dbg "Haze platform, build on feature/PPM-2598-bump-pwhm-and-lib // !prplos-M1-2023/haze-next"
+        OPENWRT_TOOLCHAIN_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
+        OPENWRT_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
-        OPENWRT_TOOLCHAIN_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
-        OPENWRT_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
+        dbg "OSP platform, build on feature/PPM-2598-bump-pwhm-and-lib // !prplos-M1-2023/urx"
+        OPENWRT_TOOLCHAIN_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
+        OPENWRT_VERSION='6bc24a960aeba80f3aaf4a12ced65af49424c3d4'
     else
         dbg "Building on prplOS-next"
     fi
@@ -220,7 +220,7 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS-next for reference platforms
+# prplOS-next for reference platforms (feature/PPM-2598-bump-pwhm-and-lib)
 OPENWRT_TOOLCHAIN_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
 OPENWRT_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
 PRPLMESH_VARIANT="-nl80211"
