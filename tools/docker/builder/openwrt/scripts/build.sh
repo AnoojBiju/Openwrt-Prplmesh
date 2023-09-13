@@ -15,8 +15,8 @@ if ! make -j"$(nproc)" ; then
     # the second build succeeds (to let the user/CI know that the
     # parallel build failed).
     echo "Build failed. Rebuilding with -j1."
-    make V=sc
-    exit 1
+    make -j3 V=sc
+    #exit 1 # Keep artifacts if succeeded
 fi
 
 mkdir -p artifacts
