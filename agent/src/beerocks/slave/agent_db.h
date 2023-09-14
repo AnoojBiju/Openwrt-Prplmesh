@@ -263,6 +263,7 @@ public:
                 bool backhaul_bss_disallow_profile2_agent_association;
                 bool active = false;
             };
+            uint8_t radio_max_bss = 0;
             std::array<sBssid, eBeeRocksIfaceIds::IFACE_TOTAL_VAPS> bssids{};
         } front;
 

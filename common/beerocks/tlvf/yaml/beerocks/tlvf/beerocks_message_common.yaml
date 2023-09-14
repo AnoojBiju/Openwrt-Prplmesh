@@ -262,6 +262,9 @@ sNodeHostap:
   hybrid_mode_supported:
     _type: uint8_t
     _comment: Boolean
+  radio_max_bss:
+    _type: uint8_t
+    _value: 0
 sVapsList:
   _type: struct
   vaps:

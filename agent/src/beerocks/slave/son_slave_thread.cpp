@@ -2443,6 +2443,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio->front.zwdfs                 = notification->params().zwdfs;
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
+
+        radio->front.radio_max_bss =
+            std::min(notification->params().radio_max_bss, uint8_t(radio->front.bssids.size()));
+
         LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         fill_channel_list_to_agent_db(fronthaul_iface, notification->channel_list());
