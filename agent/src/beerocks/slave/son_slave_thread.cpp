@@ -2444,6 +2444,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         std::copy_n(notification->params().he_mcs_set, beerocks::message::HE_MCS_SET_SIZE,
                     radio->he_mcs_set.begin());
 
+        radio->max_bss =
+            std::min(notification->params().radio_max_bss, uint8_t(radio->front.bssids.size()));
+
         save_channel_params_to_db(fronthaul_iface, notification->cs_params());
         if (notification->params().frequency_band != radio->wifi_channel.get_freq_type()) {
             LOG(ERROR) << "Radio wifi channel's frequncy types does not match the frequency type "
@@ -2453,6 +2456,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio->front.zwdfs                 = notification->params().zwdfs;
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
+
         LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
         fill_channel_list_to_agent_db(fronthaul_iface, notification->channel_list());

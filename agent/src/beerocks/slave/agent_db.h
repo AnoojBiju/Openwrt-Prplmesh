@@ -347,6 +347,11 @@ public:
          */
         beerocks::WifiChannel wifi_channel;
 
+        /**
+         * @brief Maximum supported BSSes; called WiFi.Radio.x.MaxSupportedSSIDs in tr181
+         */
+        uint8_t max_bss = 0;
+
         eWiFiBandwidth max_supported_bw = eWiFiBandwidth::BANDWIDTH_UNKNOWN;
         uint8_t number_of_antennas;
         uint8_t antenna_gain_dB;

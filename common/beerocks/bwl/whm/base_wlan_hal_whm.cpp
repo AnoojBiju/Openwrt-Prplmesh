@@ -432,6 +432,12 @@ bool base_wlan_hal_whm::refresh_radio_info()
     }
     m_ambiorix_cl->get_param(m_radio_info.ant_num, m_radio_path + "DriverStatus.", "NrTxAntenna");
 
+    uint32_t max_bss;
+    m_ambiorix_cl->get_param(max_bss, m_radio_path, "MaxSupportedSSIDs");
+    LOG(INFO) << "update max_bss_supported for " << m_radio_path << " with maxBSS " << max_bss;
+
+    m_radio_info.max_bss_supported = uint8_t(max_bss);
+
     if (!m_radio_info.available_vaps.size()) {
         LOG(INFO) << " calling refresh_vaps_info because local info struct is empty ";
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
