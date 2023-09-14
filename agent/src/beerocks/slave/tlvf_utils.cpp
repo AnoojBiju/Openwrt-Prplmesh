@@ -129,7 +129,12 @@ bool tlvf_utils::add_ap_radio_basic_capabilities(ieee1905_1::CmduMessageTx &cmdu
                                   });
     LOG(DEBUG) << "Radio reports " << num_bsses << " BSSes.";
 
-    radio_basic_caps->maximum_number_of_bsss_supported() = num_bsses;
+    uint8_t radio_max_bss = radio->front.radio_max_bss;
+
+    // when not implemented in bwl, radio_max_bss returns 0; use num_bsses in this case
+    radio_basic_caps->maximum_number_of_bsss_supported() =
+        (radio_max_bss > 0) ? radio_max_bss : num_bsses;
+
     LOG(DEBUG) << "Filling Supported operating classes on radio " << radio->front.iface_name
                << " (band type: "
                << beerocks::utils::convert_frequency_type_to_string(
