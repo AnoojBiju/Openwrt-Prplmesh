@@ -78,6 +78,8 @@ bool agent_ucc_listener::handle_dev_get_param(std::unordered_map<std::string, st
             return true;
         }
         auto ssid = params["ssid"];
+        // debug print bbsids
+        db->list_all_bssids();
         // there is an ssid, lookup the corresponding mac address
         if (!db->get_mac_by_ssid(ruid, ssid, mac_value)) {
             LOG(ERROR) << " failed to find the MAC address for ruid '" << ruid << "'"

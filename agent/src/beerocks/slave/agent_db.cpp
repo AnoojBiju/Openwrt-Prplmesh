@@ -99,6 +99,26 @@ AgentDB::sRadio *AgentDB::get_radio_by_mac(const sMacAddr &mac, eMacType mac_typ
     return radio_it == m_radios.end() ? nullptr : &(*radio_it);
 }
 
+// List all radio bssid mac combinations
+void AgentDB::list_all_bssids()
+{
+    LOG(ERROR) << "- Listing all bssids -";
+
+    for (auto radios_it = m_radios.begin(); radios_it != m_radios.end(); ++radios_it) {
+        LOG(ERROR) << "Radio iface_mac: " << radios_it->front.iface_mac;
+        // Go over front BBSIDs
+        for (auto bsses_it = radios_it->front.bssids.begin();
+             bsses_it != radios_it->front.bssids.end(); ++bsses_it) {
+            LOG(ERROR) << "    SSID: " << bsses_it->ssid;
+            LOG(ERROR) << "        MAC: " << bsses_it->mac;
+            LOG(ERROR) << "        NAME: " << bsses_it->iface_name;
+            LOG(ERROR) << "        FRONT: " << bsses_it->fronthaul_bss;
+            LOG(ERROR) << "        BACK: " << bsses_it->backhaul_bss;
+            LOG(ERROR) << "---------------------------------";
+        }
+    }
+}
+
 void AgentDB::erase_client(const sMacAddr &client_mac, sMacAddr bssid)
 {
     if (bssid != net::network_utils::ZERO_MAC) {

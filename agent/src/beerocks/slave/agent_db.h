@@ -86,7 +86,7 @@ public:
         static AgentDB instance;
         return SafeDB(instance);
     }
-    AgentDB(const AgentDB &) = delete;
+    AgentDB(const AgentDB &)        = delete;
     void operator=(const AgentDB &) = delete;
 
 private:
@@ -492,6 +492,12 @@ public:
      * @return sRadio* A pointer to the radio struct containing the given MAC address.
      */
     sRadio *get_radio_by_mac(const sMacAddr &mac, eMacType mac_type_hint = eMacType::ALL);
+
+    /**
+     * @brief Debug and list all radio information in the db
+     *
+     */
+    void list_all_bssids();
 
     /**
      * @brief Erase client from associated_clients list.
