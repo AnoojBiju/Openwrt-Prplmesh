@@ -23,6 +23,12 @@ if data_overlay_not_initialized; then
 fi
 sleep 20
 
+# /etc/init.d/prplmesh stop
+# /etc/init.d/prplmesh_whm stop
+# rm /etc/config/wld/odl/wld.odl
+# /etc/init.d/prplmesh_whm start
+# /etc/init.d/prplmesh start
+
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
 sh /etc/init.d/ip-manager restart && sleep 15
@@ -78,7 +84,7 @@ sh /etc/init.d/ssh-server restart
 # add private vaps to lan to workaround Netmodel missing wlan mib
 # this must be reverted once Netmodel version is integrated
 brctl addif br-lan wlan0 > /dev/null 2>&1 || true
-brctl addif br-lan wlan1 > /dev/null 2>&1 || true
+brctl addif br-lan wlan2 > /dev/null 2>&1 || true
 
 # configure private vaps
 ubus call "WiFi.SSID.1" _set '{ "parameters": { "SSID": "prplmesh" } }'
