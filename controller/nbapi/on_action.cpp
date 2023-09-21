@@ -911,67 +911,6 @@ amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_func
 
 amxd_dm_t *g_data_model = nullptr;
 
-static void rm_params(amxd_object_t *object, const char *param_name)
-{
-    amxd_param_t *param = amxd_object_get_param_def(object, param_name);
-
-    if (param) {
-        amxd_action_param_destroy(object, param, action_param_destroy, NULL, NULL, NULL);
-        amxd_param_delete(&param);
-    }
-}
-
-static void add_string_param(const char *param_name, amxd_object_t *param_owner_obj)
-{
-    amxd_param_t *param = NULL;
-
-    amxd_param_new(&param, param_name, AMXC_VAR_ID_CSTRING);
-    amxd_object_add_param(param_owner_obj, param);
-}
-
-/**
- * @brief Removes PreSharedKey, KeyPassphrase, SAEPassphrase parameters
- * from Device.WiFi.DataElements.Network.AccessPoint.*.Security object.
- * event_rm_params() invokes when value of parameter
- * Device.WiFi.DataElements.Network.AccessPoint.*.Security.ModeEnabled changed
- * from "WPA2-Personal" to any of other available values.
- */
-static void event_rm_params(const char *const sig_name, const amxc_var_t *const data,
-                            void *const priv)
-{
-    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
-
-    if (!security_obj) {
-        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
-                        ".Network.AccessPoint.*.Security";
-        return;
-    }
-    rm_params(security_obj, "PreSharedKey");
-    rm_params(security_obj, "KeyPassphrase");
-    rm_params(security_obj, "SAEPassphrase");
-}
-
-/**
- * @brief Add PreSharedKey, KeyPassphrase, SAEPassphrase parameters
- * to Device.WiFi.DataElements.Network.AccessPoint.*.Security object.
- * Function invokes when value of parameter
- * Device.WiFi.DataElements.Network.AccessPoint.*.Security.ModeEnabled changed to "WPA2-Personal".
- */
-static void event_add_hidden_params(const char *const sig_name, const amxc_var_t *const data,
-                                    void *const priv)
-{
-    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
-
-    if (!security_obj) {
-        LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
-                        ".Network.AccessPoint.*.Security";
-        return;
-    }
-    add_string_param("PreSharedKey", security_obj);
-    add_string_param("KeyPassphrase", security_obj);
-    add_string_param("SAEPassphrase", security_obj);
-}
-
 /**
  * @brief Renew configurations on agents.
  *
@@ -1090,8 +1029,6 @@ std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 {
     const std::vector<beerocks::nbapi::sEvents> events_list = {
-        {"event_rm_params", event_rm_params},
-        {"event_add_hidden_params", event_add_hidden_params},
         {"event_configuration_changed", event_configuration_changed},
     };
     return events_list;
