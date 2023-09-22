@@ -62,6 +62,8 @@ endif()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Do not fall back to C++98
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   # When compiling with openWrt, FORTIFY_SOURCE=1 always gets added.
   # Since we anyway use FORTIFY_SOURCE=2 and it cannot be set two times
