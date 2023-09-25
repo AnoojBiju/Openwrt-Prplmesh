@@ -100,6 +100,11 @@ public:
     static std::string search_path_ap();
 
     /**
+     * @brief return search/resolve path of AccessPoint instance objects.
+     */
+    static std::string search_path_ap_inst();
+
+    /**
      * @brief return path of EndPoint template object.
      */
     static std::string search_path_ep();
