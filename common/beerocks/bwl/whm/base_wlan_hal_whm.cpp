@@ -440,7 +440,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
     m_radio_info.radio_max_bss_supported = uint8_t(max_bss);
 
     if (!m_radio_info.available_vaps.size()) {
-        LOG(INFO) << " calling refresh_vaps_info because local info struct is empty ";
+        LOG(DEBUG) << "calling refresh_vaps_info because local info struct is empty";
         if (!refresh_vaps_info(beerocks::IFACE_RADIO_ID)) {
             LOG(ERROR) << " could not refresh vaps info for radio " << beerocks::IFACE_RADIO_ID;
             return false;
@@ -450,11 +450,13 @@ bool base_wlan_hal_whm::refresh_radio_info()
     return true;
 }
 
-bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
+bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantMap &aps)
 {
     aps.clear();
-    auto result =
-        m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(wbapi_utils::search_path_ap());
+
+    auto result = m_ambiorix_cl->get_object_multi<AmbiorixVariantMapSmartPtr>(
+        wbapi_utils::search_path_ap_inst());
+
     if (!result) {
         LOG(ERROR) << "could not get ap multi object for " << wbapi_utils::search_path_ap();
         return false;
@@ -463,13 +465,22 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
     for (auto &it : *result) {
         auto &ap = it.second;
         if ((ap.empty()) ||
-            (!m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path)) ||
-            (radio_path != m_radio_path)) {
+            (!m_ambiorix_cl->resolve_path(wbapi_utils::get_path_radio_reference(ap), radio_path))) {
             LOG(ERROR) << "iteration on ap " << it.first << " problem with radio reference ? ";
             LOG(ERROR) << "radio path " << radio_path << " m_radio_path " << m_radio_path;
             continue;
         }
-        aps.emplace_back(std::move(ap));
+        if (radio_path != m_radio_path) {
+            continue;
+        }
+        std::string mac_addr = wbapi_utils::get_ssid_mac(
+            *(m_ambiorix_cl->get_object(wbapi_utils::get_path_ssid_reference(ap))));
+
+        if (mac_addr == "00:00:00:00:00:00" || mac_addr.empty()) {
+            continue;
+        }
+        LOG(INFO) << "add " << it.first << " to list of APs, with MAC " << mac_addr;
+        aps.emplace(std::move(mac_addr), std::move(ap));
     }
     return true;
 }
@@ -491,10 +502,9 @@ bool base_wlan_hal_whm::check_enabled_vap(const std::string &bss) const
 
 bool base_wlan_hal_whm::refresh_vaps_info(int id)
 {
-    bool ret   = false;
-    int vap_id = -1;
-    LOG(DEBUG) << "refresh vaps info id: " << id;
-    AmbiorixVariantList curr_vaps;
+    bool ret = false;
+
+    AmbiorixVariantMap curr_vaps;
     get_radio_vaps(curr_vaps);
 
     AmbiorixVariant empty_vap;
@@ -502,27 +512,69 @@ bool base_wlan_hal_whm::refresh_vaps_info(int id)
     std::vector<std::string> newEnabledVaps;
     bool wasActive   = has_enabled_vap();
     int nb_curr_vaps = curr_vaps.size();
-    while (++vap_id < std::max(int(beerocks::IFACE_VAP_ID_MAX), nb_curr_vaps)) {
-        if (id == beerocks::IFACE_RADIO_ID || id == vap_id) {
-            if (vap_id >= nb_curr_vaps) {
-                ret |= refresh_vap_info(vap_id, empty_vap);
-            } else {
-                auto &saved_vaps = m_radio_info.available_vaps;
-                bool wasKnown    = (saved_vaps.find(vap_id) != saved_vaps.end());
-                bool wasEnabled  = wasKnown && check_enabled_vap(saved_vaps[vap_id].bss);
-                ret |= refresh_vap_info(vap_id, curr_vaps.at(vap_id));
-                bool isKnown   = (saved_vaps.find(vap_id) != saved_vaps.end());
-                bool isEnabled = isKnown && check_enabled_vap(saved_vaps[vap_id].bss);
-                detectNewVaps |= ((isKnown != wasKnown) || (!wasActive && isEnabled));
-                if (!wasEnabled && isEnabled) {
-                    newEnabledVaps.push_back(saved_vaps[vap_id].bss);
-                }
-            }
+
+    auto &saved_vaps = m_radio_info.available_vaps;
+    // iterate on saved_vaps and try to update with info from curr_vaps;
+
+    std::vector<int> empty_slots;
+    int max_slot = -1;
+    // extract at runtime max(saved_vaps.keys()); instead of computing it
+
+    auto handle_vap = [&](int vap_id, const bwl::VAPElement &vap) {
+        bool wasEnabled = check_enabled_vap(vap.bss);
+        auto updatedVAP = curr_vaps.find(vap.mac);
+        if (updatedVAP != curr_vaps.end()) {
+            LOG(INFO) << "update vap mac " << updatedVAP->first << ", insert in " << vap_id;
+            ret |= refresh_vap_info(vap_id, updatedVAP->second);
+            curr_vaps.erase(vap.mac);
+        } else {
+            LOG(INFO) << "reset vap_id " << vap_id;
+            ret |= refresh_vap_info(vap_id, empty_vap);
+            empty_slots.push_back(vap_id);
+            // slot of vap_id was freed by refresh_vap_info(empty_vap);
         }
-        if (id == vap_id) {
-            break;
+        bool isKnown   = (saved_vaps.find(vap_id) != saved_vaps.end());
+        bool isEnabled = isKnown && check_enabled_vap(saved_vaps[vap_id].bss);
+        detectNewVaps |= !wasActive && isEnabled;
+        //!wasActive : no vaps enabled on this radio previously
+
+        if (!wasEnabled && isEnabled) {
+            LOG(INFO) << "wasEnabled :" << wasEnabled << " isEnabled:" << isEnabled;
+            newEnabledVaps.push_back(saved_vaps[vap_id].bss);
         }
+        max_slot = std::max(max_slot, vap_id);
     };
+
+    if (id != IFACE_RADIO_ID) {
+        auto v = saved_vaps.find(id);
+        if (v != saved_vaps.end()) {
+            handle_vap(id, v->second);
+            empty_slots.clear();
+        } else {
+            LOG(ERROR) << "can't find vap_id " << id;
+        }
+    } else {
+        for (const auto &vap : saved_vaps) {
+            handle_vap(vap.first, vap.second);
+        }
+        for (int e = int(beerocks::IFACE_VAP_ID_MAX) - 1; e > (max_slot); e--) {
+            empty_slots.push_back(e);
+        }
+    }
+
+    while (!curr_vaps.empty() && !empty_slots.empty()) {
+        int slot = empty_slots.back();
+        LOG(INFO) << "insert new_vap with mac " << curr_vaps.begin()->first << " in slot " << slot;
+
+        ret |= refresh_vap_info(slot, curr_vaps.begin()->second);
+        if ((saved_vaps.find(slot) != saved_vaps.end()) &&
+            check_enabled_vap(saved_vaps[slot].bss)) {
+            newEnabledVaps.push_back(saved_vaps[slot].bss);
+        }
+        empty_slots.pop_back();
+        curr_vaps.erase(curr_vaps.begin()->first);
+        detectNewVaps |= true;
+    }
 
     if (detectNewVaps) {
         process_radio_event(get_iface_name(), "AccessPointNumberOfEntries",
@@ -544,6 +596,8 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
 
     auto wifi_ssid_path = wbapi_utils::get_path_ssid_reference(ap_obj);
     auto ifname         = wbapi_utils::get_ap_iface(ap_obj);
+
+    LOG(INFO) << "refresh_vap_info " << id << " path " << wifi_ssid_path;
     if (!wifi_ssid_path.empty() && !ifname.empty() &&
         !wbapi_utils::get_path_radio_reference(ap_obj).empty()) {
         std::string mac;
@@ -634,11 +688,12 @@ bool base_wlan_hal_whm::process_ext_events(int fd)
 
 int base_wlan_hal_whm::whm_get_vap_id(const std::string &iface)
 {
-    AmbiorixVariantList aps;
+    LOG(INFO) << "whm_get_vap_id " << iface;
+    AmbiorixVariantMap aps;
     if (get_radio_vaps(aps) && !aps.empty()) {
         int vap_id = beerocks::IFACE_VAP_ID_MIN;
         for (const auto &ap : aps) {
-            if (wbapi_utils::get_ap_iface(ap) == iface) {
+            if (wbapi_utils::get_ap_iface(ap.second) == iface) {
                 return vap_id;
             }
             vap_id++;
