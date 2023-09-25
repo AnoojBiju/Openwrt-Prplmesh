@@ -2080,7 +2080,8 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
 
     // Now that all the existing BSSs were updated, we need to iterate over the remaining incoming configuration.
     // Any BSS that is flagged for teardown in the final configuration will instead be updated with the incoming configuration.
-    for (const auto &remaining_bss : config_copy) {
+
+    for (auto &remaining_bss : config_copy) {
         // Find if there are any BSSs that are pending for teardown
         auto iter = std::find_if(final_config.begin(), final_config.end(), bss_pending_teardown);
         if (iter != final_config.end()) {
@@ -2092,6 +2093,14 @@ bool ApAutoConfigurationTask::validate_reconfiguration(
             iter->encr_type   = remaining_bss.encr_type;
             iter->network_key = remaining_bss.network_key;
             iter->bss_type    = remaining_bss.bss_type;
+
+        } else if (final_config.size() < radio->front.radio_max_bss) {
+            LOG(DEBUG) << "SSID " << remaining_bss.ssid
+                       << " will be marked for a new instance of AccessPoint";
+            // use wildcard mac for 'new' vaps
+            tlvf::mac_from_string(remaining_bss.bssid.oct, network_utils::WILD_MAC_STRING);
+
+            final_config.emplace_back(std::move(remaining_bss));
         } else {
             LOG(ERROR) << "Cannot add more VAPs then what are currently configured";
         }
