@@ -344,31 +344,95 @@ bool ap_wlan_hal_whm::update_vap_credentials(
 {
     LOG(DEBUG) << "updating vap credentials of radio " << get_iface_name();
     bool ret;
+    auto new_vap_index = m_radio_info.available_vaps.size();
 
-    for (auto bss_info_conf : bss_info_conf_list) {
+    for (const auto &bss_info_conf : bss_info_conf_list) {
+        std::string wifi_vap_path, wifi_ssid_path;
+        std::string ifname = "new_interface";
+
         auto bssid = tlvf::mac_to_string(bss_info_conf.bssid);
         int vap_id = get_vap_id_with_mac(bssid);
-        if (!check_vap_id(vap_id)) {
+
+        if (bssid == beerocks::net::network_utils::WILD_MAC_STRING) {
+            LOG(DEBUG) << "create new vap for wildcard bssid";
+
+            auto freq_name = wbapi_utils::band_short_name(m_radio_info.frequency_band);
+
+            std::string new_vap_name = "vap" + freq_name + std::to_string(new_vap_index++);
+
+            std::string radio_name;
+            if (!m_ambiorix_cl->get_param(radio_name, m_radio_path, "Alias")) {
+                LOG(ERROR) << "cannot read radio name for " << m_radio_path;
+                continue;
+            }
+
+            LOG(INFO) << "calling addVAPIntf with radio name " << radio_name << " vap name "
+                      << new_vap_name;
+
+            AmbiorixVariant result;
+            AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+            args.add_child("vap", new_vap_name);
+            args.add_child("radio", radio_name);
+
+            m_ambiorix_cl->call("Device.WiFi.", "addVAPIntf", args, result);
+
+            // ex of call: Device.WiFi.addVAPIntf(vap="vap5g4", radio="radio2")
+            // use the parameter 'vap', "vap5g4", as Alias to retrieve the new
+            // SSID instance; from there, retrieve AccessPoint by SSIDReference;
+
+            std::string search_path = wbapi_utils::search_path_ssid_by_alias(new_vap_name);
+            if (!m_ambiorix_cl->resolve_path(search_path, wifi_ssid_path)) {
+                LOG(ERROR) << "new SSID not found";
+                continue;
+            }
+
+            search_path = wbapi_utils::search_path_ap_by_ssidRef(wifi_ssid_path);
+            if (!m_ambiorix_cl->resolve_path(search_path, wifi_vap_path)) {
+                LOG(ERROR) << "new AccessPoint not found";
+                continue;
+            }
+
+            LOG(INFO) << "added new instances " << wifi_ssid_path << " " << wifi_vap_path;
+
+            args.set_type(AMXC_VAR_ID_HTABLE);
+            args.add_child("BridgeInterface", "br-lan");
+            args.add_child("IEEE80211kEnabled", 1);
+            args.add_child("WDSEnable", 1);
+            if (!m_ambiorix_cl->update_object(wifi_vap_path, args)) {
+                LOG(INFO) << "cannot set bridge, 11k and wds for " << wifi_vap_path;
+                //continue;
+                // no continue here since these parameters are supposed to be handled
+                // by other EasyMesh messages : ex bridging - traffic separation policy;
+                // or not handled by EasyMesh : ex WDSEnable;
+            }
+        } else if (!check_vap_id(vap_id)) {
             LOG(ERROR) << "no matching vap_id for bssid " << bssid;
             continue;
-        }
-        auto &vap_info = m_radio_info.available_vaps[vap_id];
-        auto &ifname   = vap_info.bss;
-        auto vap_it    = m_vapsExtInfo.find(ifname);
-        if (vap_it == m_vapsExtInfo.end()) {
-            LOG(ERROR) << "fail to get ifname of " << bssid;
-            continue;
-        }
-        std::string &wifi_vap_path  = vap_it->second.path;
-        std::string &wifi_ssid_path = vap_it->second.ssid_path;
-        bool &prev_teardown         = vap_it->second.teardown;
+        } else {
+            auto &vap_info = m_radio_info.available_vaps[vap_id];
+            ifname         = vap_info.bss;
+            auto vap_it    = m_vapsExtInfo.find(ifname);
+            if (vap_it == m_vapsExtInfo.end()) {
+                LOG(ERROR) << "fail to get ifname of " << bssid;
+                continue;
+            }
+            wifi_vap_path  = vap_it->second.path;
+            wifi_ssid_path = vap_it->second.ssid_path;
 
-        LOG(DEBUG) << "updating AP " << wifi_vap_path << " SSID " << wifi_ssid_path << " ifname "
-                   << ifname << " vap_id " << std::to_string(vap_id);
+            LOG(DEBUG) << "updating AP " << wifi_vap_path << " SSID " << wifi_ssid_path
+                       << " ifname " << ifname << " vap_id " << std::to_string(vap_id);
+        }
+        /* here we need to know the :
+        * wifi_vap_path
+        * wifi_ssid_path
+        * */
 
         AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
         if (bss_info_conf.teardown) {
-            prev_teardown = true;
+            auto &vap_info          = m_radio_info.available_vaps[vap_id];
+            ifname                  = vap_info.bss;
+            auto vap_it             = m_vapsExtInfo.find(ifname);
+            vap_it->second.teardown = true;
             LOG(INFO) << "BSS " << bss_info_conf.bssid << " flagged for tear down.";
             new_obj.add_child<bool>("Enable", false);
             ret = m_ambiorix_cl->update_object(wifi_vap_path, new_obj);
@@ -444,6 +508,15 @@ bool ap_wlan_hal_whm::update_vap_credentials(
             LOG(ERROR) << "Failed to update Security object " << wifi_ap_sec_path;
             continue;
         }
+        if (ifname == "new_interface") {
+            // skip update of vap_info, new instance in vap_info will be added asynchronously on a pwhm event
+            continue;
+        }
+
+        auto &vap_info      = m_radio_info.available_vaps[vap_id];
+        ifname              = vap_info.bss;
+        auto vap_it         = m_vapsExtInfo.find(ifname);
+        bool &prev_teardown = vap_it->second.teardown;
 
         if (prev_teardown) {
             prev_teardown = false;
