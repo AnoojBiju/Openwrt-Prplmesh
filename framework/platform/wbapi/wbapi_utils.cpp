@@ -67,6 +67,16 @@ std::string wbapi_utils::band_short_name(const std::string &band)
     return "";
 }
 
+std::string wbapi_utils::band_short_name(const beerocks::eFreqType &band)
+{
+    for (const auto &map_it : band_freq_table) {
+        if (map_it.second.second == band) {
+            return map_it.second.first;
+        }
+    }
+    return "";
+}
+
 const std::map<std::string, std::vector<WSC::eWscAuth>> wbapi_utils::security_mode_table = {
     {"None", {WSC::eWscAuth::WSC_AUTH_OPEN}},
     {"WPA-Personal", {WSC::eWscAuth::WSC_AUTH_WPAPSK, WSC::eWscAuth::WSC_AUTH_WPA}},
@@ -187,6 +197,11 @@ std::string wbapi_utils::search_path_ssid_iface_by_bssid(const std::string &bssi
     return search_path_ssid_by_bssid(bssid) + "Name";
 }
 
+std::string wbapi_utils::search_path_ssid_by_alias(const std::string &alias)
+{
+    return search_path_ssid() + "[Alias == '" + alias + "'].";
+}
+
 std::string wbapi_utils::search_path_ap_iface() { return search_path_ssid() + "*.Alias"; }
 
 std::string wbapi_utils::search_path_ap_by_iface(const std::string &vap_ifname)
@@ -202,6 +217,11 @@ std::string wbapi_utils::search_path_ap_by_radRef(const std::string &radioRef)
 std::string wbapi_utils::search_path_ap_iface_by_radRef(const std::string &radioRef)
 {
     return search_path_ap_by_radRef(radioRef) + "Alias";
+}
+
+std::string wbapi_utils::search_path_ap_by_ssidRef(const std::string &ssidRef)
+{
+    return search_path_ap() + "[SSIDReference == '" + ssidRef + "'].";
 }
 
 std::string wbapi_utils::search_path_assocDev_by_mac(const std::string &vap_ifname,
