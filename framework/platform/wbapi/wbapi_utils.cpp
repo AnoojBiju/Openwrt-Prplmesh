@@ -167,6 +167,8 @@ std::string wbapi_utils::search_path_ssid() { return search_path_wifi() + "SSID.
 
 std::string wbapi_utils::search_path_ap() { return search_path_wifi() + "AccessPoint."; }
 
+std::string wbapi_utils::search_path_ap_inst() { return search_path_wifi() + "AccessPoint.*."; }
+
 std::string wbapi_utils::search_path_ep() { return search_path_wifi() + "EndPoint."; }
 
 std::string wbapi_utils::search_path_radio_iface() { return search_path_radio() + "*.Name"; }
