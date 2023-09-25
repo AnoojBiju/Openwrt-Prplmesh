@@ -100,6 +100,8 @@ void channel_selection_task::handle_event(int event_type, void *obj)
                 handle_event       = true;
                 acs_response_event = static_cast<sAcsResponse_event *>(obj);
                 FSM_MOVE_STATE(ON_ACS_RESPONSE);
+            } else {
+                delete static_cast<sAcsResponse_event *>(obj);
             }
             break;
         }
@@ -127,6 +129,8 @@ void channel_selection_task::handle_event(int event_type, void *obj)
                 restricted_channel_response_event =
                     static_cast<sRestrictedChannelResponse_event *>(obj);
                 FSM_MOVE_STATE(ACTIVATE_SLAVE);
+            } else {
+                delete static_cast<sRestrictedChannelResponse_event *>(obj);
             }
             break;
         }
