@@ -46,6 +46,12 @@ public:
     static std::string band_short_name(const std::string &band);
 
     /**
+     * @brief Convert a beerocks::eFreqType bandwidth
+     * to band description string (24g, 5g, 6g).
+     */
+    static std::string band_short_name(const beerocks::eFreqType &band);
+
+    /**
      * @brief Converts WSC::eWscAuth ecurity mode to string.
      */
     static std::string security_mode_to_string(const WSC::eWscAuth &security_mode);
@@ -129,6 +135,11 @@ public:
     static std::string search_path_ssid_iface_by_bssid(const std::string &bssid);
 
     /**
+     * @brief return search path of SSID object instance by Alias
+    */
+    static std::string search_path_ssid_by_alias(const std::string &alias);
+
+    /**
      * @brief return search path of AccessPoint object interface Name.
      */
     static std::string search_path_ap_iface();
@@ -148,6 +159,11 @@ public:
      * filtered by radio reference.
      */
     static std::string search_path_ap_iface_by_radRef(const std::string &radioRef);
+
+    /**
+     * @brief return search path of AccessPoint object instance by SSID reference
+     */
+    static std::string search_path_ap_by_ssidRef(const std::string &ssidRef);
 
     /**
      * @brief return search path of associated device object instance
