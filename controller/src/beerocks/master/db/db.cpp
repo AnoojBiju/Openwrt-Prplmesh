@@ -124,6 +124,16 @@ std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+std::shared_ptr<Agent> db::get_agent(const sMacAddr &al_mac)
+{
+    auto agent = m_agents.get(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "Could not find Agent: " << al_mac << " in m_agents";
+    }
+
+    return agent;
+}
+
 bool db::set_sta_association_frame(const sMacAddr &sta_mac, std::vector<uint8_t> assoc_frame)
 {
     auto sta = get_station(sta_mac);
