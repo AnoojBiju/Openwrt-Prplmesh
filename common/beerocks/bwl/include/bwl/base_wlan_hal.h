@@ -261,6 +261,47 @@ public:
         return (m_radio_info.available_vaps.find(vap_id) != m_radio_info.available_vaps.end());
     }
 
+    /*!
+     * Returns bss_color_bitmap string from uint64 value
+     */
+    std::string get_bss_color_bitmap(uint64_t decimal_value)
+    {
+        std::string resultStr;
+        bool first = true;
+
+        for (int i = 0; i < 64; ++i) {
+            if ((decimal_value >> i) & 1) {
+                if (!first) {
+                    resultStr += ',';
+                }
+                resultStr += std::to_string(i);
+                first = false;
+            }
+        }
+        return resultStr;
+    }
+
+    /*!
+     * Converting string of decimal values(ex. "1,3,5,63") to uint64.
+     */
+    uint64_t get_uint64_from_bss_string(const std::string &decimal_str)
+    {
+        std::istringstream iss(decimal_str);
+        std::string decimal;
+        uint64_t result = 0;
+
+        while (std::getline(iss, decimal, ',')) {
+            int value = std::stoi(decimal);
+
+            if (value >= 0 && value <= 63) {
+                // Set the corresponding bit in result to 1.
+                uint64_t bitmask = 1ULL << value;
+                result |= bitmask;
+            }
+        }
+        return result;
+    }
+
     // Protected methods
 protected:
     /*!
