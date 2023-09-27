@@ -3201,8 +3201,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION";
 
         auto db    = AgentDB::get();
-        auto radio = db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(),
-                                          AgentDB::eMacType::RADIO);
+        auto radio = db->radio(fronthaul_iface);
+
         if (!radio) {
             LOG(DEBUG) << "Radio " << beerocks_header->actionhdr()->radio_mac()
                        << " does not exist on the db";

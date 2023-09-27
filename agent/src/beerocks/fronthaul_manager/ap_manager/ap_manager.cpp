@@ -3317,6 +3317,7 @@ void ApManager::csa_notification_timer_elapsed(
         LOG(ERROR) << "Failed building message!";
         return;
     }
+    ap_wlan_hal->refresh_radio_info();
     fill_sr_params(spatial_reuse_report->sr_params());
     send_cmdu(cmdu_tx);
 
