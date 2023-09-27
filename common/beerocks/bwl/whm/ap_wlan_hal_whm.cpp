@@ -1243,9 +1243,9 @@ bool ap_wlan_hal_whm::set_spatial_reuse_config(
         new_obj.add_child("SRGOBSSPDMinOffset", spatial_reuse_params.srg_obsspd_min_offset);
         new_obj.add_child("SRGOBSSPDMaxOffset", spatial_reuse_params.srg_obsspd_max_offset);
         new_obj.add_child("SRGBSSColorBitmap",
-                          std::to_string(spatial_reuse_params.srg_bss_color_bitmap));
+                          get_bss_color_bitmap(spatial_reuse_params.srg_bss_color_bitmap));
         new_obj.add_child("SRGPartialBSSIDBitmap",
-                          std::to_string(spatial_reuse_params.srg_partial_bssid_bitmap));
+                          get_bss_color_bitmap(spatial_reuse_params.srg_partial_bssid_bitmap));
     }
     if (!m_ambiorix_cl->update_object(path_to_80211ax, new_obj)) {
         LOG(ERROR) << "Could not set spatial reuse parameters for " << path_to_80211ax;
@@ -1283,11 +1283,14 @@ bool ap_wlan_hal_whm::get_spatial_reuse_config(
     m_ambiorix_cl->get_param<>(string_bss_color_bitmap, path_to_80211ax, "SRGBSSColorBitmap");
     m_ambiorix_cl->get_param<>(string_partial_bssid_bitmap, path_to_80211ax,
                                "SRGPartialBSSIDBitmap");
+    spatial_reuse_params.srg_bss_color_bitmap = get_uint64_from_bss_string(string_bss_color_bitmap);
+    spatial_reuse_params.srg_partial_bssid_bitmap =
+        get_uint64_from_bss_string(string_partial_bssid_bitmap);
 
-    LOG(WARNING) << "Get spatial reuse parameters. bss_color: " << spatial_reuse_params.bss_color
-                 << " partial_bss_color: " << spatial_reuse_params.partial_bss_color
-                 << " string_bss_color_bitmap: " << string_bss_color_bitmap
-                 << " string_partial_bssid_bitmap: " << string_partial_bssid_bitmap;
+    LOG(INFO) << "Get spatial reuse parameters. bss_color: " << spatial_reuse_params.bss_color
+              << " partial_bss_color: " << spatial_reuse_params.partial_bss_color
+              << " string_bss_color_bitmap: " << string_bss_color_bitmap
+              << " string_partial_bssid_bitmap: " << string_partial_bssid_bitmap;
     return true;
 }
 
