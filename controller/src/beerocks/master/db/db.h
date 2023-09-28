@@ -37,6 +37,7 @@
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
 
 #include <algorithm>
 #include <array>
@@ -1114,6 +1115,18 @@ public:
     bool set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv);
 
     /**
+     * @brief Add 'SpatialReuse' data element, set values to its parameters.
+     * Example of full path to object:
+     * "Device.WiFi.DataElements.Netwok.Device.1.Radio.1.SpatialReuse"
+     *
+     * @param spatial_reuse_report_tlv TLV with Spatial Reuse included in
+     * 'Operating Channel Report' message.
+     * @return True if sub-object was successfully added
+     * and values for its parameters set, false otherwise.
+     */
+    bool add_spatial_reuse_parameters(wfa_map::tlvSpatialReuseReport &spatial_reuse_report_tlv);
+
+    /**
      * @brief Set values for estimated MAC data rate downlink and uplink
      * for STA.EstMACDataRateDownlink and STA.EstMACDataRateUplink data elements.
      * Example of full path to data element:
@@ -1165,6 +1178,7 @@ public:
                                        beerocks::WifiChannel *supported_channels, int length);
     std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
+    std::string get_bss_color_bitmap_string(uint64_t decimal_value);
 
     bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
                                               uint8_t tx_power,
