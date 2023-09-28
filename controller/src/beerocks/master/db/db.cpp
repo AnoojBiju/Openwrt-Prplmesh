@@ -2086,6 +2086,26 @@ std::string db::get_hostap_supported_channels_string(const sMacAddr &radio_mac)
 }
 
 /**
+* @brief Returns bss_color_bitmap string from uint64 value
+*/
+std::string db::get_bss_color_bitmap_string(uint64_t decimal_value)
+{
+    std::string resultStr;
+    bool first = true;
+
+    for (int i = 0; i < 64; ++i) {
+        if ((decimal_value >> i) & 1) {
+            if (!first) {
+                resultStr += ',';
+            }
+            resultStr += std::to_string(i);
+            first = false;
+        }
+    }
+    return resultStr;
+}
+
+/**
  * @brief Add supported operating class to the database.
  * Currently this function is a wrapper which converts the operating
  * class to a set of supported channels and updates the list of currently
@@ -6517,6 +6537,133 @@ bool db::remove_current_op_classes(const sMacAddr &radio_mac)
         return false;
     }
 
+    return true;
+}
+
+bool db::add_spatial_reuse_parameters(wfa_map::tlvSpatialReuseReport &spatial_reuse_report_tlv)
+{
+    LOG(INFO) << "add_spatial_reuse_parameters, radio_uid: "
+              << spatial_reuse_report_tlv.radio_uid();
+    auto radio = get_radio_by_uid(spatial_reuse_report_tlv.radio_uid());
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio for mac: " << spatial_reuse_report_tlv.radio_uid();
+        return false;
+    }
+
+    auto radio_path = radio->dm_path;
+    if (radio_path.empty()) {
+        return true;
+    }
+
+    bool is_any_field_set =
+        (spatial_reuse_report_tlv.flags1().bss_color != 0 ||
+         spatial_reuse_report_tlv.flags1().partial_bss_color != 0 ||
+         spatial_reuse_report_tlv.flags2().psr_disallowed != 0 ||
+         spatial_reuse_report_tlv.flags2().non_srg_offset_valid != 0 ||
+         spatial_reuse_report_tlv.flags2().srg_information_valid != 0 ||
+         spatial_reuse_report_tlv.flags2().hesiga_spatial_reuse_value15_allowed != 0 ||
+         spatial_reuse_report_tlv.non_srg_obsspd_max_offset() != 0 ||
+         spatial_reuse_report_tlv.srg_obsspd_min_offset() != 0 ||
+         spatial_reuse_report_tlv.srg_obsspd_max_offset() != 0 ||
+         spatial_reuse_report_tlv.srg_bss_color_bitmap() != 0 ||
+         spatial_reuse_report_tlv.srg_partial_bssid_bitmap() != 0 ||
+         spatial_reuse_report_tlv.neighbor_bss_color_in_use_bitmap() != 0);
+
+    // Do not set SpatialReuse parameters if they all are empty. Checking is cheaper than ambiorix call.
+    if (is_any_field_set) {
+        // Prepare path to the SpatialReuse instance
+        // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.SpatialReuse
+        std::string spatial_reuse_path = radio_path + ".SpatialReuse";
+
+        //Data model path: Device.WiFi.DataElements.Network.Device.1.Radio.1.SpatialReuse.BSSColor
+        if (!m_ambiorix_datamodel->set(spatial_reuse_path, "BSSColor",
+                                       spatial_reuse_report_tlv.flags1().bss_color)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path
+                       << ".BSSColor: " << spatial_reuse_report_tlv.flags1().bss_color;
+            return false;
+        }
+        if (!m_ambiorix_datamodel->set(spatial_reuse_path, "PartialBSSColor",
+                                       spatial_reuse_report_tlv.flags1().partial_bss_color)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".PartialBSSColor: "
+                       << spatial_reuse_report_tlv.flags1().partial_bss_color;
+            return false;
+        }
+        if (!m_ambiorix_datamodel->set(
+                spatial_reuse_path, "HESIGASpatialReuseValue15Allowed",
+                spatial_reuse_report_tlv.flags2().hesiga_spatial_reuse_value15_allowed)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path
+                       << ".HESIGASpatialReuseValue15Allowed: "
+                       << spatial_reuse_report_tlv.flags2().hesiga_spatial_reuse_value15_allowed;
+            return false;
+        }
+        if (!m_ambiorix_datamodel->set(spatial_reuse_path, "SRGInformationValid",
+                                       spatial_reuse_report_tlv.flags2().srg_information_valid)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".SRGInformationValid: "
+                       << spatial_reuse_report_tlv.flags2().srg_information_valid;
+            return false;
+        }
+        if (!m_ambiorix_datamodel->set(spatial_reuse_path, "NonSRGOffsetValid",
+                                       spatial_reuse_report_tlv.flags2().non_srg_offset_valid)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".NonSRGOffsetValid: "
+                       << spatial_reuse_report_tlv.flags2().non_srg_offset_valid;
+            return false;
+        }
+        if (!m_ambiorix_datamodel->set(spatial_reuse_path, "PSRDisallowed",
+                                       spatial_reuse_report_tlv.flags2().psr_disallowed)) {
+            LOG(ERROR) << "Failed to set " << spatial_reuse_path
+                       << ".PSRDisallowed: " << spatial_reuse_report_tlv.flags2().psr_disallowed;
+            return false;
+        }
+        if (spatial_reuse_report_tlv.flags2().non_srg_offset_valid) {
+            if (!m_ambiorix_datamodel->set(spatial_reuse_path, "NonSRGOBSSPDMaxOffset",
+                                           spatial_reuse_report_tlv.non_srg_obsspd_max_offset())) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".NonSRGOBSSPDMaxOffset: "
+                           << spatial_reuse_report_tlv.non_srg_obsspd_max_offset();
+                return false;
+            }
+        }
+        if (spatial_reuse_report_tlv.flags2().srg_information_valid) {
+            if (!m_ambiorix_datamodel->set(spatial_reuse_path, "SRGOBSSPDMinOffset",
+                                           spatial_reuse_report_tlv.srg_obsspd_min_offset())) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".SRGOBSSPDMinOffset: "
+                           << spatial_reuse_report_tlv.srg_obsspd_min_offset();
+                return false;
+            }
+            if (!m_ambiorix_datamodel->set(spatial_reuse_path, "SRGOBSSPDMaxOffset",
+                                           spatial_reuse_report_tlv.srg_obsspd_max_offset())) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".SRGOBSSPDMaxOffset: "
+                           << spatial_reuse_report_tlv.srg_obsspd_max_offset();
+                return false;
+            }
+            if (!m_ambiorix_datamodel->set(
+                    spatial_reuse_path, "SRGBSSColorBitmap",
+                    get_bss_color_bitmap_string(spatial_reuse_report_tlv.srg_bss_color_bitmap()))) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".SRGBSSColorBitmap: "
+                           << get_bss_color_bitmap_string(
+                                  spatial_reuse_report_tlv.srg_bss_color_bitmap());
+                return false;
+            }
+            if (!m_ambiorix_datamodel->set(
+                    spatial_reuse_path, "SRGPartialBSSIDBitmap",
+                    get_bss_color_bitmap_string(
+                        spatial_reuse_report_tlv.srg_partial_bssid_bitmap()))) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path << ".SRGPartialBSSIDBitmap: "
+                           << get_bss_color_bitmap_string(
+                                  spatial_reuse_report_tlv.srg_partial_bssid_bitmap());
+                return false;
+            }
+            if (!m_ambiorix_datamodel->set(
+                    spatial_reuse_path, "NeighborBSSColorInUseBitmap",
+                    get_bss_color_bitmap_string(
+                        spatial_reuse_report_tlv.neighbor_bss_color_in_use_bitmap()))) {
+                LOG(ERROR) << "Failed to set " << spatial_reuse_path
+                           << ".NeighborBSSColorInUseBitmap: "
+                           << get_bss_color_bitmap_string(
+                                  spatial_reuse_report_tlv.neighbor_bss_color_in_use_bitmap());
+                return false;
+            }
+        }
+    }
     return true;
 }
 
