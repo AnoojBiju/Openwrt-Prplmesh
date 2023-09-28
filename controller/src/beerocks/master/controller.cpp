@@ -88,6 +88,7 @@
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
 #include <tlvf/wfa_map/tlvSpatialReuseRequest.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
@@ -2055,6 +2056,14 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_m
                       << ", operating_channel=" << int(channel);
 
             database.add_current_op_class(ruid, operating_class, channel, tx_power);
+        }
+    }
+
+    for (const auto &spatial_reuse_report_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvSpatialReuseReport>()) {
+
+        if (!database.add_spatial_reuse_parameters(*spatial_reuse_report_tlv)) {
+            LOG(ERROR) << "Couldn't set values for ap SpatialReuse data model";
         }
     }
 
