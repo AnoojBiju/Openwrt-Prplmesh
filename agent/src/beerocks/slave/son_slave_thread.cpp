@@ -1923,22 +1923,49 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
             LOG(WARNING) << "non-EasyMesh mode - skip updating VAP credentials";
             break;
         }
+        if (db->device_conf.certification_mode) {
+            LOG(DEBUG) << "Request agent to tear down on certification mode";
+            for (const auto &radio_manager_element : m_radio_managers.get()) {
+                // Tear down all VAPS in the radio by sending an update request with an empty
+                // configuration.
+                auto request_out = message_com::create_vs_message<
+                    beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
+                if (!request_out) {
+                    LOG(ERROR) << "Failed building message "
+                                  "cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
+                    return false;
+                }
+                auto &radio_manager = radio_manager_element.second;
+                auto radio_iface =
+                    m_radio_managers.get_radio_iface_from_fd(radio_manager.ap_manager_fd);
+                auto radio = db->radio(radio_iface);
+                if (!radio) {
+                    return false;
+                }
+                request_out->set_bridge_ifname(db->bridge.iface_name);
+                for (uint8_t vap_idx = 0; vap_idx < eBeeRocksIfaceIds::IFACE_TOTAL_VAPS;
+                     vap_idx++) {
+                    if (radio->front.bssids[vap_idx].mac == network_utils::ZERO_MAC) {
+                        continue;
+                    }
+                    auto wifi_credentials = request_out->create_wifi_credentials();
+                    if (!wifi_credentials) {
+                        LOG(ERROR) << "Failed building wifi_credentials message!";
+                        return false;
+                    }
 
-        for (const auto &radio_manager_element : m_radio_managers.get()) {
-            // Tear down all VAPS in the radio by sending an update request with an empty
-            // configuration.
-            auto request_out = message_com::create_vs_message<
-                beerocks_message::cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST>(cmdu_tx);
-            if (!request_out) {
-                LOG(ERROR)
-                    << "Failed building message cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
-                return false;
+                    wifi_credentials->bssid_attr().data = radio->front.bssids[vap_idx].mac;
+                    wifi_credentials->bss_type() = WSC::eWscVendorExtSubelementBssType::TEARDOWN;
+                    wifi_credentials->set_ssid("");
+                    wifi_credentials->set_network_key("");
+                    wifi_credentials->authentication_type_attr().data =
+                        WSC::eWscAuth::WSC_AUTH_INVALID;
+                    wifi_credentials->encryption_type_attr().data = WSC::eWscEncr::WSC_ENCR_INVALID;
+                    request_out->add_wifi_credentials(wifi_credentials);
+                }
+                send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
             }
-
-            auto &radio_manager = radio_manager_element.second;
-            send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
         }
-
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST: {
