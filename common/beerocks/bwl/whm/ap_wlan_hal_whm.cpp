@@ -81,7 +81,7 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
         ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
         auto &vapsExtInfo    = hal->m_vapsExtInfo;
         auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                            [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
                                        return element.second.path == ap_path;
                                    });
         if (vap_it == vapsExtInfo.end()) {
