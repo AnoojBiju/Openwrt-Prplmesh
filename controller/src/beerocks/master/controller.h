@@ -131,6 +131,31 @@ public:
                  uint8_t pool_size, int dwell_time);
 
     /**
+     * @brief Trigger the set spatial reuse parameters by NBAPI.
+     *
+     * @param ruid ruid of radio for wich scan requested.
+     * @param bss_color The value of the BSS Color subfield of the HEOperations.BSSColorInformation field being transmitted by BSSs operating on this radio
+     * @param hesiga_spr_value15_allowed Indicates if the Agent is allowed to set HESIGA.SpatialReuse field to value 15 (PSR_AND_NON_SRG_OBSS_PD_PROHIBITED) in HE PPDU transmissions of this radio
+     * @param srg_information_valid This field indicates whether the SRG Information fields (SRG OBSS PD Min Offset, SRG OBSS PD Max Offset, SRG BSS Color Bitmap and SRG Partial BSSID Bitmap) in this command are valid.
+     * @param non_srg_offset_valid This field indicates whether the Non-SRG OBSSPD Max Offset field in this command is valid.
+     * @param psr_disallowed Indicates if the Agent is disallowed to use Parameterized Spatial Reuse (PSR)-based Spatial Reuse for transmissions by the specified radio.
+     * @param non_srg_obsspd_max_offset The value of dot11NonSRGAPOBSSPDMaxOffset (i.e the Non-SRG OBSSPD Max Offset value being used to control the transmissions of the specified radio)
+     * @param srg_obsspd_min_offset The value of dot11SRGAPOBSSPDMinOffset (i.e. the SRG OBSSPD Min Offset value being used to control the transmissions of the specified radio)
+     * @param srg_obsspd_max_offset The value of dot11SRGAPOBSSPDMaxOffset (i.e. the SRG OBSSPD Max Offset value being used to control the transmissions of the specified radio)
+     * @param srg_bss_color_bitmap The value of dot11SRGAPBSSColorBitmap (i.e. the SRG BSS Color Bitmap being used to control the tranmissions of the specified radio)
+     * @param srg_partial_bssid_bitmap The value of dot11SRGAPBSSIDBitmap (i.e. the SRG Partial BSSID Color Bitmap being used to control the transmissions of the specified radio)
+     * @return True if set spatial reuse tiggered, false otherwise.
+     */
+    bool trigger_set_spatial_reuse(const sMacAddr &ruid, uint32_t bss_color,
+                                   const bool hesiga_spr_value15_allowed,
+                                   const bool srg_information_valid,
+                                   const bool non_srg_offset_valid, const bool psr_disallowed,
+                                   uint32_t non_srg_obsspd_max_offset,
+                                   uint32_t srg_obsspd_min_offset, uint32_t srg_obsspd_max_offset,
+                                   uint64_t srg_bss_color_bitmap,
+                                   uint64_t srg_partial_bssid_bitmap);
+
+    /**
      * @brief Triggers VBSS creation for the given VBSSID on the given radio/agent
      * 
      * @param dest_ruid The UID of the radio to create the VBSS on
