@@ -170,8 +170,8 @@ main() {
         OPENWRT_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
-        OPENWRT_TOOLCHAIN_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
-        OPENWRT_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
+        OPENWRT_TOOLCHAIN_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
+        OPENWRT_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
     else
         dbg "Building on prplOS-next"
     fi

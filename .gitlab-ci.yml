@@ -54,12 +54,7 @@ image-build-scripts:
 platform:
   stage: platform
   needs:
-    - build-in-docker
-    - build-in-docker-legacy
     - image-build-boardfarm-ci
-  rules:
-    - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
-    - !reference [.rules-for-expensive-job, rules]
   variables:
     STABILITY_TESTS: $STABILITY_TESTS
     ALTRAN_TESTS: $ALTRAN_TESTS
@@ -283,6 +278,8 @@ test-gw-repeater:
     - job: build-in-docker-legacy
   tags:
     - docker-test
+  rules:
+    - when: manual
 
 boardfarm-tests:
   stage: test
@@ -299,6 +296,8 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
   timeout: 30m
+  rules:
+    - when: manual
 
 boardfarm-stability-tests:
   extends: boardfarm-tests
