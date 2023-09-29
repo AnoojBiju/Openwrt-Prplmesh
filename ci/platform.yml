@@ -46,36 +46,50 @@ build-for-rdkb-turris-omnia:
   variables:
     TARGET_DEVICE: "turris-omnia"
   retry: 2
+  rules:
+    - when: manual
 
 build-for-turris-omnia-legacy:
   extends: .build-for-openwrt-legacy
   variables:
     TARGET_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
 
 build-for-glinet-b1300-legacy:
   extends: .build-for-openwrt-legacy
   variables:
     TARGET_DEVICE: "glinet-b1300"
+  rules:
+    - when: manual
 
 build-for-intel-mips:
   extends: .build-for-openwrt-legacy
   variables:
     TARGET_DEVICE: "intel_mips"
+  rules:
+    - when: manual
 
 build-for-turris-omnia:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "turris-omnia"
+  rules:
+    - when: manual
 
 build-for-glinet-b1300:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "glinet-b1300"
+  rules:
+    - when: manual
 
 build-for-haze:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "haze"
+  rules:
+    - when: manual
 
 trigger-build-for-osp:
   stage: build
