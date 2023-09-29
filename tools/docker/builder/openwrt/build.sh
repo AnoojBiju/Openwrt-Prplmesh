@@ -173,9 +173,9 @@ main() {
         sed -i 's/make -j"$(nproc)" V=sc/make -j1 V=sc/g' "$scriptdir/scripts/build-openwrt.sh"
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx // !prplos-M1-2023/urx"
-        OPENWRT_TOOLCHAIN_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
-        OPENWRT_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
+        dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
+        OPENWRT_TOOLCHAIN_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
+        OPENWRT_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
     else
         dbg "Building on prplOS-next"
     fi
