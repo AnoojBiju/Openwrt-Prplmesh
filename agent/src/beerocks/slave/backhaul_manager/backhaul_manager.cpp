@@ -1877,7 +1877,6 @@ bool BackhaulManager::send_slaves_tear_down()
         LOG(ERROR) << "Failed building cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
         return false;
     }
-    LOG(DEBUG) << "Request agent to tear down";
     if (!send_cmdu(m_agent_fd, cmdu_tx)) {
         LOG(ERROR) << "Failed to send cACTION_BACKHAUL_RADIO_TEAR_DOWN_REQUEST";
         return false;
