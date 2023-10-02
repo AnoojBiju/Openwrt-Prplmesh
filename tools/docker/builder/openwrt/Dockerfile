@@ -8,7 +8,7 @@
 ####
 ## OpenWrt pre-requisites and "openwrt" user
 ####
-FROM ubuntu:bionic-20210930 as openwrt-prerequisites
+FROM ubuntu:bionic-20230530 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
@@ -17,7 +17,7 @@ RUN apt-get update \
     python-yaml python3-yaml rsync less vim gnupg software-properties-common openssh-client \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
     && if [ -n "$HTTP_PROXY" ]; then KEYSERVER_OPTIONS="--keyserver-options http-proxy=$HTTP_PROXY"; fi \
-    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 $KEYSERVER_OPTIONS --recv-keys CC86BB64 \
+    && (for n in `seq 1 10`; do sleep 2 && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 $KEYSERVER_OPTIONS --recv-keys CC86BB64 && break; done) \
     && add-apt-repository ppa:rmescandon/yq \
     && apt-get -y install --no-install-recommends yq \
     && rm -rf /var/lib/apt/lists/*
@@ -68,6 +68,8 @@ RUN printf '\033[1;35m%s Cloning prplWrt\n\033[0m' "$(date --iso-8601=seconds --
     && git checkout "$OPENWRT_TOOLCHAIN_VERSION" \
     && ./scripts/gen_config.py "$TARGET_SYSTEM" prpl \
     && make defconfig \
+    && make -j"$(nproc)" tools/tar/compile \
+    && make -j"$(nproc)" download check FIXUP=1 \
     && make -j"$(nproc)" \
     && rm -rf bin \
     && rm -rf build_dir/target*/libnl-3* \
