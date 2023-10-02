@@ -1,5 +1,6 @@
 #!/bin/bash -e
 # shellcheck disable=SC2076
+# shellcheck disable=SC2016
 ###############################################################
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 # SPDX-FileCopyrightText: 2019-2020 the prplMesh contributors (see AUTHORS.md)
@@ -159,19 +160,22 @@ main() {
             ;;
     esac
 
-    legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
+    legacy_platforms=("glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
         dbg "Legacy platform, building on prplOS(-old)"
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos-M1-2023/haze-next"
-        OPENWRT_TOOLCHAIN_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
-        OPENWRT_VERSION='6dffc2bf970aa41ba74a733c6a36d678d7218019'
+        dbg "Haze platform, build on prplos-M1-2023/haze-next // !prplos-M1-2023/haze-next"
+        OPENWRT_TOOLCHAIN_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
+        OPENWRT_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
+        # Temporary workaround for Haze build failure
+        sed -i 's/make -j"$(nproc)" V=sc/make -j1 V=sc/g' "$scriptdir/scripts/build-openwrt.sh"
+        sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
-        OPENWRT_TOOLCHAIN_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
-        OPENWRT_VERSION='adea67123fe2a1e7b45f2167025aac6c6478fcd2'
+        dbg "OSP platform, build on prplos-M1-2023/urx // !prplos-M1-2023/urx"
+        OPENWRT_TOOLCHAIN_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
+        OPENWRT_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
     else
         dbg "Building on prplOS-next"
     fi
@@ -220,9 +224,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS-next for reference platforms
-OPENWRT_TOOLCHAIN_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
-OPENWRT_VERSION='f2aea105dfce50489cb2a5ee3f99fc0e1c2fd555'
+# prplOS-next for reference platforms (feature/PPM-2598-bump-pwhm-and-lib)
+OPENWRT_TOOLCHAIN_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
+OPENWRT_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
