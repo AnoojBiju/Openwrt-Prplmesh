@@ -220,7 +220,7 @@ public:
 private:
     std::recursive_mutex m_mutex;
     std::string m_amxb_backend;
-    amxc_var_t* m_config = nullptr;
+    amxc_var_t *m_config = nullptr;
     std::string m_bus_uri;
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
     int m_fd                  = -1;

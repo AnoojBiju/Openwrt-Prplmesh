@@ -30,7 +30,6 @@ AmbiorixConnection::~AmbiorixConnection()
 {
     amxc_var_delete(&m_config);
     amxb_free(&m_bus_ctx);
-    amxb_be_remove_all();
 }
 
 const std::string &AmbiorixConnection::uri() const { return m_bus_uri; }

@@ -125,6 +125,9 @@ protected:
     // Private data-members:
 private:
     bool fsm_setup();
+
+protected:
+    std::string m_radio_mac_address;
 };
 
 } // namespace whm
