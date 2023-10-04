@@ -300,36 +300,31 @@ status_function() {
 
     bml_cmd="bml_get_device_operational_radios $BRIDGE_MAC"
 
-    if  pgrep -l beerocks_cont ; then
+    if pgrep beerocks_cont >/dev/null ; then
         echo "executing operational test using bml"
-        if execute_beerocks_command "$bml_cmd" ; then
-            OUTPUT=$output
-            # Expecting
-            # > OK Main radio agent operational
-            # > OK wlan0 radio agent operational
-            # > OK wlan2 radio agent operational
-            OK_Count=$(echo "$OUTPUT" | grep -c -e "OK.*operational")
-            if [ "$OK_Count" -eq 3 ]; then
-                success "operational test success!"
-                OUTPUT=$(echo "$OUTPUT" | grep -E '(FAIL|OK).*?operational')
-                success "$OUTPUT"
-                exit 0
-            else
-                err "operational test failed!"
-                OUTPUT=$(echo "$OUTPUT" | grep -E '(FAIL| OK).*?operational' | sed -e "s/ OK/OK/")
-                echo "$OUTPUT"
-                if [ "$(echo "$OUTPUT" | grep -c -e " @BEEROCKS_WLAN1_IFACE@ .*operational")" -eq 0 ]; then
-                    err "FAIL @BEEROCKS_WLAN1_IFACE@ radio agent operational"
-                fi
-                if [ "$(echo "$OUTPUT" | grep -c -e " @BEEROCKS_WLAN2_IFACE@ .*operational")" -eq 0 ]; then
-                    err "FAIL @BEEROCKS_WLAN2_IFACE@ radio agent operational"
-                fi
-                exit 1
-            fi
-        else
+        if ! execute_beerocks_command "$bml_cmd" ; then
             err "Beerocks command failed to execute!"
             exit 1
         fi
+
+        OUTPUT=$(echo "$output" | grep -E '(FAIL|OK).*?operational')
+        Count=$(echo "$OUTPUT" | grep -c 'radio agent operational')
+        OK_Count=$(echo "$OUTPUT" | grep -c -e "OK.*operational")
+        if [ "$OK_Count" -eq "$Count" ]; then
+            success "operational test success!"
+            success "$OUTPUT"
+            exit 0
+        fi
+
+        err "operational test failed!"
+        echo "$OUTPUT" |
+        while read -r line ; do
+            case $line in
+                "OK "*) success "$line" ;;
+                "FAIL "*) err "$line" ;;
+            esac
+        done
+        exit 1
     else
         echo "executing operational test using grep on log files"
         # check for operational status
