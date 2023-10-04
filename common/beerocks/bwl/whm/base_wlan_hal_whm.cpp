@@ -39,6 +39,9 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
     m_fds_ext_events.clear();
     m_ambiorix_cl.resolve_path(wbapi_utils::search_path_radio_by_iface(iface_name), m_radio_path);
 
+    get_radio_mac();
+    refresh_radio_info();
+
     // Initialize the FSM
     fsm_setup();
 }
@@ -731,9 +734,10 @@ bool base_wlan_hal_whm::whm_get_radio_path(const std::string &iface, std::string
 
 std::string base_wlan_hal_whm::get_radio_mac()
 {
-    std::string mac("");
-    m_ambiorix_cl.get_param(mac, m_radio_path, "BaseMACAddress");
-    return mac;
+    if (m_radio_mac_address.empty()) {
+        m_ambiorix_cl.get_param(m_radio_mac_address, m_radio_path, "BaseMACAddress");
+    }
+    return m_radio_mac_address;
 }
 
 bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
