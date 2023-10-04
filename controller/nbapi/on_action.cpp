@@ -907,10 +907,6 @@ amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_func
     return result;
 }
 
-// Events
-
-amxd_dm_t *g_data_model = nullptr;
-
 static void rm_params(amxd_object_t *object, const char *param_name)
 {
     amxd_param_t *param = amxd_object_get_param_def(object, param_name);
@@ -939,7 +935,8 @@ static void add_string_param(const char *param_name, amxd_object_t *param_owner_
 static void event_rm_params(const char *const sig_name, const amxc_var_t *const data,
                             void *const priv)
 {
-    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *security_obj =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!security_obj) {
         LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
@@ -960,7 +957,8 @@ static void event_rm_params(const char *const sig_name, const amxc_var_t *const 
 static void event_add_hidden_params(const char *const sig_name, const amxc_var_t *const data,
                                     void *const priv)
 {
-    amxd_object_t *security_obj = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *security_obj =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!security_obj) {
         LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM
@@ -1001,7 +999,8 @@ bool send_ap_config_renew()
 static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
 {
-    amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *configuration =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!configuration) {
         LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM ".Configuration";
@@ -1014,7 +1013,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.client_11k_roaming =
         amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
-        amxd_object_get_bool(configuration, "ClientRoamingEnabled", nullptr);
+        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
