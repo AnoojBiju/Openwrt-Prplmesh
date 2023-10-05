@@ -166,16 +166,13 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos-M1-2023/haze-next // !prplos-M1-2023/haze-next"
-        OPENWRT_TOOLCHAIN_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
-        OPENWRT_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
-        # Temporary workaround for Haze build failure
-        sed -i 's/make -j"$(nproc)" V=sc/make -j1 V=sc/g' "$scriptdir/scripts/build-openwrt.sh"
-        sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
+        dbg "Haze platform, build on prplos (-v3.0.0-preview1)"
+        OPENWRT_TOOLCHAIN_VERSION='6b2e0b6037b5325413da9d381676c30ceae4b92e'
+        OPENWRT_VERSION='6b2e0b6037b5325413da9d381676c30ceae4b92e'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx (/feature/PPM-2598-bump-pwhm-and-lib)"
-        OPENWRT_TOOLCHAIN_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
-        OPENWRT_VERSION='257758b9042ec559d128a38d80d972be65e975a7'
+        dbg "OSP platform, build on  prplos-UPDK-9.1.30.4 with USPagent"
+        OPENWRT_TOOLCHAIN_VERSION='0dec8cb9e0abf8c73f16b9811a200251a3280b8e'
+        OPENWRT_VERSION='0dec8cb9e0abf8c73f16b9811a200251a3280b8e'
     else
         dbg "Building on prplOS-next"
     fi
@@ -224,9 +221,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS-next for reference platforms (feature/PPM-2598-bump-pwhm-and-lib)
-OPENWRT_TOOLCHAIN_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
-OPENWRT_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
+# prplOS-next for reference platforms
+OPENWRT_TOOLCHAIN_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
+OPENWRT_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
