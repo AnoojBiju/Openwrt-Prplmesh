@@ -487,7 +487,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 
     } break;
 
-    case beerocks_message::ACTION_PLATFORM_SEND_GRATUITOUS_ARP: {
+        /*case beerocks_message::ACTION_PLATFORM_SEND_GRATUITOUS_ARP: {
         LOG(TRACE) << "ACTION_PLATFORM_SEND_GRATUITOUS_ARP";
 
         if (!init_arp_monitor()) {
@@ -517,7 +517,7 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
             break;
         }
         stop_arp_monitor();
-    } break;
+    } break;*/
 
     case beerocks_message::ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_REQUEST: {
         // Request message

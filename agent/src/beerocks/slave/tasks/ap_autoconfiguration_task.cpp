@@ -242,6 +242,24 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
             /* Workaround: Send Gracious ARP to get response from Controller which
                 is available after hops greater than 1.
             */
+            std::string str_iface_ip;
+            std::string str_iface_mac;
+            int arp_socket                = -1;
+            sMacAddr dst_mac              = {.oct = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+            auto db                       = AgentDB::get();
+            std::string bridge_iface_name = db->bridge.iface_name;
+            if (!network_utils::linux_iface_get_ip(bridge_iface_name, str_iface_ip)) {
+                LOG(ERROR) << "Failed reading '" << bridge_iface_name << "' IP!";
+                return;
+            }
+            if (!network_utils::linux_iface_get_mac(bridge_iface_name, str_iface_mac)) {
+                LOG(ERROR) << "Failed reading '" << bridge_iface_name << "' MAC!";
+                return;
+            }
+
+            network_utils::arp_send(bridge_iface_name, str_iface_ip, str_iface_ip, dst_mac,
+                                    tlvf::mac_from_string(str_iface_mac), 5, arp_socket);
+            /*           
             auto request = message_com::create_vs_message<
                 beerocks_message::cACTION_PLATFORM_SEND_GRATUITOUS_ARP>(m_cmdu_tx);
             if (request == nullptr) {
@@ -255,6 +273,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
                 return;
             }
             platform_manager_cmdu_client->send_cmdu(m_cmdu_tx);
+            */
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
             m_task_is_active = true;
         }
