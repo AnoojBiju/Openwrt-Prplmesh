@@ -28,6 +28,11 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ] || [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb34
 fi
 
 if [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
+    # remove clashing packages
+    sed -i '/wpa-cli$/d' "profiles/debug.yml"
+fi
+
+if [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
     # add open source hostap introduced in MXL 9.1.15 code base
     args+=("mxl_wlan_hostap_ng")
 fi
@@ -46,7 +51,7 @@ fi
 
 # The initial 'make defconfig' invocation generates a wrong config, so
 # run it again. Remove this workaround once PPM-2279 is fixed.
-make defconfig
+# make defconfig
 
 for profile in "${args[@]}" ; do
     printf "\nProfile %s:\n" "${profile}" >> files/etc/prplwrt-version

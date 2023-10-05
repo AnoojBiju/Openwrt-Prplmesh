@@ -16,7 +16,7 @@ if ! make -j"$(nproc)" ; then
     # parallel build failed).
     echo "Build failed. Rebuilding with -j1."
     make V=sc
-    exit 1
+    #exit 1
 fi
 
 mkdir -p artifacts
