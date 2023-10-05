@@ -1601,7 +1601,7 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
     }
     case beerocks_message::ACTION_BACKHAUL_DISCONNECTED_NOTIFICATION: {
 
-        if (m_agent_state <= STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED) {
+        if (m_agent_state <= STATE_JOIN_INIT) {
             break;
         }
 

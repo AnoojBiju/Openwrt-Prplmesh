@@ -487,6 +487,38 @@ bool PlatformManager::handle_cmdu(int fd, ieee1905_1::CmduMessageRx &cmdu_rx)
 
     } break;
 
+    case beerocks_message::ACTION_PLATFORM_SEND_GRATUITOUS_ARP: {
+        LOG(TRACE) << "ACTION_PLATFORM_SEND_GRATUITOUS_ARP";
+
+        if (!init_arp_monitor()) {
+            LOG(ERROR) << "can't start ARP monitor";
+            return false;
+        }
+
+        // Send a probe request to the ARP monitor
+        if (!m_ctxArpMon) {
+            LOG(WARNING) << "ARP monitor NOT active...";
+            break;
+        }
+
+        std::string str_iface_ip;
+        uint8_t dst_mac[BPL_ARP_MON_MAC_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+        auto db                              = AgentDB::get();
+        std::string bridge_iface_name        = db->bridge.iface_name;
+        if (!beerocks::net::network_utils::linux_iface_get_ip(bridge_iface_name, str_iface_ip)) {
+            LOG(ERROR) << "Failed reading " << bridge_iface_name << " IP!";
+            return false;
+        }
+
+        if (bpl::arp_mon_probe(m_ctxArpMon, dst_mac,
+                               beerocks::net::network_utils::ipv4_from_string(str_iface_ip).oct,
+                               beerocks_header->id()) != 0) {
+            LOG(DEBUG) << "Failed sending GRATUITOUS ARP!";
+            break;
+        }
+        stop_arp_monitor();
+    } break;
+
     case beerocks_message::ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_REQUEST: {
         // Request message
         LOG(TRACE) << "ACTION_PLATFORM_ADMIN_CREDENTIALS_GET_REQUEST";

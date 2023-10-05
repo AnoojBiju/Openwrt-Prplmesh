@@ -121,3 +121,6 @@ cACTION_PLATFORM_ERROR_NOTIFICATION:
     _type: char
     _length: [256]
     _comment: # Must match BPL_ERROR_STRING_LEN
+
+cACTION_PLATFORM_SEND_GRATUITOUS_ARP:
+  _type: class

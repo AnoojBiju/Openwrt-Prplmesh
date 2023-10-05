@@ -239,6 +239,22 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
             }
 
             LOG(DEBUG) << "starting discovery sequence on radio_iface=" << radio->front.iface_name;
+            /* Workaround: Send Gracious ARP to get response from Controller which
+                is available after hops greater than 1.
+            */
+            auto request = message_com::create_vs_message<
+                beerocks_message::cACTION_PLATFORM_SEND_GRATUITOUS_ARP>(m_cmdu_tx);
+            if (request == nullptr) {
+                LOG(ERROR) << "Failed building message!";
+                return;
+            }
+            // notify platform manager
+            auto platform_manager_cmdu_client = m_btl_ctx.get_platform_manager_cmdu_client();
+            if (!platform_manager_cmdu_client) {
+                LOG(ERROR) << "Failed to get platform manager cmdu client";
+                return;
+            }
+            platform_manager_cmdu_client->send_cmdu(m_cmdu_tx);
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
             m_task_is_active = true;
         }
