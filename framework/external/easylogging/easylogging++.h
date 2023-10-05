@@ -3248,13 +3248,20 @@ class Writer : base::NoCopy {
   }
 
   template <typename T>
-  inline Writer& operator<<(const T& log) {
+  typename std::enable_if<not std::is_enum<T>::value, Writer&>::type
+  operator<<(const T& log) {
 #if ELPP_LOGGING_ENABLED
     if (m_proceed) {
       m_messageBuilder << log;
     }
 #endif  // ELPP_LOGGING_ENABLED
     return *this;
+  }
+
+  template <typename T>
+  typename std::enable_if<std::is_enum<T>::value, Writer&>::type
+  operator<<(const T& e) {
+    return *this << static_cast<typename std::underlying_type<T>::type>(e);
   }
 
   inline Writer& operator<<(std::ostream& (*log)(std::ostream&)) {
