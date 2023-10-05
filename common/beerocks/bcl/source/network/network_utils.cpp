@@ -551,6 +551,26 @@ std::vector<std::string> network_utils::linux_get_iface_list_from_bridge(const s
     return ifs;
 }
 
+int network_utils::linux_get_iface_state_from_bridge(const std::string &bridge,
+                                                     const std::string &ifname)
+{
+    std::string filename = "/sys/class/net/" + bridge + "/brif/" + ifname + "/state";
+    std::ifstream stp_state_file(filename, std::ios::in);
+
+    if (!stp_state_file.is_open()) {
+        LOG(ERROR) << "Failed to open " << filename;
+        return -1;
+    }
+
+    int state;
+    if (!(stp_state_file >> state)) {
+        LOG(ERROR) << "Failed to read integer state from " << filename;
+        return -1;
+    }
+
+    return state;
+}
+
 uint32_t network_utils::linux_get_iface_index(const std::string &iface_name)
 {
     uint32_t iface_index = if_nametoindex(iface_name.c_str());
