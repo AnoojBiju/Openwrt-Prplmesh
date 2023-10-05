@@ -28,6 +28,14 @@ if [ "$TARGET_SYSTEM" = "intel_mips" ] || [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb34
 fi
 
 if [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
+    # remove clashing packages
+    sed -i '/strace$/d' "profiles/debug.yml"
+    sed -i '/gdb$/d' "profiles/debug.yml"
+    sed -i '/gdbserver$/d' "profiles/debug.yml"
+    sed -i '/wpa-cli$/d' "profiles/debug.yml"
+fi
+
+if [ "$TARGET_SYSTEM" = "mxl_x86_osp_tb341" ]; then
     # add open source hostap introduced in MXL 9.1.15 code base
     args+=("mxl_wlan_hostap_ng")
 fi

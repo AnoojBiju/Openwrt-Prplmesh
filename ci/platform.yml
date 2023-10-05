@@ -88,8 +88,6 @@ build-for-haze:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "haze"
-  rules:
-    - when: manual
 
 trigger-build-for-osp:
   stage: build
@@ -108,6 +106,8 @@ trigger-build-for-osp:
   needs: []
   tags:
     - osp-build-fetch
+  rules:
+    - when: manual
 
 build-for-osp:
   stage: build
@@ -150,6 +150,8 @@ build-for-osp:
   timeout: 3h
   tags:
     - osp-build-fetch
+  rules:
+    - when: manual
 
 build-for-cgr:
   stage: build
