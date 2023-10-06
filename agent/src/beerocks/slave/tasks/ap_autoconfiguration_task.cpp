@@ -242,6 +242,34 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
             FSM_MOVE_STATE(radio->front.iface_name, eState::CONTROLLER_DISCOVERY);
             m_task_is_active = true;
         }
+
+        /* Workaround: Send Gratuitous ARP to get autoconfig response
+           from Controller which is available after hops greater than 1.
+        */
+        std::string str_iface_ip;
+        std::string str_iface_mac;
+        int arp_socket                = -1;
+        int count                     = 5;
+        sMacAddr dst_mac              = {.oct = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
+        std::string bridge_iface_name = db->bridge.iface_name;
+
+        /* Get the IP address and MAC Address of the bridge */
+        if (!network_utils::linux_iface_get_ip(bridge_iface_name, str_iface_ip)) {
+            LOG(ERROR) << "Failed reading '" << bridge_iface_name << "' IP!";
+            return;
+        }
+        if (!network_utils::linux_iface_get_mac(bridge_iface_name, str_iface_mac)) {
+            LOG(ERROR) << "Failed reading '" << bridge_iface_name << "' MAC!";
+            return;
+        }
+        /* Send Gratuitous ARP*/
+        LOG(DEBUG) << "Sending Gratuitous ARP from "
+                   << " Bridge: " << bridge_iface_name << " IP: " << str_iface_ip
+                   << " Src MAC: " << str_iface_mac << " Dst MAC: " << tlvf::mac_to_string(dst_mac)
+                   << " Count: " << count;
+
+        network_utils::arp_send(bridge_iface_name, str_iface_ip, str_iface_ip, dst_mac,
+                                tlvf::mac_from_string(str_iface_mac), count, arp_socket);
         // Call work() to not waste time, and send_ap_autoconfiguration_search_message immediately.
         work();
         break;
