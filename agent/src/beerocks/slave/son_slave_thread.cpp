@@ -349,14 +349,13 @@ void slave_thread::agent_reset()
     });
 
     // If stopped, move to STATE_STOPPED.
-    if (m_stopped) {
+    if (m_stopped && !m_is_backhaul_disconnected) {
         LOG(DEBUG) << "goto STATE_STOPPED";
         m_agent_state = STATE_STOPPED;
         platform_notify_error(beerocks::bpl::eErrorCode::SLAVE_STOPPED, "");
         return;
-    }
 
-    if (m_is_backhaul_disconnected) {
+    } else {
         m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
