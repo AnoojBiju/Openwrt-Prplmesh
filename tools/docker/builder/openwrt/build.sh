@@ -160,7 +160,7 @@ main() {
             ;;
     esac
 
-    legacy_platforms=("glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
+    legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
         dbg "Legacy platform, building on prplOS(-old)"
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
