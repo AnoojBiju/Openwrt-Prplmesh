@@ -1545,9 +1545,11 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
             auto radio_info = std::shared_ptr<sRadioInfo>();
             if (found == m_radios_info.end()) {
                 // If a radio hasn't been found in the radios_info lists then add it.
-                radio_info               = std::make_shared<sRadioInfo>();
-                radio_info->hostap_iface = radio->front.iface_name;
-                radio_info->sta_iface    = radio->back.iface_name;
+                radio_info                  = std::make_shared<sRadioInfo>();
+                radio_info->hostap_iface    = radio->front.iface_name;
+                radio_info->sta_iface       = radio->back.iface_name;
+                radio_info->primary_channel = radio->wifi_channel.get_channel();
+
                 LOG(DEBUG) << "Pushing new Radio";
                 m_radios_info.push_back(radio_info);
             } else {
@@ -1830,8 +1832,7 @@ bool BackhaulManager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmd
 bool BackhaulManager::send_slaves_enable()
 {
     auto iface_hal = get_wireless_hal();
-
-    auto db = AgentDB::get();
+    auto db        = AgentDB::get();
     for (const auto &radio_info : m_radios_info) {
         auto notification =
             message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(
@@ -1853,7 +1854,6 @@ bool BackhaulManager::send_slaves_enable()
             notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
             notification->center_channel() = notification->channel();
         }
-
         // Uninitialized CMDU parameters remain zero.
         // Channel zero is used to trigger ACS on radio which does not have BH link
         // TODO: This flow is valid only for MxL platforms (PPM-1928)
@@ -2793,6 +2793,32 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
 
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
 {
+    auto db        = AgentDB::get();
+    auto enableAps = [&]() -> bool {
+        if (!db->device_conf.certification_mode)
+            return false;
+        for (const auto &radio_info : m_radios_info) {
+            auto notification = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(cmdu_tx);
+
+            if (!notification) {
+                LOG(ERROR) << "Failed building message!";
+                return false;
+            }
+
+            notification->set_iface(radio_info->hostap_iface);
+            notification->channel()        = radio_info->primary_channel;
+            notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
+            notification->center_channel() = radio_info->primary_channel;
+
+            LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
+                       << ", channel = " << int(notification->channel())
+                       << ", center_channel = " << int(notification->center_channel());
+
+            send_cmdu(m_agent_fd, cmdu_tx);
+        }
+        return true;
+    };
     if ((m_eFSMState == EState::OPERATIONAL)) {
         auto it = std::find_if(m_radios_info.begin(), m_radios_info.end(),
                                [&](std::shared_ptr<sRadioInfo> radio_info) {
@@ -2821,6 +2847,8 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         auto sta_wlan_hal = get_selected_backhaul_sta_wlan_hal();
         if (!sta_wlan_hal) {
             LOG(ERROR) << "Failed to get backhaul STA hal";
+            enableAps() ? LOG(DEBUG) << "Enabling all radios"
+                        : LOG(DEBUG) << "Failed enabling radios";
             return false;
         }
 
@@ -2848,6 +2876,8 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         }
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
+            enableAps() ? LOG(DEBUG) << "Enabling all radios"
+                        : LOG(DEBUG) << "Failed enabling radios";
             return false;
         }
         return true;
