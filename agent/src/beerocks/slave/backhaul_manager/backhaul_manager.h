@@ -416,7 +416,7 @@ public:
         sMacAddr radio_mac;       /**< Radio ID (= radio MAC address) */
         std::string hostap_iface; /**< Name of the radio interface */
         std::string sta_iface;    /**< Name of the bSTA interface on the radio (if any) */
-
+        uint8_t primary_channel;  /**< Primary Channel of the radio */
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         std::vector<int> sta_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
         int sta_hal_int_events              = beerocks::net::FileDescriptor::invalid_descriptor;
