@@ -399,6 +399,16 @@ public:
     std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
 
     /**
+     * @brief Get agent from its ALID
+     *
+     * If no agent is found with the given ALID, an error is logged (and nullptr returned)
+     *
+     * @param al_mac ALID of the agent
+     * @return Pointer to the Agent object, or nullptr if it doesn't exist
+     */
+    std::shared_ptr<Agent> get_agent(const sMacAddr &al_mac);
+
+    /**
      * @brief Set the (Re)association frame for station `sta_mac`
      * 
      * @param sta_mac MAC of the originating station.
