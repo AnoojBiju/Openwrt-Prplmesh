@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlvBackhaulSteeringRequest.h>
 #include <tlvf/wfa_map/tlvBackhaulSteeringResponse.h>
 #include <tlvf/wfa_map/tlvProfile2AssociationStatusNotification.h>
+#include <tlvf/wfa_map/tlvTunnelledSourceInfo.h>
 
 // BPL Error Codes
 #include <bpl/bpl_cfg.h>
@@ -1805,6 +1806,22 @@ bool BackhaulManager::handle_slave_1905_1_message(ieee1905_1::CmduMessageRx &cmd
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::FAILED_CONNECTION_MESSAGE: {
         return handle_slave_failed_connection_message(cmdu_rx, src_mac);
+    }
+    case ieee1905_1::eMessageType::TUNNELLED_MESSAGE: {
+        auto source_info_tlv = cmdu_tx.getClass<wfa_map::tlvTunnelledSourceInfo>();
+        if (!source_info_tlv) {
+            LOG(ERROR) << "addClass ieee1905_1::tlvTunnelledSourceInfo failed!";
+            return false;
+        }
+        auto db = AgentDB::get();
+        if (db->controller_info.bridge_mac == beerocks::net::network_utils::ZERO_MAC) {
+            LOG(DEBUG) << "Controller MAC unknown. Dropping message.";
+            return false;
+        }
+        LOG(DEBUG) << "Sending Tunnelled Message of STA MAC: " << source_info_tlv->mac()
+                   << " to the controller: " << db->controller_info.bridge_mac;
+        return forward_cmdu_to_broker(cmdu_rx, db->controller_info.bridge_mac, db->bridge.mac,
+                                      db->bridge.iface_name);
     }
     default: {
         bool handled = m_task_pool.handle_cmdu(cmdu_rx, iface_index, dst_mac, src_mac,
