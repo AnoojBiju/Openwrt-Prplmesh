@@ -952,6 +952,27 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     switch (m_eFSMState) {
     case EState::INIT_HAL: {
         skip_select = true;
+        auto db     = AgentDB::get();
+
+        for (auto &radio_info : m_radios_info) {
+            auto radio = db->radio(radio_info->sta_iface);
+            if (!radio) {
+                continue;
+            }
+            LOG(DEBUG) << "dstolbov radio_info->sta_iface = " << radio_info->sta_iface;
+            for (auto &fd : radio_info->sta_hal_ext_events) {
+                if (fd > 0) {
+                    m_event_loop->remove_handlers(fd);
+                }
+            }
+            radio_info->sta_hal_ext_events.clear();
+            if (radio_info->sta_hal_int_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            }
+        }
+
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(WPA_ATTACH_TIMEOUT_SECONDS);
         FSM_MOVE_STATE(WPA_ATTACH);
