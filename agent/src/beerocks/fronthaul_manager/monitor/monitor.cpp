@@ -250,7 +250,9 @@ void Monitor::on_thread_stop()
         }
 
         if (m_mon_hal_int_events > 0) {
-            m_event_loop->remove_handlers(m_mon_hal_int_events);
+            if (m_event_loop->remove_handlers(m_mon_hal_int_events)) {
+                m_mon_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            }
         }
 
         if (m_mon_hal_nl_events > 0) {
