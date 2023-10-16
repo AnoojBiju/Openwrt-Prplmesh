@@ -2989,6 +2989,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         client_association_event_tlv->bssid()      = notification_in->bssid();
         client_association_event_tlv->association_event() =
             wfa_map::tlvClientAssociationEvent::CLIENT_HAS_JOINED_THE_BSS;
+        if (client_association_event_tlv->client_mac() != beerocks::net::network_utils::ZERO_MAC)
+            LOG(DEBUG) << "Added Client Association event TLV for Client: "
+                       << client_association_event_tlv->client_mac();
 
         if (!db->controller_info.prplmesh_controller) {
             LOG(DEBUG) << "non-prlMesh, not adding ClientAssociationEvent VS TLV";
