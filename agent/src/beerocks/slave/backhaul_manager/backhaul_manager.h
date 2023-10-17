@@ -290,6 +290,13 @@ private:
 
 public:
     std::vector<std::shared_ptr<sRadioInfo>> m_radios_info;
+
+    /**
+     * @brief enable radios via APS REQUEST
+     * 
+     * @return true om sucess, false om failure
+     */
+    bool enable_aps(const std::shared_ptr<sRadioInfo> &radio_info);
     int get_agent_fd() { return m_agent_fd; }
 
 private:
@@ -420,6 +427,7 @@ public:
         std::shared_ptr<bwl::sta_wlan_hal> sta_wlan_hal;
         std::vector<int> sta_hal_ext_events = {beerocks::net::FileDescriptor::invalid_descriptor};
         int sta_hal_int_events              = beerocks::net::FileDescriptor::invalid_descriptor;
+        uint8_t radio_state;
     };
 
 private:

@@ -238,6 +238,7 @@ sNodeHostap:
   ant_num: uint8_t
   ant_gain: uint8_t
   tx_power: uint8_t
+  radio_state: uint8_t
   frequency_band: beerocks::eFreqType
   max_bandwidth: beerocks::eWiFiBandwidth
   ht_supported: uint8_t #bool

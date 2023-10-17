@@ -1210,6 +1210,7 @@ void ApAutoConfigurationTask::handle_multi_ap_policy_config_request(
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return;
     }
+    LOG(DEBUG) << "Sending ACK message back to controller with mid = " << std::hex << mid;
     m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 
     /** Traffic Separation Policy **/
