@@ -2771,7 +2771,7 @@ void ApManager::handle_hostapd_attached()
         message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_JOINED_NOTIFICATION>(
             cmdu_tx);
 
-    if (notification == nullptr) {
+    if (!notification) {
         LOG(ERROR) << "Failed building message!";
         return;
     }
@@ -2790,6 +2790,7 @@ void ApManager::handle_hostapd_attached()
     notification->cs_params().bandwidth            = uint8_t(
         beerocks::utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth));
 
+    notification->params().radio_state    = ap_wlan_hal->get_radio_info().radio_state;
     notification->params().frequency_band = ap_wlan_hal->get_radio_info().frequency_band;
     notification->params().max_bandwidth  = ap_wlan_hal->get_radio_info().max_bandwidth;
     notification->params().ht_supported   = ap_wlan_hal->get_radio_info().ht_supported;
@@ -2822,6 +2823,7 @@ void ApManager::handle_hostapd_attached()
     LOG(INFO) << " current channel = " << ap_wlan_hal->get_radio_info().channel;
     LOG(INFO) << " vht_center_frequency = " << ap_wlan_hal->get_radio_info().vht_center_freq;
     LOG(INFO) << " current bw = " << ap_wlan_hal->get_radio_info().bandwidth;
+    LOG(INFO) << " radio status = " << ap_wlan_hal->get_radio_info().radio_state;
     LOG(INFO) << " frequency_band = "
               << beerocks::utils::convert_frequency_type_to_string(
                      ap_wlan_hal->get_radio_info().frequency_band);
