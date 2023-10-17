@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // slave when requested
     std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(agent_uds_path, event_loop));
+        beerocks::create_cmdu_client_factory(agent_uds_path, event_loop);
     LOG_IF(!slave_cmdu_client_factory, FATAL) << "Unable to create CMDU client factory!";
 
     // Create ap_manager

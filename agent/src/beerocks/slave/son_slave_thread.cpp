@@ -248,7 +248,7 @@ bool slave_thread::thread_init()
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // platform manager when requested
     m_platform_manager_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(platform_manager_uds_path, m_event_loop));
+        beerocks::create_cmdu_client_factory(platform_manager_uds_path, m_event_loop);
     LOG_IF(!m_platform_manager_cmdu_client_factory, FATAL)
         << "Unable to create CMDU client factory!";
 
@@ -260,7 +260,7 @@ bool slave_thread::thread_init()
     // Create CMDU client factory to create CMDU clients connected to CMDU server running in
     // platform manager when requested
     m_backhaul_manager_cmdu_client_factory =
-        std::move(beerocks::create_cmdu_client_factory(backhaul_manager_uds_path, m_event_loop));
+        beerocks::create_cmdu_client_factory(backhaul_manager_uds_path, m_event_loop);
     LOG_IF(!m_backhaul_manager_cmdu_client_factory, FATAL)
         << "Unable to create CMDU client factory!";
 

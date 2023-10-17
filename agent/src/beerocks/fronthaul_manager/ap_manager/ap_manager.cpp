@@ -2228,12 +2228,11 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             [&](pending_disable_vap_t vap) { return (vap.vap_id == msg->params.vap_id); });
 
         if (it == pending_disable_vaps.end()) {
-            pending_disable_vaps.push_back(std::move((pending_disable_vap_t){
+            pending_disable_vaps.push_back({
                 .vap_id  = msg->params.vap_id,
                 .timeout = std::chrono::steady_clock::now() +
                            std::chrono::seconds(DISABLE_BACKHAUL_VAP_TIMEOUT_SEC),
-
-            }));
+            });
         }
 
         auto notification = message_com::create_vs_message<
