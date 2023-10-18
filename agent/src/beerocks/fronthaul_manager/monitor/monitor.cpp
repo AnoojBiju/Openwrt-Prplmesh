@@ -1558,6 +1558,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
+        auto cert_mode         = request->cert_mode();
         auto radio_mac         = request->scan_params().radio_mac;
         auto dwell_time_ms     = request->scan_params().dwell_time_ms;
         auto channel_pool      = request->scan_params().channel_pool;
@@ -1589,7 +1590,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         response_out->success() =
-            mon_wlan_hal->channel_scan_trigger(int(dwell_time_ms), channel_pool_vector);
+            mon_wlan_hal->channel_scan_trigger(int(dwell_time_ms), channel_pool_vector, cert_mode);
         LOG_IF(!response_out->success(), ERROR) << "channel_scan_trigger Failed";
 
         send_cmdu(cmdu_tx);
