@@ -2029,10 +2029,10 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                 << "Failed building cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST message!";
             return false;
         }
-
+        request_out->cert_mode()   = request_in->cert_mode();
         request_out->scan_params() = request_in->scan_params();
 
-        LOG(DEBUG) << "send cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
+        LOG(DEBUG) << "send ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST";
         send_cmdu(radio_manager.monitor_fd, cmdu_tx);
         break;
     }
