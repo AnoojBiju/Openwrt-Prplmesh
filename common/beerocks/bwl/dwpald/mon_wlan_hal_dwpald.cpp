@@ -24,6 +24,9 @@ extern "C" {
 }
 
 #define MONITOR_DWPALD_ATTACH_ID 1
+#define BREAK_TIME_FOR_CERT 100
+#define BREAK_TIME_BUSY_FOR_CERT 100
+#define WINDOW_SLICE_FOR_CERT 103
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// DWPAL////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1134,7 +1137,8 @@ bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &va
 }
 
 bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
-                                              const std::vector<unsigned int> &channel_pool)
+                                              const std::vector<unsigned int> &channel_pool,
+                                              bool cert_mode)
 {
     LOG(DEBUG) << "Channel scan trigger received on interface=" << m_radio_info.iface_name;
 
@@ -1155,8 +1159,33 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
         dwell_time_msec = params_bg.window_slice + 1;
     }
 
-    if (params_bg.active_dwell_time != dwell_time_msec ||
-        params_bg.passive_dwell_time != dwell_time_msec) {
+    if (cert_mode) {
+        if (params_bg.active_dwell_time != dwell_time_msec ||
+            params_bg.passive_dwell_time != dwell_time_msec) {
+            params_bg.active_dwell_time  = dwell_time_msec;
+            params_bg.passive_dwell_time = dwell_time_msec;
+        }
+        params_bg.break_time           = BREAK_TIME_FOR_CERT;
+        params_bg.break_time_busy      = BREAK_TIME_BUSY_FOR_CERT;
+        params_bg.window_slice         = WINDOW_SLICE_FOR_CERT;
+        params_bg.window_slice_overlap = 0;
+        LOG(DEBUG) << "Certification mode:" << std::endl
+                   << " passive_dwell_time: " << params_bg.passive_dwell_time << std::endl
+                   << " active_dwell_time: " << params_bg.active_dwell_time << std::endl
+                   << " num_probe_reqs: " << params_bg.num_probe_reqs << std::endl
+                   << " probe_reqs_interval: " << params_bg.probe_reqs_interval << std::endl
+                   << " num_chans_in_chunk: " << params_bg.num_chans_in_chunk << std::endl
+                   << " Break_time: " << params_bg.break_time << std::endl
+                   << " Break_time_busy: " << params_bg.break_time_busy << std::endl
+                   << " window_slice: " << params_bg.window_slice << std::endl
+                   << " window_slice_overlap: " << params_bg.window_slice_overlap << std::endl
+                   << " cts_to_self_duration: " << params_bg.cts_to_self_duration << std::endl;
+        if (!dwpal_set_scan_params_bg(params_bg, bg_size)) {
+            LOG(ERROR) << "Failed setting new scan parameters";
+            return false;
+        }
+    } else if (params_bg.active_dwell_time != dwell_time_msec ||
+               params_bg.passive_dwell_time != dwell_time_msec) {
         params_bg.active_dwell_time  = dwell_time_msec;
         params_bg.passive_dwell_time = dwell_time_msec;
         LOG(DEBUG) << "Setting NEW scan params, updating default dwell_time from "
@@ -1277,9 +1306,9 @@ bool mon_wlan_hal_dwpal::generate_connected_clients_events(
         do {
             // if thread awake time is too long - return false (means there is more handling to be done on next wake-up)
             if (std::chrono::steady_clock::now() > max_iteration_timeout) {
-                LOG(DEBUG)
-                    << "Thread is awake too long - will continue on next wakeup, last handled sta:"
-                    << m_prev_client_mac;
+                LOG(DEBUG) << "Thread is awake too long - will continue on next wakeup, last "
+                              "handled sta:"
+                           << m_prev_client_mac;
                 is_finished_all_clients = false;
                 return true;
             }
