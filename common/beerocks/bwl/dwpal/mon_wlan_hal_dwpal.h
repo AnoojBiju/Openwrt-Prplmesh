@@ -14,6 +14,10 @@
 #include <bcl/network/network_utils.h>
 #include <bwl/mon_wlan_hal.h>
 
+#define BREAK_TIME_FOR_CERT 100
+#define BREAK_TIME_BUSY_FOR_CERT 100
+#define WINDOW_SLICE_FOR_CERT 103
+
 namespace bwl {
 namespace dwpal {
 

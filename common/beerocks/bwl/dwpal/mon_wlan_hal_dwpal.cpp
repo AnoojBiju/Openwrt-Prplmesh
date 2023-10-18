@@ -1057,9 +1057,9 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     LOG(DEBUG) << "Channel scan trigger received on interface=" << m_radio_info.iface_name;
 
     //build background scan parameters
-    scan_params channel_scan_params = {0};
+    ScanParams channel_scan_params = {0};
     sScanCfgParamsBG params_bg; //background scan param
-    size_t bg_size = ScanCfgParamsBG_size;
+    size_t bg_size = ScanCfgParams_size_invalid;
 
     // get original background scan params
     if (!dwpal_get_scan_params_bg(params_bg, bg_size)) {
@@ -1118,16 +1118,15 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     // must as single wifi won't allow scan on ap without this flag
     channel_scan_params.ap_force = 1;
 
-    int cmd_res                     = 0;
-    m_scan_was_triggered_internally = true;
-    auto ret = dwpald_ieee80211_scan_trigger((char *)m_radio_info.iface_name.c_str(),
-                                             &channel_scan_params, &cmd_res);
-    if (ret != DWPALD_SUCCESS && cmd_res != 0) {
+    int cmd_res = 0;
+    auto ret    = dwpal_driver_nl_scan_trigger_sync(get_dwpal_nl_ctx(),
+                                                 (char *)m_radio_info.iface_name.c_str(), &cmd_res,
+                                                 &channel_scan_params);
+    if (ret != DWPAL_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << " scan trigger failed! Abort scan";
-        m_scan_was_triggered_internally = false;
         return false;
     }
-
+    m_scan_was_triggered_internally = true;
     LOG(DEBUG) << "Scan trigger request sent";
 
     return true;
