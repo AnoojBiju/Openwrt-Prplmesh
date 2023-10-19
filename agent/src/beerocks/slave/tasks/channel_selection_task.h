@@ -77,18 +77,7 @@ private:
             bool tx_limit_valid                = false;
             uint8_t CSA_count                  = 5;
         } outgoing_request;
-        struct sSpatialReuseParams {
-            uint8_t bss_color                         = 0;
-            bool hesiga_spatial_reuse_value15_allowed = false;
-            bool srg_information_valid                = false;
-            bool non_srg_offset_valid                 = false;
-            bool psr_disallowed                       = false;
-            uint8_t non_srg_obsspd_max_offset         = 0;
-            uint8_t srg_obsspd_min_offset             = 0;
-            uint8_t srg_obsspd_max_offset             = 0;
-            uint64_t srg_bss_color_bitmap             = 0;
-            uint64_t srg_partial_bssid_bitmap         = 0;
-        } spatial_reuse_request;
+        son::wireless_utils::sSpatialReuseParams spatial_reuse_request;
         sSelectedChannel selected_channel;
         bool power_switch_received          = false;
         bool channel_switch_needed          = false;
