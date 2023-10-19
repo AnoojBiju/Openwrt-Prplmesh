@@ -170,9 +170,9 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='6b2e0b6037b5325413da9d381676c30ceae4b92e'
         OPENWRT_VERSION='6b2e0b6037b5325413da9d381676c30ceae4b92e'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on  prplos-UPDK-9.1.30.4 with USPagent"
-        OPENWRT_TOOLCHAIN_VERSION='0dec8cb9e0abf8c73f16b9811a200251a3280b8e'
-        OPENWRT_VERSION='0dec8cb9e0abf8c73f16b9811a200251a3280b8e'
+        dbg "OSP platform, build on  prplos-UPDK-9.1.30.4 with USPagent - 4addr driver update - webui fix"
+        OPENWRT_TOOLCHAIN_VERSION='aecca8160ecfd9862f051cab33a317ef84022db3'
+        OPENWRT_VERSION='aecca8160ecfd9862f051cab33a317ef84022db3'
     else
         dbg "Building on prplOS-next"
     fi
