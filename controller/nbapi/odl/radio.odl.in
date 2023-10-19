@@ -85,6 +85,19 @@
             %in %mandatory string pass
         );
 
+        %instance bool SetSpatialReuse(
+            %in uint32 bss_color,
+            %in bool hesiga_spr_value15_allowed,
+            %in bool srg_information_valid,
+            %in bool non_srg_offset_valid,
+            %in bool psr_disallowed,
+            %in uint32 non_srg_obsspd_max_offset,
+            %in uint32 srg_obsspd_min_offset,
+            %in uint32 srg_obsspd_max_offset,
+            %in string srg_bss_color_bitmap,
+            %in string srg_partial_bssid_bitmap
+        );
+
         object Capabilities;
 
         object BSS [] {

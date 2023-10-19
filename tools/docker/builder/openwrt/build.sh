@@ -173,9 +173,9 @@ main() {
         sed -i 's/make -j"$(nproc)" V=sc/make -j1 V=sc/g' "$scriptdir/scripts/build-openwrt.sh"
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx // !prplos-M1-2023/urx"
-        OPENWRT_TOOLCHAIN_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
-        OPENWRT_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
+        dbg "OSP platform, build on  mm/prplos-M1-PPM-2598-bump-pwhm-and-lib"
+        OPENWRT_TOOLCHAIN_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
+        OPENWRT_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
     else
         dbg "Building on prplOS-next"
     fi
@@ -224,9 +224,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS-next for reference platforms (feature/PPM-2598-bump-pwhm-and-lib)
-OPENWRT_TOOLCHAIN_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
-OPENWRT_VERSION='34f26b7c1d15181a9dd89c1149ee049c9509d08c'
+# prplOS-next for reference platforms
+OPENWRT_TOOLCHAIN_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
+OPENWRT_VERSION='3d35e216847f6eb8f533687d613ad4f0d19f4a4c'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
