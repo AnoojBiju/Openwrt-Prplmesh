@@ -330,7 +330,7 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
             // Missing wifi6_caps->spatial_reuse. PPM-2602.
             // continue;
         }
-        if (!handle_spatial_reuse_tlv(spatial_reuse_request_tlv)) {
+        if (!handle_spatial_reuse_tlv(*spatial_reuse_request_tlv)) {
             LOG(ERROR) << "Failed to handle spatial reuse request params";
         }
     }
@@ -1470,31 +1470,31 @@ bool ChannelSelectionTask::check_is_there_better_channel_than_current(const sMac
 }
 
 bool ChannelSelectionTask::handle_spatial_reuse_tlv(
-    const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv)
+    wfa_map::tlvSpatialReuseRequest &spatial_reuse_tlv)
 {
-    const auto &radio_mac = spatial_reuse_tlv->radio_uid();
+    const auto &radio_mac = spatial_reuse_tlv.radio_uid();
     auto &radio_request   = m_pending_selection.requests[radio_mac];
 
     LOG(DEBUG) << "Spatial reuse params are received for radio : " << radio_mac;
 
-    radio_request.spatial_reuse_request.bss_color = spatial_reuse_tlv->flags1().bss_color;
+    radio_request.spatial_reuse_request.bss_color = spatial_reuse_tlv.flags1().bss_color;
     radio_request.spatial_reuse_request.hesiga_spatial_reuse_value15_allowed =
-        spatial_reuse_tlv->flags2().hesiga_spatial_reuse_value15_allowed;
+        spatial_reuse_tlv.flags2().hesiga_spatial_reuse_value15_allowed;
     radio_request.spatial_reuse_request.srg_information_valid =
-        spatial_reuse_tlv->flags2().srg_information_valid;
+        spatial_reuse_tlv.flags2().srg_information_valid;
     radio_request.spatial_reuse_request.non_srg_offset_valid =
-        spatial_reuse_tlv->flags2().non_srg_offset_valid;
-    radio_request.spatial_reuse_request.psr_disallowed = spatial_reuse_tlv->flags2().psr_disallowed;
+        spatial_reuse_tlv.flags2().non_srg_offset_valid;
+    radio_request.spatial_reuse_request.psr_disallowed = spatial_reuse_tlv.flags2().psr_disallowed;
     radio_request.spatial_reuse_request.non_srg_obsspd_max_offset =
-        spatial_reuse_tlv->non_srg_obsspd_max_offset();
+        spatial_reuse_tlv.non_srg_obsspd_max_offset();
     radio_request.spatial_reuse_request.srg_obsspd_min_offset =
-        spatial_reuse_tlv->srg_obsspd_min_offset();
+        spatial_reuse_tlv.srg_obsspd_min_offset();
     radio_request.spatial_reuse_request.srg_obsspd_max_offset =
-        spatial_reuse_tlv->srg_obsspd_max_offset();
+        spatial_reuse_tlv.srg_obsspd_max_offset();
     radio_request.spatial_reuse_request.srg_bss_color_bitmap =
-        spatial_reuse_tlv->srg_bss_color_bitmap();
+        spatial_reuse_tlv.srg_bss_color_bitmap();
     radio_request.spatial_reuse_request.srg_partial_bssid_bitmap =
-        spatial_reuse_tlv->srg_partial_bssid_bitmap();
+        spatial_reuse_tlv.srg_partial_bssid_bitmap();
     radio_request.spatial_reuse_request_received = true;
 
     LOG(DEBUG)

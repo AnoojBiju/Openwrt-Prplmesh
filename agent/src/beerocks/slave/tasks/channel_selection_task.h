@@ -166,8 +166,7 @@ private:
 
     bool check_is_there_better_channel_than_current(const sMacAddr &radio_mac);
 
-    bool handle_spatial_reuse_tlv(
-        const std::shared_ptr<wfa_map::tlvSpatialReuseRequest> spatial_reuse_tlv);
+    bool handle_spatial_reuse_tlv(wfa_map::tlvSpatialReuseRequest &spatial_reuse_tlv);
 
     ChannelSelectionTask::sSelectedChannel
     select_next_channel(const sMacAddr &radio_mac,
