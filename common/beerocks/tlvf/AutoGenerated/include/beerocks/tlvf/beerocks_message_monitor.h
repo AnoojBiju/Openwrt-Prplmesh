@@ -771,6 +771,7 @@ class cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST : public BaseClass
         static eActionOp_MONITOR get_action_op(){
             return (eActionOp_MONITOR)(ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST);
         }
+        uint8_t& cert_mode();
         sTriggerChannelScanParams& scan_params();
         void class_swap() override;
         bool finalize() override;
@@ -779,6 +780,7 @@ class cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_MONITOR* m_action_op = nullptr;
+        uint8_t* m_cert_mode = nullptr;
         sTriggerChannelScanParams* m_scan_params = nullptr;
 };
 
