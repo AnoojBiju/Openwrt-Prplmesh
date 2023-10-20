@@ -196,8 +196,20 @@
                     object AccessPoint[] {
                         counted with AccessPointNumberOfEntries;
                     }
-
+                    
                     void AccessPointCommit();
+
+                    // Global network wide enable
+                    bool Enable = true; 
+
+                    // Global network wide enable
+                    object X-PRPL_ORG_Group[] {
+                        //name of the group (private / guest, etc...)
+                        %read-only string Name = "";
+
+                        //  Enable of the group
+                        bool Enable;
+                    }
 
                     void SetServicePrioritization();
 
@@ -265,6 +277,12 @@
 %populate {
     on event "dm:object-changed" call event_configuration_changed
         filter 'object matches "@CONTROLLER_ROOT_DM_literal@\.Configuration\."';
+
+    on event "dm:object-changed" call event_network_enable_changed                                                                                             
+        filter 'object matches "@CONTROLLER_ROOT_DM_literal@\.Network\." && contains("parameters.Enable")'; 
+
+    on event "*" call event_network_group_changed                                                                                             
+        filter 'object matches "@CONTROLLER_ROOT_DM_literal@\.Network\.X-PRPL_ORG_Group\."'; 
 }
 
 include "device.odl";

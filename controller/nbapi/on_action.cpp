@@ -15,6 +15,7 @@
 #include <locale.h>
 #include <sstream>
 #include <time.h>
+#include <unordered_map>
 
 using namespace beerocks;
 using namespace net;
@@ -243,73 +244,123 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
     amxd_object_t *access_point = amxd_object_get_child(object, "AccessPoint");
 
     if (!access_point) {
-        LOG(WARNING) << "Fail to get AccessPoint object from data model";
-        return amxd_status_ok;
+        LOG(ERROR) << "AccessPoint Object is not found!";
+        return amxd_status_object_not_found;
+    }
+
+    bool network_enable         = get_param_bool(object, "Enable");
+    amxd_object_t *group_object = amxd_object_get_child(object, "X-PRPL_ORG_Group");
+    if (!group_object) {
+        LOG(WARNING) << "Fail to get Group object from Network object!";
+        return amxd_status_object_not_found;
+    }
+
+    // Lets build a map of key=Name-->Enable
+    std::unordered_map<std::string, bool> group_status;
+    amxd_object_for_each(instance, it, group_object)
+    {
+        amxd_object_t *group_inst = amxc_llist_it_get_data(it, amxd_object_t, it);
+        std::string group_name    = get_param_string(group_inst, "Name");
+        bool group_enable         = get_param_bool(group_inst, "Enable");
+        if (!group_name.empty()) {
+            group_status[group_name] = group_enable;
+        } else {
+            LOG(WARNING) << "Name param  inside Group object is empty!";
+        }
     }
 
     g_database->clear_bss_info_configuration();
-    amxd_object_for_each(instance, it, access_point)
-    {
-        son::wireless_utils::sBssInfoConf bss_info;
-        amxd_object_t *access_point_inst = amxc_llist_it_get_data(it, amxd_object_t, it);
-        amxd_object_t *security_inst     = amxd_object_get_child(access_point_inst, "Security");
 
-        bss_info.ssid      = get_param_string(access_point_inst, "SSID");
-        auto multi_ap_mode = get_param_string(access_point_inst, "MultiApMode");
-        bss_info.backhaul  = (multi_ap_mode.find("Backhaul") != std::string::npos);
-        bss_info.fronthaul = (multi_ap_mode.find("Fronthaul") != std::string::npos);
+    if (network_enable) {
+        amxd_object_for_each(instance, it, access_point)
+        {
+            amxd_object_t *access_point_inst = amxc_llist_it_get_data(it, amxd_object_t, it);
+            son::wireless_utils::sBssInfoConf bss_info;
+            bss_info.ssid = get_param_string(access_point_inst, "SSID");
 
-        if (!bss_info.backhaul && !bss_info.fronthaul) {
-            LOG(DEBUG) << "MultiApMode for AccessPoint: " << bss_info.ssid << " is not set.";
-            continue;
-        }
-        if (get_param_bool(access_point_inst, "Band2_4G")) {
-            bss_info.operating_class.splice(bss_info.operating_class.end(),
-                                            son::wireless_utils::string_to_wsc_oper_class("24g"));
-        }
-        if (get_param_bool(access_point_inst, "Band5GH")) {
-            bss_info.operating_class.splice(bss_info.operating_class.end(),
-                                            son::wireless_utils::string_to_wsc_oper_class("5gh"));
-        }
-        if (get_param_bool(access_point_inst, "Band5GL")) {
-            bss_info.operating_class.splice(bss_info.operating_class.end(),
-                                            son::wireless_utils::string_to_wsc_oper_class("5gl"));
-        }
-        if (get_param_bool(access_point_inst, "Band6G")) {
-            bss_info.operating_class.splice(bss_info.operating_class.end(),
-                                            son::wireless_utils::string_to_wsc_oper_class("6g"));
-        }
-        if (bss_info.operating_class.empty()) {
-            LOG(DEBUG) << "Band for Access Point: " << bss_info.ssid << " is not set.";
-            continue;
-        }
+            bool access_point_enable = amxd_object_get_bool(access_point_inst, "Enable", NULL);
+            std::string group_name   = get_param_string(access_point_inst, "X-PRPL_ORG_GroupName");
+            if (!group_name.empty()) {
+                bool new_enable_value =
+                    network_enable && group_status[group_name] && access_point_enable;
 
-        std::string mode_enabled = get_param_string(security_inst, "ModeEnabled");
-        if (mode_enabled == "WPA3-Personal") {
-            bss_info.network_key         = get_param_string(security_inst, "SAEPassphrase");
-            bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_SAE;
-            bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_AES;
-        } else if (mode_enabled == "WPA2-Personal") {
-            bss_info.network_key = get_param_string(security_inst, "PreSharedKey");
-            if (bss_info.network_key.empty()) {
-                bss_info.network_key = get_param_string(security_inst, "KeyPassphrase");
+                //the Accesspoint shall not be enabled/existing--> lets skip it then
+                if (!new_enable_value) {
+                    continue;
+                }
+                LOG(DEBUG) << "Enabling AP with ssid:" << bss_info.ssid
+                           << " under GroupName: " << group_name;
+
+            } else {
+                // We keep the accesspoint with a warning, maybe re-consider this in the future ?
+                LOG(WARNING) << "AccessPoint " << bss_info.ssid << " has en Empty GroupName param!";
+                if (!access_point_enable) {
+                    continue;
+                }
             }
-            bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
-            bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_AES;
-        } else {
-            bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_OPEN;
-            bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_NONE;
-        }
 
-        if (bss_info.authentication_type != WSC::eWscAuth::WSC_AUTH_OPEN &&
-            bss_info.network_key.empty()) {
-            LOG(WARNING) << "BSS: " << bss_info.ssid << " with mode: " << mode_enabled
-                         << " missing value for network key.";
-            continue;
+            amxd_object_t *security_inst = amxd_object_get_child(access_point_inst, "Security");
+
+            auto multi_ap_mode = get_param_string(access_point_inst, "MultiApMode");
+            bss_info.backhaul  = (multi_ap_mode.find("Backhaul") != std::string::npos);
+            bss_info.fronthaul = (multi_ap_mode.find("Fronthaul") != std::string::npos);
+
+            if (!bss_info.backhaul && !bss_info.fronthaul) {
+                LOG(DEBUG) << "MultiApMode for AccessPoint: " << bss_info.ssid << " is not set.";
+                continue;
+            }
+            if (get_param_bool(access_point_inst, "Band2_4G")) {
+                bss_info.operating_class.splice(
+                    bss_info.operating_class.end(),
+                    son::wireless_utils::string_to_wsc_oper_class("24g"));
+            }
+            if (get_param_bool(access_point_inst, "Band5GH")) {
+                bss_info.operating_class.splice(
+                    bss_info.operating_class.end(),
+                    son::wireless_utils::string_to_wsc_oper_class("5gh"));
+            }
+            if (get_param_bool(access_point_inst, "Band5GL")) {
+                bss_info.operating_class.splice(
+                    bss_info.operating_class.end(),
+                    son::wireless_utils::string_to_wsc_oper_class("5gl"));
+            }
+            if (get_param_bool(access_point_inst, "Band6G")) {
+                bss_info.operating_class.splice(
+                    bss_info.operating_class.end(),
+                    son::wireless_utils::string_to_wsc_oper_class("6g"));
+            }
+            if (bss_info.operating_class.empty()) {
+                LOG(WARNING) << "Band for Access Point: " << bss_info.ssid << " is not set.";
+                continue;
+            }
+
+            std::string mode_enabled = get_param_string(security_inst, "ModeEnabled");
+            if (mode_enabled == "WPA3-Personal" || mode_enabled == "WPA3-Personal-Transition") {
+                bss_info.network_key         = get_param_string(security_inst, "SAEPassphrase");
+                bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_SAE;
+                bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_AES;
+            } else if (mode_enabled == "WPA2-Personal") {
+                bss_info.network_key = get_param_string(security_inst, "PreSharedKey");
+                if (bss_info.network_key.empty()) {
+                    bss_info.network_key = get_param_string(security_inst, "KeyPassphrase");
+                }
+                bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
+                bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_AES;
+            } else {
+                bss_info.authentication_type = WSC::eWscAuth::WSC_AUTH_OPEN;
+                bss_info.encryption_type     = WSC::eWscEncr::WSC_ENCR_NONE;
+            }
+
+            if (bss_info.authentication_type != WSC::eWscAuth::WSC_AUTH_OPEN &&
+                bss_info.network_key.empty()) {
+                LOG(WARNING) << "BSS: " << bss_info.ssid << " with mode: " << mode_enabled
+                             << " missing value for network key.";
+                continue;
+            }
+            LOG(DEBUG) << "Add bss info configration for AP with ssid: " << bss_info.ssid
+                       << " and operating classes: " << bss_info.operating_class;
+            g_database->add_bss_info_configuration(bss_info);
         }
-        LOG(DEBUG) << "Add bss info configration for AP with ssid: " << bss_info.ssid
-                   << " and operating classes: " << bss_info.operating_class;
-        g_database->add_bss_info_configuration(bss_info);
     }
 
     // Update wifi credentials
@@ -322,6 +373,7 @@ amxd_status_t access_point_commit(amxd_object_t *object, amxd_function_t *func, 
             LOG(ERROR) << "Failed son_actions::send_ap_config_renew_msg ! ";
         }
     }
+
     return amxd_status_ok;
 }
 
@@ -1152,6 +1204,47 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     // TODO Save persistent settings with amxo_parser_save() (PPM-1419)
 }
 
+/**
+ * @brief Event handler for controller Group change.
+ *
+ * event_group_enable_changed is invoked when value of parameter Device.WiFi.DataElements.Network.Group.X.Enable is changed
+ * 
+ */
+
+static void event_network_group_changed(const char *const sig_name, const amxc_var_t *const data,
+                                        void *const priv)
+{
+    amxd_object_t *group = amxd_dm_signal_get_object(g_data_model, data);
+
+    if (!group) {
+        LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Network.Group.X.";
+        return;
+    }
+
+    access_point_commit(amxd_object_get_parent(amxd_object_get_parent(group)), nullptr, nullptr,
+                        nullptr);
+}
+
+/**
+ * @brief Event handler for controller Network.Enable change.
+ *
+ * event_group_enable_changed is invoked when value of parameter Device.WiFi.DataElements.Network.Enable is changed
+ * 
+ */
+
+static void event_network_enable_changed(const char *const sig_name, const amxc_var_t *const data,
+                                         void *const priv)
+{
+    amxd_object_t *network_obj = amxd_dm_signal_get_object(g_data_model, data);
+
+    if (!network_obj) {
+        LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Network.";
+        return;
+    }
+
+    access_point_commit(network_obj, nullptr, nullptr, nullptr);
+}
+
 std::vector<beerocks::nbapi::sActionsCallback> get_actions_callback_list(void)
 {
     const std::vector<beerocks::nbapi::sActionsCallback> actions_list = {
@@ -1166,7 +1259,8 @@ std::vector<beerocks::nbapi::sEvents> get_events_list(void)
 {
     const std::vector<beerocks::nbapi::sEvents> events_list = {
         {"event_configuration_changed", event_configuration_changed},
-    };
+        {"event_network_group_changed", event_network_group_changed},
+        {"event_network_enable_changed", event_network_enable_changed}};
     return events_list;
 }
 

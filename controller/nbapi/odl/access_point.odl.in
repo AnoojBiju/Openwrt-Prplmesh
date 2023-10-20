@@ -36,5 +36,15 @@
         bool Band5GL = false;
         bool Band5GH = false;
         bool Band6G = false;
+
+        /*
+        ** Name of the group this set of accesspoints belong to.
+        */
+        %read-only string X-PRPL_ORG_GroupName = "";
+        /*
+        ** Enabling/Disabling the AcceessPoint set.
+        */
+        bool Enable;
+
     }
 }
