@@ -156,6 +156,11 @@ private:
     void subscribe_to_ap_bss_tm_events();
 
     /**
+     * @brief Subscribe to Ap event "MgmtActionFrameReceived" from pwhm
+     */
+    void subscribe_to_ap_mgmt_frame_events();
+
+    /**
      * @brief Process event "BSS-TM-RESP"
      */
     bool process_ap_bss_event(const std::string &interface,

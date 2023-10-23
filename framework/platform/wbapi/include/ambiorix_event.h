@@ -24,6 +24,7 @@ constexpr char AMX_CL_SCAN_COMPLETE_EVT[]    = "ScanComplete";
 constexpr char AMX_CL_BSS_TM_RESPONSE_EVT[]  = "BSS-TM-RESP";
 constexpr char AMX_CL_CHANNEL_CHANGE_EVT[]   = "Channel change event";
 constexpr char AMX_CL_WPA_CTRL_EVT[]         = "wpaCtrlEvents";
+constexpr char AMX_CL_MGMT_ACT_FRAME_EVT[]   = "MgmtActionFrameReceived";
 
 namespace beerocks {
 namespace wbapi {
