@@ -14,6 +14,10 @@
 #include <bcl/network/network_utils.h>
 #include <bwl/mon_wlan_hal.h>
 
+#define BREAK_TIME_FOR_CERT 100
+#define BREAK_TIME_BUSY_FOR_CERT 100
+#define WINDOW_SLICE_FOR_CERT 103
+
 namespace bwl {
 namespace dwpal {
 
@@ -50,7 +54,8 @@ public:
     virtual bool sta_link_measurements_11k_request(const std::string &vap_iface_name,
                                                    const std::string &sta_mac) override;
     virtual bool channel_scan_trigger(int dwell_time_msec,
-                                      const std::vector<unsigned int> &channel_pool) override;
+                                      const std::vector<unsigned int> &channel_pool,
+                                      bool cert_mode = false) override;
     virtual bool channel_scan_dump_results() override;
     virtual bool channel_scan_dump_cached_results() override;
 

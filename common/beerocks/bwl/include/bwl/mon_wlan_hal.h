@@ -78,7 +78,8 @@ public:
     virtual bool sta_link_measurements_11k_request(const std::string &vap_iface_name,
                                                    const std::string &sta_mac)           = 0;
     virtual bool channel_scan_trigger(int dwell_time_msec,
-                                      const std::vector<unsigned int> &channel_pool)     = 0;
+                                      const std::vector<unsigned int> &channel_pool,
+                                      bool cert_mode = false)                            = 0;
     virtual bool channel_scan_dump_results()                                             = 0;
     virtual bool channel_scan_dump_cached_results()                                      = 0;
     /**
