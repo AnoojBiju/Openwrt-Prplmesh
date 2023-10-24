@@ -12,12 +12,12 @@
 #include <string>
 
 // Ambiorix
+#include <amxrt/amxrt.h>
 #include <amxb/amxb_register.h>
 #include <amxd/amxd_action.h>
 #include <amxd/amxd_object.h>
 #include <amxd/amxd_object_event.h>
 #include <amxd/amxd_transaction.h>
-#include <amxrt/amxrt.h>
 
 namespace beerocks {
 namespace nbapi {
