@@ -2235,6 +2235,10 @@ BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
 }
 cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::~cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST() {
 }
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::cert_mode() {
+    return (uint8_t&)(*m_cert_mode);
+}
+
 sTriggerChannelScanParams& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::scan_params() {
     return (sTriggerChannelScanParams&)(*m_scan_params);
 }
@@ -2275,6 +2279,7 @@ bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::finalize()
 size_t cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::get_initial_size()
 {
     size_t class_size = 0;
+    class_size += sizeof(uint8_t); // cert_mode
     class_size += sizeof(sTriggerChannelScanParams); // scan_params
     return class_size;
 }
@@ -2283,6 +2288,11 @@ bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::init()
 {
     if (getBuffRemainingBytes() < get_initial_size()) {
         TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_cert_mode = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
     }
     m_scan_params = reinterpret_cast<sTriggerChannelScanParams*>(m_buff_ptr__);

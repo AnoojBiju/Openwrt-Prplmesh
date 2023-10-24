@@ -692,6 +692,7 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST : public BaseClass
         static eActionOp_BACKHAUL get_action_op(){
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST);
         }
+        uint8_t& cert_mode();
         sTriggerChannelScanParams& scan_params();
         void class_swap() override;
         bool finalize() override;
@@ -700,6 +701,7 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
+        uint8_t* m_cert_mode = nullptr;
         sTriggerChannelScanParams* m_scan_params = nullptr;
 };
 

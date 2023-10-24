@@ -667,6 +667,7 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
         trigger_request->scan_params().channel_pool_size = channels_to_scan.size();
         std::copy(channels_to_scan.begin(), channels_to_scan.end(),
                   trigger_request->scan_params().channel_pool);
+        trigger_request->cert_mode() = db->device_conf.certification_mode;
 
         // Print CMDU scan parameters
         auto print_pool = [](uint8_t *pool, uint8_t size) -> std::string {
@@ -678,7 +679,8 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
             ss << "]";
             return ss.str();
         };
-        LOG(DEBUG) << "Sending \"Scan Trigger\" request for the following:" << std::endl
+        LOG(DEBUG) << "Sending \"Scan Trigger\" request for the following "
+                   << (trigger_request->cert_mode() ? "in certification mode:" : ":") << std::endl
                    << "- Radio MAC: " << trigger_request->scan_params().radio_mac << std::endl
                    << "- Dwell time: " << trigger_request->scan_params().dwell_time_ms << std::endl
                    << "- Channels: "
