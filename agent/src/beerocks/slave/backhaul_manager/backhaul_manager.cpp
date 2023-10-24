@@ -1549,6 +1549,7 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
                 radio_info->hostap_iface    = radio->front.iface_name;
                 radio_info->sta_iface       = radio->back.iface_name;
                 radio_info->primary_channel = radio->wifi_channel.get_channel();
+                radio_info->radio_state     = radio->front.radio_state;
 
                 LOG(DEBUG) << "Pushing new Radio";
                 m_radios_info.push_back(radio_info);
@@ -2791,32 +2792,33 @@ std::string BackhaulManager::freq_to_radio_mac(eFreqType freq) const
     return {};
 }
 
+bool BackhaulManager::enable_aps(const std::shared_ptr<sRadioInfo> &radio_info)
+{
+    auto notification =
+        message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(
+            cmdu_tx);
+
+    if (!notification) {
+        LOG(ERROR) << "Failed building message!";
+        return false;
+    }
+
+    notification->set_iface(radio_info->hostap_iface);
+    notification->channel()        = radio_info->primary_channel;
+    notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
+    notification->center_channel() = radio_info->primary_channel;
+
+    LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
+               << ", channel = " << int(notification->channel())
+               << ", center_channel = " << int(notification->center_channel());
+
+    send_cmdu(m_agent_fd, cmdu_tx);
+    return true;
+}
+
 bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
 {
-    auto db        = AgentDB::get();
-    auto enableAps = [&]() -> bool {
-        for (const auto &radio_info : m_radios_info) {
-            auto notification = message_com::create_vs_message<
-                beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(cmdu_tx);
-
-            if (!notification) {
-                LOG(ERROR) << "Failed building message!";
-                return false;
-            }
-
-            notification->set_iface(radio_info->hostap_iface);
-            notification->channel()        = radio_info->primary_channel;
-            notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
-            notification->center_channel() = radio_info->primary_channel;
-
-            LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
-                       << ", channel = " << int(notification->channel())
-                       << ", center_channel = " << int(notification->center_channel());
-
-            send_cmdu(m_agent_fd, cmdu_tx);
-        }
-        return true;
-    };
+    auto db = AgentDB::get();
     if ((m_eFSMState == EState::OPERATIONAL)) {
         auto it = std::find_if(m_radios_info.begin(), m_radios_info.end(),
                                [&](std::shared_ptr<sRadioInfo> radio_info) {
@@ -2845,9 +2847,14 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         auto sta_wlan_hal = get_selected_backhaul_sta_wlan_hal();
         if (!sta_wlan_hal) {
             LOG(ERROR) << "Failed to get backhaul STA hal";
-            if (db->device_conf.certification_mode)
-                enableAps() ? LOG(DEBUG) << "Enabling all radios"
-                            : LOG(DEBUG) << "Failed enabling radios";
+            if (db->device_conf.certification_mode) {
+                for (const auto &radio_info : m_radios_info) {
+                    enable_aps(radio_info)
+                        ? LOG(DEBUG) << "Enabling radio interface" << radio_info->hostap_iface
+                        : LOG(DEBUG)
+                              << "Failed enabling radio interface" << radio_info->hostap_iface;
+                }
+            }
             return false;
         }
 
@@ -2875,9 +2882,14 @@ bool BackhaulManager::start_wps_pbc(const sMacAddr &radio_mac)
         }
         if (!sta_wlan_hal->start_wps_pbc()) {
             LOG(ERROR) << "Failed to start wps";
-            if (db->device_conf.certification_mode)
-                enableAps() ? LOG(DEBUG) << "Enabling all radios"
-                            : LOG(DEBUG) << "Failed enabling radios";
+            if (db->device_conf.certification_mode) {
+                for (const auto &radio_info : m_radios_info) {
+                    enable_aps(radio_info)
+                        ? LOG(DEBUG) << "Enabling radio interface" << radio_info->hostap_iface
+                        : LOG(DEBUG)
+                              << "Failed enabling radio interface" << radio_info->hostap_iface;
+                }
+            }
             return false;
         }
         return true;
@@ -2984,6 +2996,16 @@ void BackhaulManager::handle_dev_reset_default(
     // Store socket descriptor to send reply to UCC client when command processing is completed.
     m_dev_reset_default_fd = fd;
 
+    auto db = AgentDB::get();
+
+    if (db->device_conf.certification_mode) {
+        for (const auto &radio_info : m_radios_info) {
+            enable_aps(radio_info)
+                ? LOG(DEBUG) << "Enabling radio interface" << radio_info->hostap_iface
+                : LOG(DEBUG) << "Failed enabling radio interface" << radio_info->hostap_iface;
+        }
+    }
+
     // Get the HAL for the connected wireless interface and, if any, disconnect the interface
     auto active_hal = get_wireless_hal();
     if (active_hal) {
@@ -2992,7 +3014,7 @@ void BackhaulManager::handle_dev_reset_default(
 
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
-    auto db            = AgentDB::get();
+
     auto bridge        = db->bridge.iface_name;
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
@@ -3037,7 +3059,6 @@ void BackhaulManager::handle_dev_reset_default(
             return;
         }
     }
-
     m_dev_reset_default_timer = m_timer_manager->add_timer(
         "Dev Reset Default",
         std::chrono::duration_cast<std::chrono::milliseconds>(dev_reset_default_timeout),

@@ -2333,6 +2333,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         }
 
         radio->front.iface_mac    = notification->params().iface_mac;
+        radio->front.radio_state  = notification->params().radio_state;
         radio->number_of_antennas = notification->params().ant_num;
         radio->antenna_gain_dB    = notification->params().ant_gain;
         radio->tx_power_dB        = notification->params().tx_power;

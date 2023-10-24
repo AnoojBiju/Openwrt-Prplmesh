@@ -243,6 +243,7 @@ public:
             }
             std::string iface_name;
             sMacAddr iface_mac;
+            bool radio_state = false;
             eWiFiBandwidth max_supported_bw;
 
             // When set, radio can only be used for ZWDFS purpose.
