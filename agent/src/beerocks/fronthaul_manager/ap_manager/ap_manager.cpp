@@ -3306,6 +3306,14 @@ void ApManager::csa_notification_timer_elapsed(
         return;
     }
 
+    struct OnReturn {
+        std::atomic<bool> &csa_notification_timer_on;
+        ~OnReturn() { csa_notification_timer_on = false; }
+    } on_return{csa_notification_timer_on};
+
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
+
     // Sends the cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION event
     // to the son_slave_thread, which adds the fetched values to the radio structure of AgentDB
     auto spatial_reuse_report = message_com::create_vs_message<
@@ -3314,6 +3322,7 @@ void ApManager::csa_notification_timer_elapsed(
         LOG(ERROR) << "Failed building message!";
         return;
     }
+
     ap_wlan_hal->refresh_radio_info();
     fill_sr_params(spatial_reuse_report->sr_params());
     send_cmdu(cmdu_tx);
@@ -3332,9 +3341,6 @@ void ApManager::csa_notification_timer_elapsed(
     ap_wlan_hal->refresh_radio_info();
     fill_cs_params(notification->cs_params());
     send_cmdu(cmdu_tx);
-
-    // Reset the variable indicating the presence of an ongoing timer for CSA notification
-    csa_notification_timer_on = false;
 }
 
 void ApManager::start_csa_notification_timer(
@@ -3345,9 +3351,9 @@ void ApManager::start_csa_notification_timer(
 
     // Start a timer for approximately 5 seconds (timer should be configurable based on the CSA count).
     // When the timer elapses, the "csa_notification_timer_elapsed" function will be called
-    std::thread timer_thread([this, request]() {
+    std::thread([this, request]() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
-        csa_notification_timer_elapsed(request);
-    });
-    timer_thread.detach();
+        csa_notification_timer_elapsed(std::move(request));
+    })
+        .detach();
 }

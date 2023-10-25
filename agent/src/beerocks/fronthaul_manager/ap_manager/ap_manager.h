@@ -19,6 +19,7 @@
 #include <bcl/network/file_descriptor.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <atomic>
 #include <list>
 
 namespace son {
@@ -281,7 +282,7 @@ private:
     void csa_notification_timer_elapsed(
         std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
             request);
-    bool csa_notification_timer_on = false;
+    std::atomic<bool> csa_notification_timer_on{false};
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
