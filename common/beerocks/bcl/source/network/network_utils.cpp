@@ -1044,6 +1044,7 @@ bool network_utils::linux_iface_get_speed(const std::string &iface, uint32_t &li
         if (!result)
 #endif
         {
+            //LOG(DEBUG) << "******GILLI INSIDE GET SPEED ETHTOOL_GSET*******";
             struct ethtool_cmd ecmd_legacy;
 
             ifr.ifr_data = reinterpret_cast<char *>(&ecmd_legacy);

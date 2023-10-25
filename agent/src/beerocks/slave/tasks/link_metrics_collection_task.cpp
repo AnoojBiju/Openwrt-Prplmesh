@@ -229,6 +229,8 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
         link_metrics_type = tlvLinkMetricQueryAllNeighbors->link_metrics_type();
     }
 
+    LOG(DEBUG) << "****GILLI PRINTING LINK METRICS TYPE = ***" << link_metrics_type;
+
     /**
      * Set alias flag to true if link metrics for a specific neighbor have been requested
      */
@@ -252,7 +254,7 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      */
     std::map<sLinkInterface, std::vector<sLinkNeighbor>> neighbor_links_map;
     if (!get_neighbor_links(neighbor_al_mac, neighbor_links_map)) {
-        LOG(ERROR) << "Failed to get the list of neighbor links";
+        LOG(DEBUG) << "Failed to get the list of neighbor links";
         return;
     }
 
@@ -262,16 +264,18 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * neighbor” shall be included in this message.
      */
     bool invalid_neighbor = specific_neighbor && neighbor_links_map.empty();
+    LOG(DEBUG) << "*****GILLI VALUE OF INVALID NEIGHBOR " << invalid_neighbor << " WITH LINK_MAP "
+               << neighbor_links_map.empty();
     if (invalid_neighbor) {
         auto tlvLinkMetricResultCode = m_cmdu_tx.addClass<ieee1905_1::tlvLinkMetricResultCode>();
         if (!tlvLinkMetricResultCode) {
-            LOG(ERROR) << "addClass ieee1905_1::tlvLinkMetricResultCode failed, mid=" << std::hex
+            LOG(DEBUG) << "addClass ieee1905_1::tlvLinkMetricResultCode failed, mid=" << std::hex
                        << mid;
             return;
         }
 
-        LOG(INFO) << "Invalid neighbor 1905.1 AL ID specified: "
-                  << tlvf::mac_to_string(neighbor_al_mac);
+        LOG(DEBUG) << "Invalid neighbor 1905.1 AL ID specified: "
+                   << tlvf::mac_to_string(neighbor_al_mac);
 
         tlvLinkMetricResultCode->value() = ieee1905_1::tlvLinkMetricResultCode::INVALID_NEIGHBOR;
 
@@ -285,32 +289,37 @@ void LinkMetricsCollectionTask::handle_link_metric_query(ieee1905_1::CmduMessage
      * Report link metrics for the link with specific neighbor or for all neighbors, as
      * obtained from topology database
      */
+
     for (const auto &entry : neighbor_links_map) {
         auto interface        = entry.first;
         const auto &neighbors = entry.second;
 
+        LOG(DEBUG) << "****GILLI (MediaType = " << std::hex << (int)interface.media_type;
+
         std::unique_ptr<link_metrics_collector> collector =
             create_link_metrics_collector(interface);
         if (!collector) {
+            LOG(DEBUG) << "*****GILLI COLLECTOR FAILED****";
             continue;
         }
 
         for (const auto &neighbor : neighbors) {
 
-            LOG(TRACE) << "Getting link metrics for interface " << interface.iface_name
+            LOG(DEBUG) << "Getting link metrics for interface " << interface.iface_name
                        << " (MediaType = " << std::hex << (int)interface.media_type
                        << ") and neighbor " << neighbor.iface_mac;
 
             sLinkMetrics link_metrics;
             if (!collector->get_link_metrics(interface.iface_name, neighbor.iface_mac,
                                              link_metrics)) {
-                LOG(ERROR) << "Unable to get link metrics for interface " << interface.iface_name
+                LOG(DEBUG) << "Unable to get link metrics for interface " << interface.iface_name
                            << " and neighbor " << neighbor.iface_mac;
                 return;
             }
 
             if (!add_link_metrics_tlv(reporter_al_mac, interface, neighbor, link_metrics,
                                       link_metrics_type)) {
+                LOG(DEBUG) << "*****GILLI FAILED TO ADD LINK METRICS TLV****";
                 return;
             }
         }
@@ -1253,7 +1262,7 @@ LinkMetricsCollectionTask::create_link_metrics_collector(const sLinkInterface &l
         return std::make_unique<ieee802_11_link_metrics_collector>();
     }
 
-    LOG(ERROR) << "Unable to create link metrics collector for interface '"
+    LOG(DEBUG) << "Unable to create link metrics collector for interface '"
                << link_interface.iface_name << "' (unsupported media type " << std::hex
                << (int)media_type << ")";
 
@@ -1280,7 +1289,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         if (!MediaType::get_media_type(wired_interface.iface_name,
                                        ieee1905_1::eMediaTypeGroup::IEEE_802_3,
                                        wired_interface.media_type)) {
-            LOG(ERROR) << "Unable to compute media type for interface "
+            LOG(DEBUG) << "Unable to compute media type for interface "
                        << wired_interface.iface_name;
             return false;
         }
@@ -1335,11 +1344,11 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                 radio->wifi_channel.get_freq_type(), radio->max_supported_bw);
 
             if (ieee1905_1::eMediaType::UNKNOWN_MEDIA == interface.media_type) {
-                LOG(ERROR) << "Unknown media type for interface " << interface.iface_name;
+                LOG(DEBUG) << "Unknown media type for interface " << interface.iface_name;
                 return false;
             }
 
-            LOG(TRACE) << "Getting neighbors connected to interface " << interface.iface_name
+            LOG(DEBUG) << "Getting neighbors connected to interface " << interface.iface_name
                        << " with BSSID " << bssid;
 
             // TODO: This is not correct... We actually have to get this from the topology
