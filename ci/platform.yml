@@ -289,16 +289,12 @@ boardfarm-on-turris-omnia-rdkb:
     - ./dctest.py --dut $TARGET_DEVICE --test-suite test_flows_on_rdkb
   needs:
     - build-for-rdkb-turris-omnia
-  rules:
-    # Enable again when RDKB boardfarm is fixed
-    - allow_failure: true
 
 boardfarm-on-turris-omnia-rdkb-stability:
   extends: boardfarm-on-turris-omnia-rdkb
   parallel: 10
   rules:
-    # Enable again when RDKB boardfarm is fixed
-    - if: '$STABILITY_TESTS == "y"'
+    - if: '$STABILITY_TESTS == "yes"'
 
 run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1

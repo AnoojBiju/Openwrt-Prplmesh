@@ -50,18 +50,20 @@ class URXOSP(GenericPrplOS):
         # shell.sendline(f"setenv fullimage {self.image}")
         # shell.sendline("")
         # shell.sendline("saveenv")
-        # shell.expect("done")
-
-        shell.sendline(
-            "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
-        shell.expect("blocks erased: OK", timeout=20)
-        shell.expect(self.bootloader_prompt)
+        # shell.expect("OK")
 
         shell.sendline("run update_fullimage")
         shell.expect("done", timeout=30)
         # Image transfer successful
-        shell.expect("done", timeout=30)
-        shell.expect("done", timeout=30)
+        shell.expect("Found device tree image", timeout=15)
+        shell.expect("Saving Environment to MMC", timeout=15)
+        shell.expect("OK", timeout=15)
         # Image written to MMC
         shell.sendline("")
+        shell.expect(self.bootloader_prompt)
+
+        time.sleep(5)
+        shell.sendline(
+            "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
+        shell.expect("blocks erased: OK", timeout=15)
         shell.expect(self.bootloader_prompt)
