@@ -18,6 +18,8 @@
 #include <math.h>
 #include <net/if.h> // if_nametoindex
 
+#include <bpl/bpl_cfg.h>
+
 #ifdef USE_LIBSAFEC
 #define restrict __restrict
 #include <libsafec/safe_str_lib.h>
@@ -1784,6 +1786,13 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
             cmd += " ht"; //n
         } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " vht"; // ac
+        }
+
+        bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
+        if (certification_mode) {
+            LOG(INFO) << "In Certification mode, overriding bw to 20MHz";
+            cmd = "CHAN_SWITCH " + std::to_string(csa_beacon_count) + " " + freq_str +
+                  " center_freq1=" + freq_str + " bandwidth=20 vht";
         }
     }
 

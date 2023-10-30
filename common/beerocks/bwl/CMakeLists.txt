@@ -200,7 +200,7 @@ endif()
 add_library(${PROJECT_NAME} ${bwl_common_sources} ${bwl_platform_sources})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})
-target_link_libraries(${PROJECT_NAME} bcl elpp ${BWL_LIBS})
+target_link_libraries(${PROJECT_NAME} bcl elpp bpl ${BWL_LIBS})
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PLATFORM_INCLUDE_DIR}
