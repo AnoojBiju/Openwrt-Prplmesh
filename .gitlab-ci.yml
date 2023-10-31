@@ -54,8 +54,6 @@ image-build-scripts:
 platform:
   stage: platform
   needs:
-    - build-in-docker
-    - build-in-docker-legacy
     - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
