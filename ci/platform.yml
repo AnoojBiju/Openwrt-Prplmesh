@@ -84,7 +84,7 @@ trigger-build-for-osp:
     - |
       curl -X POST --retry 3 -s -o /dev/null -F \
       token=${OSP_PIPELINE_TRIGGER_TOKEN} \
-      -F ref="main-v2.1" \
+      -F ref="main-v2.5" \
       -F variables[PRPLMESH_REVISION]="$CI_COMMIT_SHA" \
       -F variables[PARENT_PIPELINE_ID]="$CI_PIPELINE_ID" \
       -F variables[PARENT_PROJECT_ID]="$CI_PROJECT_ID" \
