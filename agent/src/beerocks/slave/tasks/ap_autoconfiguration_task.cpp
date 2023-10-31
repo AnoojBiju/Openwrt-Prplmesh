@@ -103,11 +103,12 @@ void ApAutoConfigurationTask::work()
         auto &conf_params       = radios_conf_param_kv.second;
         switch (conf_params.state) {
         case eState::UNCONFIGURED: {
+            LOG(DEBUG) << "dstolbov state UNCONFIGURED, iface = " << radio_iface;
             break;
         }
         case eState::CONTROLLER_DISCOVERY: {
             auto db = AgentDB::get();
-
+            LOG(DEBUG) << "dstolbov state CONTROLLER_DISCOVERY, iface = " << radio_iface;
             auto radio = db->radio(radio_iface);
             if (!radio) {
                 continue;
@@ -116,16 +117,23 @@ void ApAutoConfigurationTask::work()
             // If another radio with same band already finished the discovery phase, we can skip
             // directly to next phase (AP_CONFIGURATION).
             if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
+                LOG(DEBUG) << "dstolbov CONTROLLER_DISCOVERY, iface = " << radio_iface
+                           << " another radio with same band already finished the discovery phase";
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
 
             // If another radio with same band already have sent the
             // AP_AUTOCONFIGURATION_SEARCH_MESSAGE, we can skip and let it handle it.
             if (m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent) {
+                LOG(DEBUG) << "dstolbov CONTROLLER_DISCOVERY, iface = " << radio_iface
+                           << " another radio with same band already have sent the "
+                              "AP_AUTOCONFIGURATION_SEARCH_MESSAGE";
                 continue;
             }
 
             if (send_ap_autoconfiguration_search_message(radio_iface)) {
+                LOG(DEBUG) << "dstolbov CONTROLLER_DISCOVERY, iface = " << radio_iface
+                           << " send_ap_autoconfiguration_search_message success";
                 m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = true;
             }
 
@@ -141,18 +149,26 @@ void ApAutoConfigurationTask::work()
             if (!radio) {
                 continue;
             }
+            LOG(DEBUG) << "dstolbov state WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE, iface = "
+                       << radio_iface;
             if (m_discovery_status[radio->wifi_channel.get_freq_type()].completed) {
+                LOG(DEBUG) << "dstolbov WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE, iface = "
+                           << radio_iface << " completed";
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
                 break;
             }
 
             if (std::chrono::steady_clock::now() > conf_params.timeout) {
+                LOG(DEBUG) << "dstolbov WAIT_FOR_CONTROLLER_DISCOVERY_COMPLETE, iface = "
+                           << radio_iface << " timeout";
                 FSM_MOVE_STATE(radio_iface, eState::CONTROLLER_DISCOVERY);
                 m_discovery_status[radio->wifi_channel.get_freq_type()].msg_sent = false;
             }
             break;
         }
         case eState::SEND_AP_AUTOCONFIGURATION_WSC_M1: {
+            LOG(DEBUG) << "dstolbov state SEND_AP_AUTOCONFIGURATION_WSC_M1, iface = "
+                       << radio_iface;
             send_ap_autoconfiguration_wsc_m1_message(radio_iface);
             conf_params.timeout =
                 std::chrono::steady_clock::now() +
@@ -161,16 +177,22 @@ void ApAutoConfigurationTask::work()
             break;
         }
         case eState::WAIT_AP_AUTOCONFIGURATION_WSC_M2: {
+            LOG(DEBUG) << "dstolbov state WAIT_AP_AUTOCONFIGURATION_WSC_M2, iface = "
+                       << radio_iface;
             if (std::chrono::steady_clock::now() > conf_params.timeout) {
+                LOG(DEBUG) << "dstolbov WAIT_AP_AUTOCONFIGURATION_WSC_M2, iface = " << radio_iface
+                           << " timeout";
                 FSM_MOVE_STATE(radio_iface, eState::SEND_AP_AUTOCONFIGURATION_WSC_M1);
             }
             break;
         }
         case eState::WAIT_AP_CONFIGURATION_COMPLETE: {
+            LOG(DEBUG) << "dstolbov state WAIT_AP_CONFIGURATION_COMPLETE, iface = " << radio_iface;
             configuration_complete_wait_action(radio_iface);
             break;
         }
         case eState::CONFIGURED: {
+            LOG(DEBUG) << "dstolbov state CONFIGURED, iface = " << radio_iface;
             configured_aps_count++;
             break;
         }
@@ -181,6 +203,8 @@ void ApAutoConfigurationTask::work()
 
     // Update status on the database.
     auto db = AgentDB::get();
+    LOG(DEBUG) << "dstolbov configured_aps_count = " << int(configured_aps_count)
+               << " updating status on the DB";
     if (configured_aps_count > 0 && configured_aps_count == m_radios_conf_params.size()) {
         db->statuses.ap_autoconfiguration_completed = true;
         m_task_is_active                            = false;
@@ -204,6 +228,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
 {
     switch (eEvent(event_enum_value)) {
     case INIT_TASK: {
+        LOG(DEBUG) << "dstolbov state INIT_TASK";
         auto db = AgentDB::get();
 
         db->statuses.ap_autoconfiguration_completed = false;
@@ -225,6 +250,7 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
         break;
     }
     case START_AP_AUTOCONFIGURATION: {
+        LOG(DEBUG) << "dstolbov state START_AP_AUTOCONFIGURATION";
         auto db = AgentDB::get();
         for (const auto radio : db->get_radios_list()) {
             if (!radio) {
@@ -605,11 +631,11 @@ bool ApAutoConfigurationTask::send_ap_autoconfiguration_search_message(
 bool ApAutoConfigurationTask::send_ap_autoconfiguration_wsc_m1_message(
     const std::string &radio_iface)
 {
-    LOG(DEBUG) << "Sending AP_AUTOCONFIGURATION_WSC_MESSAGE with M1 " << radio_iface;
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE)) {
         LOG(ERROR) << "Failed creating AP_AUTOCONFIGURATION_WSC_MESSAGE";
         return false;
     }
+    LOG(DEBUG) << "Sending AP_AUTOCONFIGURATION_WSC_MESSAGE with M1 " << radio_iface;
 
     auto db    = AgentDB::get();
     auto radio = db->radio(radio_iface);
@@ -1650,7 +1676,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
 
     const auto &vap_info = notification_in->vap_info();
     auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
-                              [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                        [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
                                   return bssid.mac == vap_info.mac;
                               });
     if (bssid == radio->front.bssids.end()) {

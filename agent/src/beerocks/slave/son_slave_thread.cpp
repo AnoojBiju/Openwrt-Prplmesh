@@ -4472,6 +4472,7 @@ bool slave_thread::agent_fsm()
         }
         LOG(TRACE) << "goto STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE";
         m_agent_state = STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE;
+
         m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
                                ApAutoConfigurationTask::eEvent::START_AP_AUTOCONFIGURATION);
         break;
@@ -4656,7 +4657,9 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
         dst_addr = db->controller_info.bridge_mac;
         break;
     }
-
+    LOG(DEBUG) << "dstolbov dst_addr = " << dst_addr;
+    LOG(DEBUG) << "dstolbov db->controller_info.bridge_mac = " << db->controller_info.bridge_mac;
+    LOG(DEBUG) << "dstolbov db->bridge.mac = " << db->bridge.mac;
     return m_broker_client->send_cmdu(cmdu_tx, dst_addr, db->bridge.mac);
 }
 

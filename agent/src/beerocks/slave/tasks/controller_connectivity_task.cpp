@@ -64,6 +64,8 @@ const std::string ControllerConnectivityTask::fsm_state_to_string(eState status)
         return "BACKHAUL_LINK_DISCONNECTED";
     case eState::RECONNECTION:
         return "RECONNECTION";
+    case eState::WAIT_FOR_RECONNECT:
+        return "WAIT_FOR_RECONNECT";
     default:
         LOG(ERROR) << "state argument doesn't have an enum";
         break;
@@ -145,14 +147,25 @@ void ControllerConnectivityTask::work()
                 }
             }
 
-            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wireless;
+            db->backhaul.connection_type        = AgentDB::sBackhaul::eConnectionType::Wireless;
+            it->iface_name                      = "wlan0";
+            it->credentials.front().ssid        = "prplmesh";
+            it->credentials.front().network_key = "prplmesh_pass";
+            it->credentials.front().auth_type   = WSC::eWscAuth::WSC_AUTH_WPA2PSK;
+
             db->backhaul.selected_iface_name = it->iface_name;
+            LOG(DEBUG) << "dstolbov Selected backhaul interface: " << it->iface_name;
 
             // Filling in credentials for a future backhaul connection
             db->device_conf.back_radio.ssid = it->credentials.front().ssid;
+            LOG(DEBUG) << "dstolbov Selected backhaul SSID: " << it->credentials.front().ssid;
             db->device_conf.back_radio.pass = it->credentials.front().network_key;
+            LOG(DEBUG) << "dstolbov Selected backhaul password: "
+                       << it->credentials.front().network_key;
             db->device_conf.back_radio.security_type =
                 wsc_to_bwl_authentication(it->credentials.front().auth_type);
+            LOG(DEBUG) << "dstolbov Selected backhaul security type: "
+                       << int(db->device_conf.back_radio.security_type);
 
             FSM_MOVE_STATE(RECONNECTION);
             break;
@@ -167,8 +180,19 @@ void ControllerConnectivityTask::work()
     case eState::RECONNECTION: {
         LOG(DEBUG) << "state RECONNECTION";
         send_reconnect_to_backhaul_manager();
+        state_time_stamp_timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(RECONNECT_TIMEOUT_SEC);
+
+        FSM_MOVE_STATE(WAIT_FOR_RECONNECT);
         break;
     }
+    case eState::WAIT_FOR_RECONNECT: {
+        if (std::chrono::steady_clock::now() > state_time_stamp_timeout) {
+            FSM_MOVE_STATE(RECONNECTION);
+        }
+        break;
+    }
+
     default:
         break;
     }
@@ -258,6 +282,7 @@ bool ControllerConnectivityTask::check_controller_message_timeout()
     }
 
     if (time_elapsed_sec > message_timeout_sec) {
+
         return true;
     }
 
@@ -343,12 +368,12 @@ bool ControllerConnectivityTask::send_reconnect_to_backhaul_manager()
         message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_RECONNECT_COMMAND>(
             m_cmdu_tx);
     if (!bh_reconnect_cmd) {
-        LOG(ERROR) << "Failed building message ACTION_BACKHAUL_DISCONNECT_COMMAND!";
+        LOG(ERROR) << "dstolbov Failed building message ACTION_BACKHAUL_DISCONNECT_COMMAND!";
         return false;
     }
     auto backhaul_manager_cmdu_client = m_btl_ctx.get_backhaul_manager_cmdu_client();
     if (!backhaul_manager_cmdu_client) {
-        LOG(ERROR) << "Failed to get backhaul manager cmdu client";
+        LOG(ERROR) << "dstolbov Failed to get backhaul manager cmdu client";
         return false;
     }
     LOG(ERROR) << "Sending ACTION_BACKHAUL_RECONNECT_COMMAND to BH manager";

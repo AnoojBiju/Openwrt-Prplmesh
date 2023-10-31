@@ -83,11 +83,12 @@ private:
         CONNECTION_TIMEOUT,
         BACKHAUL_LINK_DISCONNECTED,
         RECONNECTION,
+        WAIT_FOR_RECONNECT,
     };
 
-    struct sConfigurationParams {
-    };
+    struct sConfigurationParams {};
 
+    std::chrono::steady_clock::time_point state_time_stamp_timeout;
     bool m_task_is_active = false;
     eState m_task_state   = eState::INIT;
 
@@ -248,6 +249,12 @@ private:
      * @return None
      */
     void init_task_configuration();
+
+    /**
+     * @brief Timeout to reconnect to the controller in seconds.
+     * 
+     */
+    const int RECONNECT_TIMEOUT_SEC = 120;
 };
 
 } // namespace beerocks

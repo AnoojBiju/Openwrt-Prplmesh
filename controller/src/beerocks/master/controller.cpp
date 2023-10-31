@@ -509,7 +509,12 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         }
         }
     } else {
-        LOG(DEBUG) << "received 1905.1 cmdu message";
+        LOG(DEBUG) << "dstolbov received 1905.1 cmdu message, message type: "
+                   << int(cmdu_rx.getMessageType());
+        if (cmdu_rx.getMessageType() ==
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE) {
+            LOG(DEBUG) << "Received AP_AUTOCONF message, Going to parse it";
+        }
         handle_cmdu_1905_1_message(src_mac, cmdu_rx);
         m_task_pool.handle_ieee1905_1_msg(src_mac, cmdu_rx);
 
@@ -532,10 +537,16 @@ bool Controller::handle_cmdu_from_broker(uint32_t iface_index, const sMacAddr &d
         LOG(ERROR) << "dst_mac is zero!";
         return false;
     }
+    LOG(DEBUG) << "Message type: " << int(cmdu_rx.getMessageType());
+    LOG(DEBUG) << "src_mac: " << src_mac << ", dst_mac: " << dst_mac;
+    LOG(DEBUG) << "con_dst_mac1" << database.get_local_bridge_mac();
+    LOG(DEBUG) << "con_dst_mac2" << beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR;
 
     // Filter out messages that are not addressed to the controller
     if (dst_mac != beerocks::net::network_utils::MULTICAST_1905_MAC_ADDR &&
         dst_mac != database.get_local_bridge_mac()) {
+        LOG(DEBUG) << "Message" << int(cmdu_rx.getMessageType())
+                   << "is not addressed to the controller";
         return false;
     }
 
@@ -3423,7 +3434,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,

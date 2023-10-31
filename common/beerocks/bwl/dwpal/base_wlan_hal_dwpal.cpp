@@ -1148,10 +1148,13 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
 
 std::string base_wlan_hal_dwpal::get_radio_mac()
 {
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_dwpal), if name= "
+               << m_radio_info.iface_name;
     std::string mac;
     if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
         LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
     }
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_dwpal) mac=" << mac;
     return mac;
 }
 

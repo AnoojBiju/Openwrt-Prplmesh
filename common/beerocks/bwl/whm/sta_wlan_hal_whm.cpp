@@ -464,20 +464,20 @@ bool sta_wlan_hal_whm::reassociate()
     if (read_status(endpoint)) {
         update_status(endpoint);
         if (is_connected(endpoint.connection_status)) {
-            LOG(TRACE) << "reassociate: - EP already connected";
+            LOG(TRACE) << "dstolbov reassociate: - EP already connected";
             auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
             auto msg = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
-            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+            LOG_IF(!msg, FATAL) << "dstolbov Memory allocation failed!";
             memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
             event_queue_push(Event::Connected, msg_buff);
         } else {
-            LOG(TRACE) << "reassociate: - Toggle EP";
+            LOG(TRACE) << "dstolbov reassociate: - Toggle EP";
             AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
             params.add_child<bool>("Enable", false);
             params.add_child<bool>("Enable", true);
             bool ret = m_ambiorix_cl->update_object(m_ep_path, params);
             if (!ret) {
-                LOG(ERROR) << "Failed to toggle endpoint " << get_iface_name();
+                LOG(ERROR) << "dstolbov Failed to toggle endpoint " << get_iface_name();
                 return false;
             }
         }
@@ -490,7 +490,7 @@ bool sta_wlan_hal_whm::is_connected()
 {
     Endpoint endpoint;
     if (!read_status(endpoint)) {
-        LOG(ERROR) << "Failed reading endpoint status for iface: " << get_iface_name();
+        LOG(ERROR) << "dstolbov Failed reading endpoint status for iface: " << get_iface_name();
         return false;
     }
 

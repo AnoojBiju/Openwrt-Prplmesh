@@ -671,7 +671,7 @@ bool base_wlan_hal_dwpal::dwpal_nl_cmd_scan_dump()
 
     int cmd_res = 0;
     auto ret    = dwpald_ieee80211_scan_dump((char *)m_radio_info.iface_name.c_str(), nl_handler_cb,
-                                          &cmd_res, nullptr);
+                                             &cmd_res, nullptr);
     if (ret != DWPALD_SUCCESS && cmd_res != 0) {
         LOG(ERROR) << "dwpal_driver_nl_scan_dump Failed to request the nl scan dump";
         return false;
@@ -998,9 +998,12 @@ bool base_wlan_hal_dwpal::process_ext_events(int fd)
 std::string base_wlan_hal_dwpal::get_radio_mac()
 {
     std::string mac;
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_dwpald) if name "
+               << m_radio_info.iface_name;
     if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
         LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
     }
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_dwpald) mac= " << mac;
     return mac;
 }
 
@@ -1022,8 +1025,8 @@ bool base_wlan_hal_dwpal::dwpal_get_phy_chan_status(sPhyChanStatus &status)
     size_t expected_result_size = sizeof(status);
     int res                     = 0;
     auto ret                    = dwpald_drv_get((char *)get_iface_name().c_str(),
-                              LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS, &res, NULL, 0, &status,
-                              &expected_result_size);
+                                                 LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS, &res, NULL, 0, &status,
+                                                 &expected_result_size);
     if ((ret != DWPALD_SUCCESS) || (res < 0)) {
         LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_PHY_CHAN_STATUS failed!";
         return false;

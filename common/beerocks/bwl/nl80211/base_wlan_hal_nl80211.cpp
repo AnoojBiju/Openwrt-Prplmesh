@@ -545,27 +545,29 @@ bool base_wlan_hal_nl80211::reassociate() { return wpa_ctrl_send_msg("REASSOCIAT
 bool base_wlan_hal_nl80211::wpa_ctrl_send_msg(const std::string &cmd, const std::string &ifname)
 {
     std::string iface_name = ifname;
+    LOG(DEBUG) << "dstolbov iface_name: " << iface_name << " cmd: " << cmd;
     if (ifname.empty()) {
         iface_name = get_iface_name();
+        LOG(DEBUG) << "dstolbov iface_name after get: " << iface_name;
     }
 
     auto wpa_ctrl_cmd = m_wpa_ctrl_client.get_socket_cmd(iface_name);
     if (!wpa_ctrl_cmd) {
-        LOG(ERROR) << "Control socket not available!";
+        LOG(ERROR) << "dstolbov Control socket not available!";
         return false;
     }
-
+    LOG(DEBUG) << "dstolbov Ctrl socket is available...";
     auto buffer = m_wpa_ctrl_buffer.get();
 
     if (!wpa_ctrl_cmd->request(cmd, buffer, m_wpa_ctrl_buffer_size)) {
-        LOG(ERROR) << "can't send wpa_ctrl_request";
-        LOG(ERROR) << "failed cmd: " << cmd;
+        LOG(ERROR) << "dstolbov can't send wpa_ctrl_request";
+        LOG(ERROR) << "dstolbov failed cmd: " << cmd;
         return false;
     }
 
     if ((!strncmp(buffer, "FAIL", 4)) || (!strncmp(buffer, "UNKNOWN", 7))) {
-        LOG(DEBUG) << std::endl << "cmd failed: " << cmd;
-        LOG(WARNING) << std::endl << "reply: " << buffer;
+        LOG(DEBUG) << std::endl << "dstolbov cmd failed: " << cmd;
+        LOG(WARNING) << std::endl << "dstolbov reply: " << buffer;
         return false;
     }
 
@@ -943,9 +945,12 @@ bool base_wlan_hal_nl80211::process_ext_events(int fd)
 std::string base_wlan_hal_nl80211::get_radio_mac()
 {
     std::string mac;
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_nl80211)), if name = "
+               << m_radio_info.iface_name;
     if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
         LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
     }
+    LOG(DEBUG) << "dstolbov get_radio_mac(base_wlan_hal_nl80211) mac= " << mac;
     return mac;
 }
 

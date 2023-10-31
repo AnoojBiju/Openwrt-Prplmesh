@@ -743,7 +743,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         }
         if ((wired_link_state == wan_monitor::ELinkState::eUp) &&
             (m_selected_backhaul.empty() || m_selected_backhaul == DEV_SET_ETH)) {
-
+            LOG(DEBUG) << "dstolbov wired link is up, using wired backhaul";
             auto it = std::find(ifaces.begin(), ifaces.end(), db->ethernet.wan.iface_name);
             if (it == ifaces.end()) {
                 LOG(ERROR) << "wire iface " << db->ethernet.wan.iface_name
@@ -755,7 +755,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             // Mark the connection as WIRED
             db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
             db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
-
+            LOG(DEBUG) << "dstolbov selected iface " << db->backhaul.selected_iface_name
+                       << " as wired backhaul";
         } else {
             // If no wired backhaul is configured, or it is down, we get into this else branch.
 
@@ -781,6 +782,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
 
             // Mark the connection as WIRELESS
             db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wireless;
+            LOG(DEBUG) << "dstolbov selected iface " << db->backhaul.selected_iface_name
+                       << " as wireless backhaul";
         }
 
         // Move to the next state immediately
@@ -796,7 +799,6 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
     // Backhaul Link exists
     case EState::CONNECTED: {
         auto db = AgentDB::get();
-
         bool wired_backhaul =
             db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wired;
 
@@ -805,6 +807,7 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
         if (db->device_conf.certification_mode && wired_backhaul &&
             !db->device_conf.local_controller) {
             if (m_is_in_reset_state && m_selected_backhaul.empty()) {
+                LOG(DEBUG) << "dstolbov m_is_in_reset_state & selected backhaul empty";
                 break;
             }
         }
@@ -952,12 +955,36 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     switch (m_eFSMState) {
     case EState::INIT_HAL: {
         skip_select = true;
+        auto db     = AgentDB::get();
+
+        for (auto &radio_info : m_radios_info) {
+            auto radio = db->radio(radio_info->sta_iface);
+            if (!radio) {
+                continue;
+            }
+            LOG(DEBUG) << "dstolbov radio_info->sta_iface = " << radio_info->sta_iface;
+            for (auto &fd : radio_info->sta_hal_ext_events) {
+                if (fd > 0) {
+                    m_event_loop->remove_handlers(fd);
+                }
+            }
+            radio_info->sta_hal_ext_events.clear();
+            if (radio_info->sta_hal_int_events !=
+                beerocks::net::FileDescriptor::invalid_descriptor) {
+                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+            }
+        }
+
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(WPA_ATTACH_TIMEOUT_SECONDS);
         FSM_MOVE_STATE(WPA_ATTACH);
         break;
     }
     case EState::WPA_ATTACH: {
+        auto time_now                         = std::chrono::steady_clock::now();
+        std::chrono::duration<double> timeout = state_time_stamp_timeout - time_now;
+        LOG(DEBUG) << "dstolbov WPA ATTACH timeout = " << timeout.count() << " seconds";
 
         bool success = true;
 
@@ -969,6 +996,8 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 continue;
 
             LOG(DEBUG) << FSM_CURR_STATE_STR << " iface: " << radio_info->sta_iface;
+            LOG(DEBUG) << "dstolbov Hal instance?" << (radio_info->sta_wlan_hal ? "true" : "false")
+                       << " iface: " << radio_info->sta_iface;
 
             // Create a HAL instance if doesn't exists
             if (!radio_info->sta_wlan_hal) {
@@ -977,11 +1006,12 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 if (!beerocks::bpl::bpl_cfg_get_wpa_supplicant_ctrl_path(radio_info->sta_iface,
                                                                          hal_conf.wpa_ctrl_path)) {
-                    LOG(ERROR) << "Couldn't get hostapd control path";
+                    LOG(ERROR) << "dstolbov Couldn't get hostapd control path";
                     return false;
                 }
 
                 if (beerocks::bpl::cfg_get_operating_mode() == BPL_OPER_MODE_WDS_REPEATER) {
+                    LOG(DEBUG) << "dstolbov WDS Repeater mode";
                     hal_conf.is_repeater = true;
                 }
 
@@ -990,17 +1020,19 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     radio_info->sta_iface,
                     std::bind(&BackhaulManager::hal_event_handler, this, _1, radio_info->sta_iface),
                     hal_conf);
-                LOG_IF(!radio_info->sta_wlan_hal, FATAL) << "Failed creating HAL instance!";
+                LOG_IF(!radio_info->sta_wlan_hal, FATAL)
+                    << "dstolbov Failed creating HAL instance!";
             } else {
-                LOG(DEBUG) << "STA HAL exists...";
+                LOG(DEBUG) << "dstolbov STA HAL exists on iface " << radio_info->sta_iface;
             }
-
             // Attach in BLOCKING mode
             auto attach_state = radio_info->sta_wlan_hal->attach(true);
             if (attach_state == bwl::HALState::Operational) {
+                LOG(DEBUG) << "dstolbov HAL state oper";
                 // Internal Events
                 int int_events_fd = radio_info->sta_wlan_hal->get_int_events_fd();
                 if (int_events_fd >= 0) {
+                    LOG(DEBUG) << "dstolbov HAL int_events_fd >= 0";
                     beerocks::EventLoop::EventHandlers int_events_handlers{
                         .name = "sta_hal_int_events",
                         .on_read =
@@ -1010,14 +1042,15 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                             },
                     };
                     if (!m_event_loop->register_handlers(int_events_fd, int_events_handlers)) {
-                        LOG(ERROR) << "Unable to register handlers for internal events queue!";
+                        LOG(ERROR)
+                            << "dstolbov Unable to register handlers for internal events queue!";
                         return false;
                     }
 
-                    LOG(DEBUG) << "Internal events queue with fd = " << int_events_fd;
+                    LOG(DEBUG) << "dstolbov Internal events queue with fd = " << int_events_fd;
                     radio_info->sta_hal_int_events = int_events_fd;
                 } else {
-                    LOG(WARNING) << "Invalid event file descriptors - "
+                    LOG(WARNING) << "dstolbov Invalid event file descriptors - "
                                  << "Internal = " << int_events_fd;
                     success = false;
                     break;
@@ -1026,8 +1059,10 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 int ext_event_fd_max           = -1;
                 radio_info->sta_hal_ext_events = radio_info->sta_wlan_hal->get_ext_events_fds();
                 if (radio_info->sta_hal_ext_events.empty()) {
+                    LOG(DEBUG) << "dstolbov No external events";
                     ext_event_fd_max = 0;
                 } else {
+                    LOG(DEBUG) << "dstolbov External events";
                     beerocks::EventLoop::EventHandlers ext_events_handlers{
                         .name = "sta_hal_ext_events",
                         .on_read =
@@ -1061,6 +1096,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                             },
                     };
                     for (auto &ext_event_fd : radio_info->sta_hal_ext_events) {
+                        LOG(DEBUG) << "dstolbov ext_event_fd = " << ext_event_fd;
                         if (ext_event_fd > 0) {
                             if (!m_event_loop->register_handlers(ext_event_fd,
                                                                  ext_events_handlers)) {
@@ -1076,10 +1112,12 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                     }
                 }
                 if (ext_event_fd_max == 0) {
-                    LOG(DEBUG) << "No external event FD is available, periodic polling will be "
-                                  "done instead.";
+                    LOG(DEBUG)
+                        << "dstolbov No external event FD is available, periodic polling will be "
+                           "done instead.";
                 } else if (ext_event_fd_max < 0) {
-                    LOG(ERROR) << "Invalid external event file descriptors: " << ext_event_fd_max;
+                    LOG(ERROR) << "dstolbov Invalid external event file descriptors: "
+                               << ext_event_fd_max;
                     return false;
                 }
 
@@ -1107,16 +1145,20 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
                 auto radio = db->radio(radio_info->sta_iface);
                 if (!radio) {
-                    LOG(DEBUG) << "Radio of iface " << radio_info->sta_iface
+                    LOG(DEBUG) << "dstolbov Radio of iface " << radio_info->sta_iface
                                << " does not exist on the db";
                     continue;
                 }
+                LOG(DEBUG) << "dstolbov Radio of iface " << radio_info->sta_iface
+                           << " exists on the db, setting backhaul iface mac";
                 // Update the backhaul interface mac.
                 radio->back.iface_mac =
                     tlvf::mac_from_string(radio_info->sta_wlan_hal->get_radio_mac());
+                LOG(DEBUG) << "dstolbov backhaul iface mac = " << radio->back.iface_mac;
 
             } else if (attach_state == bwl::HALState::Failed) {
                 // Delete the HAL instance
+                LOG(DEBUG) << "dstolbov HAL state failed";
                 radio_info->sta_wlan_hal.reset();
                 success = false;
                 break;
@@ -1125,7 +1167,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         if (!success) {
             if (std::chrono::steady_clock::now() > state_time_stamp_timeout) {
-                LOG(ERROR) << "attach wpa timeout";
+                LOG(ERROR) << "dstolbov attach wpa timeout";
                 platform_notify_error(bpl::eErrorCode::BH_TIMEOUT_ATTACHING_TO_WPA_SUPPLICANT, "");
                 stop_on_failure_attempts--;
                 FSM_MOVE_STATE(RESTART);
@@ -1139,31 +1181,40 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
 
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(STATE_WAIT_WPS_TIMEOUT_SECONDS);
+
         FSM_MOVE_STATE(WAIT_WPS);
         break;
     }
     // Wait for WPS command
     case EState::WAIT_WPS: {
+        auto time_now                         = std::chrono::steady_clock::now();
+        std::chrono::duration<double> timeout = state_time_stamp_timeout - time_now;
+        LOG(DEBUG) << "dstolbov WPS ATTACH timeout = " << timeout.count() << " seconds";
+
         auto db = AgentDB::get();
         if (!db->device_conf.local_gw &&
             std::chrono::steady_clock::now() > state_time_stamp_timeout) {
-            LOG(ERROR) << STATE_WAIT_WPS_TIMEOUT_SECONDS
+            LOG(ERROR) << "dstolbov " << STATE_WAIT_WPS_TIMEOUT_SECONDS
                        << " seconds has passed on state WAIT_WPS, move state to RESTART!";
             FSM_MOVE_STATE(RESTART);
         }
 
         // check if we are still waiting for WPS although sta is connected
         for (auto &radio_info : m_radios_info) {
+            LOG(DEBUG) << "dstolbov radio_info->sta_iface = " << radio_info->sta_iface;
             std::string iface = radio_info->sta_iface;
             if (radio_info->sta_iface.empty()) {
                 continue;
             }
             if (!roam_flag && radio_info->sta_wlan_hal->is_connected()) {
                 for (const auto &sta_iface : slave_sta_ifaces) {
+                    LOG(DEBUG) << "dstolbov sta_iface = " << sta_iface;
                     auto sta_iface_hal = get_wireless_hal(sta_iface);
                     if (!sta_iface_hal) {
+                        LOG(DEBUG) << "dstolbov sta_iface_hal is null";
                         break;
                     }
+                    LOG(DEBUG) << "dstolbov reassociate hal, iface = " << sta_iface;
                     sta_iface_hal->reassociate();
                 }
             }
@@ -2548,9 +2599,9 @@ bool BackhaulManager::handle_slave_failed_connection_message(ieee1905_1::CmduMes
         db->link_metrics_policy.failed_associations_maximum_reporting_rate) {
         // we exceeded the maximum reports allowed
         // do nothing, no need to report
-        LOG(WARNING)
-            << "received failed connection, but exceeded the maximum number of reports in a minute:"
-            << db->link_metrics_policy.failed_associations_maximum_reporting_rate;
+        LOG(WARNING) << "received failed connection, but exceeded the maximum number of "
+                        "reports in a minute:"
+                     << db->link_metrics_policy.failed_associations_maximum_reporting_rate;
         return true;
     }
 
