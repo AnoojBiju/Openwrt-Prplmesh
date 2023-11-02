@@ -28,6 +28,7 @@ stages:
   - certification-R1-glinet
   - certification-R1-axepoint
   - certification-R4-OSP
+  - certification-R4-OSP-ETH
   - certification-R4-haze
   - certification-R4-turris-omnia
   - certification-R4-axepoint
