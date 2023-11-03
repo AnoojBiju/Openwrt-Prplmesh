@@ -275,8 +275,14 @@ bool prplmesh_cli::prpl_conn_map()
 
 void prplmesh_cli::print_help()
 {
-    std::cerr << R"help!(Usage: prplmesh_cli -c <command> [command_arguments]
-Next commands are available :
+    std::cerr << R"help!(
+Usage: prplmesh_cli OPTION or
+Usage: prplmesh_cli -c <command> [command_arguments]
+The following options are available:
+-v	: prints the current prplMesh version
+-h	: prints this help text
+
+The following commands are available :
 help      		: get supported commands
 version   		: get current prplMesh version
 show_ap   		: show AccessPoints
