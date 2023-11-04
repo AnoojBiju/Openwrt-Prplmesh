@@ -84,7 +84,7 @@ trigger-build-for-osp:
     - |
       curl -X POST --retry 3 -s -o /dev/null -F \
       token=${OSP_PIPELINE_TRIGGER_TOKEN} \
-      -F ref="main-v2.1" \
+      -F ref="main-v2.5" \
       -F variables[PRPLMESH_REVISION]="$CI_COMMIT_SHA" \
       -F variables[PARENT_PIPELINE_ID]="$CI_PIPELINE_ID" \
       -F variables[PARENT_PROJECT_ID]="$CI_PROJECT_ID" \
@@ -106,7 +106,7 @@ build-for-osp:
       check_package_file () {
           OSP_PACKAGE_FILE_ID=0
           local package_files=$(curl --fail --show-error --retry 3 -s --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/packages/${OSP_PACKAGE_ID}/package_files?per_page=100")
-          OSP_PACKAGE_FILE_ID=$(echo "$package_files" | jq -e -c ".[] | select ( .file_name == \"${1}\") | .id")
+          OSP_PACKAGE_FILE_ID=$(echo "$package_files" | jq -e -c ".[] | select ( .file_name == \"${1}\") | .id" | sed -n \$p)
       }
       # Wait for successfull build start
       until check_package_file "${CI_PIPELINE_ID}.build_started"

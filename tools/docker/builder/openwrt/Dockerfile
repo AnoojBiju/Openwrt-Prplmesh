@@ -12,7 +12,7 @@ FROM ubuntu:bionic-20210930 as openwrt-prerequisites
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-    autoconf-archive build-essential libncurses5 libncurses5-dev python3 python3-distutils libelf-dev libdw-dev \
+    autoconf-archive build-essential libncurses5 libncurses5-dev python3.7 python3.7-distutils libelf-dev libdw-dev \
     unzip git ca-certificates gawk wget file bash fakeroot \
     python-yaml python3-yaml rsync less vim gnupg software-properties-common openssh-client \
     #   yq is available in a separate ppa (needs gnupg and software-properties-common):
@@ -20,7 +20,8 @@ RUN apt-get update \
     && (for n in `seq 1 10`; do sleep 2 && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 $KEYSERVER_OPTIONS --recv-keys CC86BB64 && break; done) \
     && add-apt-repository ppa:rmescandon/yq \
     && apt-get -y install --no-install-recommends yq \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 # Building tlvfs currently uses the docker
 # container's python (not the one from OpenWrt)
 # python-yaml is needed to build the tlvfs

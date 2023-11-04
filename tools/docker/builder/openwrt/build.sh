@@ -166,16 +166,15 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos-M1-2023/haze-next // !prplos-M1-2023/haze-next"
-        OPENWRT_TOOLCHAIN_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
-        OPENWRT_VERSION='b7612024e46ee2c138bcaed0628ba10ac709416c'
+        dbg "Haze platform, build on prplos master (wps fix)"
+        OPENWRT_TOOLCHAIN_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
+        OPENWRT_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
         # Temporary workaround for Haze build failure
-        sed -i 's/make -j"$(nproc)" V=sc/make -j1 V=sc/g' "$scriptdir/scripts/build-openwrt.sh"
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-M1-2023/urx // !prplos-M1-2023/urx"
-        OPENWRT_TOOLCHAIN_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
-        OPENWRT_VERSION='911729c42a8bf7c118581a948a2cb952995aedef'
+        dbg "OSP platform, build on prplos-v3.0.0"
+        OPENWRT_TOOLCHAIN_VERSION='43a0c60e0268a208bb65e55ce472392faa9c04d7'
+        OPENWRT_VERSION='43a0c60e0268a208bb65e55ce472392faa9c04d7'
     else
         dbg "Building on prplOS-next"
     fi
