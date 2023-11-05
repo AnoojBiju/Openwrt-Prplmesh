@@ -19,6 +19,7 @@
 #include <bcl/network/file_descriptor.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <atomic>
 #include <list>
 
 namespace son {
@@ -166,6 +167,7 @@ private:
     bool handle_ap_enabled(int vap_id);
     bool handle_aps_update_list();
     void fill_cs_params(beerocks_message::sApChannelSwitch &params);
+    void fill_sr_params(beerocks_message::sSpatialReuseParams &params);
     bool create_ap_wlan_hal();
     void send_heartbeat();
     void send_steering_return_status(beerocks_message::eActionOp_APMANAGER ActionOp,
@@ -272,6 +274,15 @@ private:
     bool m_generate_connected_clients_events                     = false;
     std::chrono::steady_clock::time_point m_next_generate_connected_events_time =
         std::chrono::steady_clock::time_point::min();
+
+    //Timer for triggering a CSA notification
+    void start_csa_notification_timer(
+        std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
+            request);
+    void csa_notification_timer_elapsed(
+        std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
+            request);
+    std::atomic<bool> csa_notification_timer_on{false};
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.

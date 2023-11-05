@@ -141,6 +141,28 @@
             }
         }
 
+        /* The spatial reuse configuration of this radio. Applies only to Wi-Fi 6 [802.11ax] and possibly later generations of radios */
+        %read-only object SpatialReuse {
+            %read-only uint32 PartialBSSColor;
+            %read-only uint32 BSSColor;
+            %read-only bool HESIGASpatialReuseValue15Allowed;
+            %read-only bool SRGInformationValid;
+            %read-only bool NonSRGOffsetValid;
+            %read-only bool PSRDisallowed;
+            %read-only uint32 NonSRGOBSSPDMaxOffset;
+            %read-only uint32 SRGOBSSPDMinOffset;
+            %read-only uint32 SRGOBSSPDMaxOffset;
+            string SRGBSSColorBitmap {
+                on action validate call check_range [0, 8];
+            }
+            string SRGPartialBSSIDBitmap {
+                on action validate call check_range [0, 8];
+            }
+            string NeighborBSSColorInUseBitmap {
+                on action validate call check_range [0, 8];
+            }
+        }
+
         /* Describes the Channel Availability Check (CAC) Completion Report */
         %read-only object CACCompletion {
             %read-only uint32 OperatingClass = 0;

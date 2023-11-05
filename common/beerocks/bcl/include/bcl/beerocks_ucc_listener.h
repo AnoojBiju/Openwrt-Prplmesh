@@ -25,7 +25,8 @@ static constexpr uint8_t UCC_REPLY_RUNNING_TIMEOUT_SEC  = 1;
 static constexpr uint8_t UCC_REPLY_COMPLETE_TIMEOUT_SEC = 120;
 
 // list of values we support for "program":
-static constexpr std::array<const char *, 3> supported_programs = {"map", "mapr2", "mapr3"};
+static constexpr std::array<const char *, 4> supported_programs = {"map", "mapr2", "mapr3",
+                                                                   "mapr4"};
 
 class beerocks_ucc_listener {
 public:

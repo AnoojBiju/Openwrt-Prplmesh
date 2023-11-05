@@ -31,6 +31,14 @@ namespace dwpal {
 
 #define MAX_VAPS_PER_RADIO 16
 #define IF_LENGTH IF_NAMESIZE + 1
+/* Spatial reuse parameters bit masks */
+#define SR_MAX_BITMAP_PARTS 8
+#define BSS_COLOR ((BIT(0) | BIT(1) | BIT(2) | BIT(3) | BIT(4) | BIT(5)))
+#define PARTIAL_BSS_COLOR BIT(6)
+#define SR_HESIGA_SPATIAL_REUSE_VALUE15_ALLOWED BIT(4)
+#define SR_SRG_INFORMATION_VALID BIT(3)
+#define SR_NON_SRG_OFFSET_VALID BIT(2)
+#define SR_PSR_DISALLOWED BIT(0)
 
 typedef struct {
     char name[IF_LENGTH];

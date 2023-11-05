@@ -1269,6 +1269,46 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         LOG_IF(request->cs_params().channel == 0, DEBUG) << "Start ACS";
 
+        if (request->spatial_reuse_valid()) {
+
+            // Set spatial reuse parameters
+            son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
+
+            spatial_reuse_params.bss_color         = request->sr_params().bss_color;
+            spatial_reuse_params.partial_bss_color = request->sr_params().partial_bss_color;
+            spatial_reuse_params.hesiga_spatial_reuse_value15_allowed =
+                request->sr_params().hesiga_spatial_reuse_value15_allowed;
+            spatial_reuse_params.srg_information_valid = request->sr_params().srg_information_valid;
+            spatial_reuse_params.non_srg_offset_valid  = request->sr_params().non_srg_offset_valid;
+            spatial_reuse_params.psr_disallowed        = request->sr_params().psr_disallowed;
+            spatial_reuse_params.non_srg_obsspd_max_offset =
+                request->sr_params().non_srg_obsspd_max_offset;
+            spatial_reuse_params.srg_obsspd_min_offset = request->sr_params().srg_obsspd_min_offset;
+            spatial_reuse_params.srg_obsspd_max_offset = request->sr_params().srg_obsspd_max_offset;
+            spatial_reuse_params.srg_bss_color_bitmap  = request->sr_params().srg_bss_color_bitmap;
+            spatial_reuse_params.srg_partial_bssid_bitmap =
+                request->sr_params().srg_partial_bssid_bitmap;
+
+            LOG(DEBUG) << "Setting the spatial reuse params for radio : "
+                       << ap_wlan_hal->get_radio_mac();
+
+            if (!ap_wlan_hal->set_spatial_reuse_config(spatial_reuse_params)) {
+                LOG(ERROR) << "set_spatial_reuse_config Failed";
+            }
+
+            LOG(INFO) << "set_spatial_reuse_config completed successfully";
+
+            // Starts a timer to trigger a CSA notification after approximately 5 seconds.
+            // The ap_manager continues executing other tasks while the timer is ongoing.
+            // When the timer elapses, the ap_manager performs the following actions:
+            //  1. Uses the HAL API to get the spatial reuse configuration.
+            //  2. Sends the cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION event
+            //     to the son_slave_thread, which adds the fetched values to the radio structure of AgentDB.
+            //  3. Sends the cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION event to the son_slave_thread
+            //     to trigger the CSA notification.
+            start_csa_notification_timer(request);
+        }
+
         // Set transmit power
         if (request->tx_limit_valid()) {
             ap_wlan_hal->set_tx_power_limit(request->tx_limit());
@@ -1277,22 +1317,29 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
                 utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
                     request->cs_params().bandwidth) {
-                LOG(DEBUG) << "Setting tx power without channel switch, send CSA notification";
-                auto notification = message_com::create_vs_message<
-                    beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
-                if (!notification) {
-                    LOG(ERROR) << "Failed building message!";
-                    return;
+                LOG(DEBUG) << "Setting tx power without channel switch";
+                if (!csa_notification_timer_on) {
+                    // If csa_notification_timer_on is enabled, a color switch event (BSS Color) is going on
+                    // and the CSA which is required to be sent here will be handled when the timer elapses.
+                    LOG(DEBUG)
+                        << "Sending CSA notification since csa_notification_timer_on is disabled";
+                    auto notification = message_com::create_vs_message<
+                        beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
+                    if (!notification) {
+                        LOG(ERROR) << "Failed building message!";
+                        return;
+                    }
+                    ap_wlan_hal->refresh_radio_info();
+                    fill_cs_params(notification->cs_params());
+                    send_cmdu(cmdu_tx);
                 }
-                ap_wlan_hal->refresh_radio_info();
-                fill_cs_params(notification->cs_params());
-                send_cmdu(cmdu_tx);
             }
         }
 
-        if (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
-            utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
-                request->cs_params().bandwidth) {
+        if ((!request->cs_params().channel) ||
+            (ap_wlan_hal->get_radio_info().channel == request->cs_params().channel &&
+             utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
+                 request->cs_params().bandwidth)) {
             // No need to switch channels
             LOG(INFO) << "No need to switch channels as current channel and requested channels are "
                          "the same.";
@@ -2019,6 +2066,28 @@ void ApManager::fill_cs_params(beerocks_message::sApChannelSwitch &params)
     params.is_dfs_channel            = ap_wlan_hal->get_radio_info().is_dfs_channel;
 }
 
+void ApManager::fill_sr_params(beerocks_message::sSpatialReuseParams &params)
+{
+    son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
+
+    if (!ap_wlan_hal->get_spatial_reuse_config(spatial_reuse_params)) {
+        LOG(ERROR) << "get_spatial_reuse_config failed";
+    }
+
+    params.bss_color         = spatial_reuse_params.bss_color;
+    params.partial_bss_color = spatial_reuse_params.partial_bss_color;
+    params.hesiga_spatial_reuse_value15_allowed =
+        spatial_reuse_params.hesiga_spatial_reuse_value15_allowed;
+    params.srg_information_valid     = spatial_reuse_params.srg_information_valid;
+    params.non_srg_offset_valid      = spatial_reuse_params.non_srg_offset_valid;
+    params.psr_disallowed            = spatial_reuse_params.psr_disallowed;
+    params.non_srg_obsspd_max_offset = spatial_reuse_params.non_srg_obsspd_max_offset;
+    params.srg_obsspd_min_offset     = spatial_reuse_params.srg_obsspd_min_offset;
+    params.srg_obsspd_max_offset     = spatial_reuse_params.srg_obsspd_max_offset;
+    params.srg_bss_color_bitmap      = spatial_reuse_params.srg_bss_color_bitmap;
+    params.srg_partial_bssid_bitmap  = spatial_reuse_params.srg_partial_bssid_bitmap;
+}
+
 bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 {
     if (!event_ptr) {
@@ -2085,18 +2154,19 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             }
             fill_cs_params(notification->cs_params());
             acs_completed_vap_update = true;
-        } else {
+
+            send_cmdu(cmdu_tx);
+        } else if (!csa_notification_timer_on) {
+            LOG(DEBUG) << "csa_notification_timer_on isn't enabled. CSA notification can be sent";
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
-            if (notification == nullptr) {
+            if (!notification) {
                 LOG(ERROR) << "Failed building message!";
                 return false;
             }
             fill_cs_params(notification->cs_params());
+            send_cmdu(cmdu_tx);
         }
-
-        send_cmdu(cmdu_tx);
-
     } break;
 
     // STA Connected
@@ -3226,4 +3296,64 @@ void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 
     LOG(DEBUG) << "Sending Client Security Context Reponse back to controller";
     send_cmdu(cmdu_tx);
+}
+
+void ApManager::csa_notification_timer_elapsed(
+    std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
+{
+    if (!csa_notification_timer_on) {
+        // The timer elapsed, but CSA notification is no longer required
+        return;
+    }
+
+    struct OnReturn {
+        std::atomic<bool> &csa_notification_timer_on;
+        ~OnReturn() { csa_notification_timer_on = false; }
+    } on_return{csa_notification_timer_on};
+
+    uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
+    ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
+
+    // Sends the cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION event
+    // to the son_slave_thread, which adds the fetched values to the radio structure of AgentDB
+    auto spatial_reuse_report = message_com::create_vs_message<
+        beerocks_message::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION>(cmdu_tx);
+    if (!spatial_reuse_report) {
+        LOG(ERROR) << "Failed building message!";
+        return;
+    }
+
+    ap_wlan_hal->refresh_radio_info();
+    fill_sr_params(spatial_reuse_report->sr_params());
+    send_cmdu(cmdu_tx);
+
+    LOG(DEBUG) << "Sending CSA notification to trigger operating channel report";
+
+    // Sends the cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION event to the son_slave_thread
+    // to trigger the CSA notification
+    auto notification =
+        message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(
+            cmdu_tx);
+    if (!notification) {
+        LOG(ERROR) << "Failed building message!";
+        return;
+    }
+    ap_wlan_hal->refresh_radio_info();
+    fill_cs_params(notification->cs_params());
+    send_cmdu(cmdu_tx);
+}
+
+void ApManager::start_csa_notification_timer(
+    std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
+{
+    // Set a variable to indicate the presence of an ongoing timer for CSA notification
+    csa_notification_timer_on = true;
+
+    // Start a timer for approximately 5 seconds (timer should be configurable based on the CSA count).
+    // When the timer elapses, the "csa_notification_timer_elapsed" function will be called
+    std::thread([this, request]() {
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        csa_notification_timer_elapsed(std::move(request));
+    })
+        .detach();
 }

@@ -16,6 +16,7 @@
 
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
 
 using namespace beerocks;
 
@@ -223,6 +224,52 @@ bool tlvf_utils::create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu
             ? center_channel
             : radio->wifi_channel.get_channel();
     operating_channel_report_tlv->current_transmit_power() = radio->tx_power_dB;
+
+    auto wifi6_caps =
+        reinterpret_cast<beerocks::net::sWIFI6Capabilities *>(&radio->wifi6_capability);
+
+    // Missing wifi6_caps->spatial_reuse. PPM-2602.
+    if (!wifi6_caps->spatial_reuse) {
+        LOG(WARNING) << "Missing spatial_reuse in WiFi 6 capabilities";
+        wifi6_caps->spatial_reuse = true;
+    }
+
+    if (wifi6_caps->spatial_reuse) {
+        auto spatial_reuse_report_tlv = cmdu_tx.addClass<wfa_map::tlvSpatialReuseReport>();
+        if (!spatial_reuse_report_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvSpatialReuseReport has failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "Adding spatial reuse params to operating channel report for radio : "
+                   << radio_mac;
+
+        spatial_reuse_report_tlv->radio_uid() = radio_mac;
+
+        spatial_reuse_report_tlv->flags1().bss_color = radio->spatial_reuse_params.bss_color;
+        spatial_reuse_report_tlv->flags1().partial_bss_color =
+            radio->spatial_reuse_params.partial_bss_color;
+        spatial_reuse_report_tlv->flags2().hesiga_spatial_reuse_value15_allowed =
+            (radio->spatial_reuse_params.hesiga_spatial_reuse_value15_allowed ? 1 : 0);
+        spatial_reuse_report_tlv->flags2().srg_information_valid =
+            (radio->spatial_reuse_params.srg_information_valid ? 1 : 0);
+        spatial_reuse_report_tlv->flags2().non_srg_offset_valid =
+            (radio->spatial_reuse_params.non_srg_offset_valid ? 1 : 0);
+        spatial_reuse_report_tlv->flags2().psr_disallowed =
+            (radio->spatial_reuse_params.psr_disallowed ? 1 : 0);
+        spatial_reuse_report_tlv->non_srg_obsspd_max_offset() =
+            radio->spatial_reuse_params.non_srg_obsspd_max_offset;
+        spatial_reuse_report_tlv->srg_obsspd_min_offset() =
+            radio->spatial_reuse_params.srg_obsspd_min_offset;
+        spatial_reuse_report_tlv->srg_obsspd_max_offset() =
+            radio->spatial_reuse_params.srg_obsspd_max_offset;
+        spatial_reuse_report_tlv->srg_bss_color_bitmap() =
+            radio->spatial_reuse_params.srg_bss_color_bitmap;
+        spatial_reuse_report_tlv->srg_partial_bssid_bitmap() =
+            radio->spatial_reuse_params.srg_partial_bssid_bitmap;
+        spatial_reuse_report_tlv->neighbor_bss_color_in_use_bitmap() =
+            radio->spatial_reuse_params.neighbor_bss_color_in_use_bitmap;
+    }
 
     LOG(DEBUG) << "Created Operating Channel Report TLV";
     return true;

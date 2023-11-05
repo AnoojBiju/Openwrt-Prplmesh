@@ -317,8 +317,10 @@ class cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START);
         }
         sApChannelSwitch& cs_params();
+        sSpatialReuseParams& sr_params();
         int8_t& tx_limit();
         uint8_t& tx_limit_valid();
+        uint8_t& spatial_reuse_valid();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -327,8 +329,10 @@ class cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         sApChannelSwitch* m_cs_params = nullptr;
+        sSpatialReuseParams* m_sr_params = nullptr;
         int8_t* m_tx_limit = nullptr;
         uint8_t* m_tx_limit_valid = nullptr;
+        uint8_t* m_spatial_reuse_valid = nullptr;
 };
 
 class cACTION_APMANAGER_HOSTAP_CANCEL_ACTIVE_CAC_REQUEST : public BaseClass
@@ -631,6 +635,27 @@ class cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         sServicePrioConfig* m_cs_params = nullptr;
+};
+
+class cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION);
+        }
+        sSpatialReuseParams& sr_params();
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        sSpatialReuseParams* m_sr_params = nullptr;
 };
 
 class cACTION_APMANAGER_CLIENT_ASSOCIATED_NOTIFICATION : public BaseClass

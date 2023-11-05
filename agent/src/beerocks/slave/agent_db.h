@@ -13,6 +13,7 @@
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
+#include <bcl/son/son_wireless_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/enums/eDfsState.h>
 #include <beerocks/tlvf/structs/sSupportedBandwidth.h>
@@ -304,6 +305,8 @@ public:
             std::vector<beerocks_message::sSupportedBandwidth> supported_bw_list;
             beerocks_message::eDfsState dfs_state;
         };
+
+        son::wireless_utils::sSpatialReuseParams spatial_reuse_params;
 
         // Estimated time of completion of the CAC procedure.
         std::chrono::time_point<std::chrono::steady_clock> cac_completion_time;

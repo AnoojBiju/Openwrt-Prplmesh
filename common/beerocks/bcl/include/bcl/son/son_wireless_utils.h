@@ -123,6 +123,21 @@ public:
         double bit_rate_max_mbps;
     } sPhyRateBitRateEntry;
 
+    typedef struct {
+        uint8_t bss_color;
+        uint8_t partial_bss_color;
+        bool hesiga_spatial_reuse_value15_allowed;
+        bool srg_information_valid;
+        bool non_srg_offset_valid;
+        bool psr_disallowed;
+        uint8_t non_srg_obsspd_max_offset;
+        uint8_t srg_obsspd_min_offset;
+        uint8_t srg_obsspd_max_offset;
+        uint64_t srg_bss_color_bitmap;
+        uint64_t srg_partial_bssid_bitmap;
+        uint64_t neighbor_bss_color_in_use_bitmap;
+    } sSpatialReuseParams;
+
     static sPhyUlParams
     estimate_ul_params(int ul_rssi, uint16_t sta_phy_tx_rate_100kb,
                        const beerocks::message::sRadioCapabilities *capabilities,

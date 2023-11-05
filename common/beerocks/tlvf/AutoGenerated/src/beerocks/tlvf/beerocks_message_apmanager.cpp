@@ -1034,6 +1034,10 @@ sApChannelSwitch& cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::cs_params()
     return (sApChannelSwitch&)(*m_cs_params);
 }
 
+sSpatialReuseParams& cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::sr_params() {
+    return (sSpatialReuseParams&)(*m_sr_params);
+}
+
 int8_t& cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::tx_limit() {
     return (int8_t&)(*m_tx_limit);
 }
@@ -1042,10 +1046,15 @@ uint8_t& cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::tx_limit_valid() {
     return (uint8_t&)(*m_tx_limit_valid);
 }
 
+uint8_t& cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::spatial_reuse_valid() {
+    return (uint8_t&)(*m_spatial_reuse_valid);
+}
+
 void cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
     m_cs_params->struct_swap();
+    m_sr_params->struct_swap();
 }
 
 bool cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::finalize()
@@ -1079,8 +1088,10 @@ size_t cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(sApChannelSwitch); // cs_params
+    class_size += sizeof(sSpatialReuseParams); // sr_params
     class_size += sizeof(int8_t); // tx_limit
     class_size += sizeof(uint8_t); // tx_limit_valid
+    class_size += sizeof(uint8_t); // spatial_reuse_valid
     return class_size;
 }
 
@@ -1096,12 +1107,23 @@ bool cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START::init()
         return false;
     }
     if (!m_parse__) { m_cs_params->struct_init(); }
+    m_sr_params = reinterpret_cast<sSpatialReuseParams*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sSpatialReuseParams))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSpatialReuseParams) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sr_params->struct_init(); }
     m_tx_limit = reinterpret_cast<int8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(int8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(int8_t) << ") Failed!";
         return false;
     }
     m_tx_limit_valid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_spatial_reuse_valid = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
@@ -2122,6 +2144,76 @@ bool cACTION_APMANAGER_HOSTAP_SERVICE_PRIO_CONFIG::init()
         return false;
     }
     if (!m_parse__) { m_cs_params->struct_init(); }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::~cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION() {
+}
+sSpatialReuseParams& cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::sr_params() {
+    return (sSpatialReuseParams&)(*m_sr_params);
+}
+
+void cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
+    m_sr_params->struct_swap();
+}
+
+bool cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::get_initial_size()
+{
+    size_t class_size = 0;
+    class_size += sizeof(sSpatialReuseParams); // sr_params
+    return class_size;
+}
+
+bool cACTION_APMANAGER_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    m_sr_params = reinterpret_cast<sSpatialReuseParams*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(sSpatialReuseParams))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(sSpatialReuseParams) << ") Failed!";
+        return false;
+    }
+    if (!m_parse__) { m_sr_params->struct_init(); }
     if (m_parse__) { class_swap(); }
     return true;
 }

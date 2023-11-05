@@ -3832,6 +3832,137 @@ bool ap_wlan_hal_dwpal::configure_service_priority(const uint8_t *data)
     return true;
 }
 
+bool ap_wlan_hal_dwpal::set_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    // Build command string
+    std::string cmd =
+        "SET_HE_SR_PARAM sr_control_field_srp_disallowed=" +
+        std::to_string(spatial_reuse_params.psr_disallowed ? 1 : 0) +
+        " sr_control_field_non_srg_offset_present=" +
+        std::to_string(spatial_reuse_params.non_srg_offset_valid ? 1 : 0) +
+        " sr_control_field_srg_information_present=" +
+        std::to_string(spatial_reuse_params.srg_information_valid ? 1 : 0) +
+        " sr_control_field_hesiga_spatial_reuse_value15_allowed=" +
+        std::to_string(spatial_reuse_params.hesiga_spatial_reuse_value15_allowed ? 1 : 0) +
+        " non_srg_obss_pd_max_offset=" +
+        std::to_string(spatial_reuse_params.non_srg_obsspd_max_offset) +
+        " srg_obss_pd_min_offset=" + std::to_string(spatial_reuse_params.srg_obsspd_min_offset) +
+        " he_srg_obss_pd_max_offset= " +
+        std::to_string(spatial_reuse_params.srg_obsspd_max_offset) +
+        " srg_bss_color_bitmap=" + std::to_string(spatial_reuse_params.srg_bss_color_bitmap) +
+        " srg_partial_bssid_bitmap=" +
+        std::to_string(spatial_reuse_params.srg_partial_bssid_bitmap);
+    LOG(INFO) << "Spatial reuse configs set command - " << cmd;
+
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set spatial reuse params failed!";
+    }
+
+    cmd = "COLOR_SWITCH " + std::to_string(spatial_reuse_params.bss_color) + " 2000";
+    LOG(INFO) << "BSS color switch command - " << cmd;
+
+    if (!dwpal_send_cmd(cmd)) {
+        LOG(ERROR) << "set bss color failed!";
+    }
+    return true;
+}
+
+bool ap_wlan_hal_dwpal::get_spatial_reuse_config(
+    son::wireless_utils::sSpatialReuseParams &spatial_reuse_params)
+{
+    parsed_line_t reply;
+    int64_t tmp_int;
+
+    if (!dwpal_send_cmd("GET_HE_SR_PARAM", reply)) {
+        LOG(ERROR) << "HE PARAM GET unsuccessful";
+        return false;
+    }
+
+    /*  Expected reply:
+    HE SR Control=0
+    Non-SRG OBSSPD Max Offset=170
+    SRG OBSSPD Min Offset=0
+    SRG OBSSPD Max Offset=0
+    SRG BSS Color Bitmap Part1=0
+    SRG BSS Color Bitmap Part2=0
+    SRG BSS Color Bitmap Part3=0
+    SRG BSS Color Bitmap Part4=0
+    SRG BSS Color Bitmap Part5=0
+    SRG BSS Color Bitmap Part6=0
+    SRG BSS Color Bitmap Part7=0
+    SRG BSS Color Bitmap Part8=0
+    SRG Partial BSSID Bitmap Part1=0
+    SRG Partial BSSID Bitmap Part2=0
+    SRG Partial BSSID Bitmap Part3=0
+    SRG Partial BSSID Bitmap Part4=0
+    SRG Partial BSSID Bitmap Part5=0
+    SRG Partial BSSID Bitmap Part6=0
+    SRG Partial BSSID Bitmap Part7=0
+    SRG Partial BSSID Bitmap Part8=0
+    BssColor Info=61
+    OBSS BssColor Bitmap=400000000000020
+    */
+
+    LOG(DEBUG) << "GET_HE_SR_PARAM reply= " << reply;
+
+    if (!read_param("BssColor Info", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.bss_color         = (tmp_int & BSS_COLOR);
+    spatial_reuse_params.partial_bss_color = ((tmp_int & PARTIAL_BSS_COLOR) != 0);
+
+    if (!read_param("HE SR Control", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.hesiga_spatial_reuse_value15_allowed =
+        ((tmp_int & SR_HESIGA_SPATIAL_REUSE_VALUE15_ALLOWED) != 0);
+    spatial_reuse_params.srg_information_valid = ((tmp_int & SR_SRG_INFORMATION_VALID) != 0);
+    spatial_reuse_params.non_srg_offset_valid  = ((tmp_int & SR_NON_SRG_OFFSET_VALID) != 0);
+    spatial_reuse_params.psr_disallowed        = ((tmp_int & SR_PSR_DISALLOWED) != 0);
+
+    if (!read_param("Non-SRG OBSSPD Max Offset", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.non_srg_obsspd_max_offset = tmp_int;
+
+    if (!read_param("SRG OBSSPD Min Offset", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.srg_obsspd_min_offset = tmp_int;
+
+    if (!read_param("SRG OBSSPD Max Offset", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.srg_obsspd_max_offset = tmp_int;
+
+    for (auto bmap = 1; bmap <= SR_MAX_BITMAP_PARTS; bmap++) {
+        std::ostringstream os;
+        os << "SRG BSS Color Bitmap Part" << bmap + 1 << "="; /* SRG BSS Color Bitmap Part(bmap)=*/
+        if (!read_param(os.str(), reply, tmp_int)) {
+            return false;
+        }
+        spatial_reuse_params.srg_bss_color_bitmap |= (uint64_t)tmp_int << (8 * bmap);
+    }
+
+    for (auto bmap = 0; bmap < SR_MAX_BITMAP_PARTS; bmap++) {
+        std::ostringstream os;
+        os << "SRG Partial BSSID Bitmap Part" << bmap + 1
+           << "="; /* SRG BSS Color Bitmap Part(bmap)=*/
+        if (!read_param(os.str(), reply, tmp_int)) {
+            return false;
+        }
+        spatial_reuse_params.srg_partial_bssid_bitmap |= (uint64_t)tmp_int << (8 * bmap);
+    }
+
+    if (!read_param("OBSS BssColor Bitmap", reply, tmp_int)) {
+        return false;
+    }
+    spatial_reuse_params.neighbor_bss_color_in_use_bitmap = static_cast<uint64_t>(tmp_int);
+
+    return true;
+}
+
 } // namespace dwpal
 
 std::shared_ptr<ap_wlan_hal> ap_wlan_hal_create(std::string iface_name, hal_conf_t hal_conf,
