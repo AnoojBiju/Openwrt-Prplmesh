@@ -71,6 +71,7 @@ class cACTION_APMANAGER_CONFIGURE : public BaseClass
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_CONFIGURE);
         }
         uint8_t& channel();
+        uint8_t& certification_mode();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -79,6 +80,7 @@ class cACTION_APMANAGER_CONFIGURE : public BaseClass
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
         uint8_t* m_channel = nullptr;
+        uint8_t* m_certification_mode = nullptr;
 };
 
 class cACTION_APMANAGER_JOINED_NOTIFICATION : public BaseClass

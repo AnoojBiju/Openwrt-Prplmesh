@@ -195,7 +195,8 @@ struct hal_conf_t {
     bool ap_acs_enabled = false;
     std::string wpa_ctrl_path;
     std::set<std::string> monitored_BSSs;
-    bool is_repeater = false;
+    bool is_repeater        = false;
+    bool certification_mode = false;
 };
 
 //sta_wlan_hal

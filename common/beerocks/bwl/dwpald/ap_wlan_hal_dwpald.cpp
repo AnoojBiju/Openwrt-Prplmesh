@@ -1785,6 +1785,18 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
             cmd += " vht"; // ac
         }
+
+        /*
+	 * TODO: Below channel BW override is a temporary solution to overcome sniffer
+	 * issues in WFA EasyMesh cert testing as mentioned in PPM-2638.
+	 * Needs to be removed once sniffer issues resolved.
+	 */
+        bool certification_mode = get_hal_conf().certification_mode;
+        if (certification_mode) {
+            LOG(INFO) << "In Certification mode, overriding bw to 20MHz";
+            cmd = "CHAN_SWITCH " + std::to_string(csa_beacon_count) + " " + freq_str +
+                  " center_freq1=" + freq_str + " bandwidth=20 vht";
+        }
     }
 
     // Send command

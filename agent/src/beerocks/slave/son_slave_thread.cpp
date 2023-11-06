@@ -2302,6 +2302,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         auto db               = AgentDB::get();
         config_msg->channel() = db->device_conf.front_radio.config.at(iface).configured_channel;
+        config_msg->certification_mode() = db->device_conf.certification_mode;
 
         return send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
     }
