@@ -664,8 +664,7 @@ bool base_wlan_hal_whm::whm_get_radio_path(const std::string &iface, std::string
 std::string base_wlan_hal_whm::get_radio_mac()
 {
     std::string mac("");
-    auto wifi_radio_path = wbapi_utils::search_path_radio_by_iface(get_iface_name());
-    m_ambiorix_cl->get_param<>(mac, wifi_radio_path, "BaseMACAddress");
+    m_ambiorix_cl->get_param<>(mac, m_radio_path, "BaseMACAddress");
     return mac;
 }
 
