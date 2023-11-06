@@ -1747,7 +1747,7 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         cmd += freq_str; // CenterFrequency
 
         // Extension Channel
-        if (bw != beerocks::BANDWIDTH_20) {
+        if (bw == beerocks::eWiFiBandwidth::BANDWIDTH_40) {
             if (freq < vht_center_frequency) {
                 cmd += " sec_channel_offset=1";
             } else {
