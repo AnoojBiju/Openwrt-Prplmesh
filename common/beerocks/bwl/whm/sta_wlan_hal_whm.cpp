@@ -711,7 +711,7 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
         if (old_status.empty() || new_status.empty()) {
             return true;
         }
-        LOG(WARNING) << "endpoint " << interface << " ConnectionStatus " << new_status;
+        LOG(INFO) << "Endpoint " << interface << " ConnectionStatus " << new_status;
         if (is_connected(new_status)) {
             Endpoint endpoint;
             if (!read_status(endpoint)) {
@@ -749,51 +749,36 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
                                             const AmbiorixVariant *data)
 {
     std::string reason;
-    data->read_child<>(reason, "reason");
+    data->read_child(reason, "reason");
     if (reason.empty()) {
         return true;
     }
-    LOG(WARNING) << "WPS end, interface:" << interface << ", reason: " << reason;
+
+    LOG(INFO) << "WPS end, interface: " << interface << ", reason: " << reason;
+
     if (reason == "Success") {
-        std::string ssid, key, mode, bssid;
-        data->read_child<>(ssid, "SSID");
-        data->read_child<>(key, "KeyPassPhrase");
-        data->read_child<>(mode, "securitymode");
-        data->read_child<>(bssid, "macAddress");
+        std::string ssid, key, mode;
+        data->read_child(ssid, "SSID");
+        data->read_child(key, "KeyPassPhrase");
+        data->read_child(mode, "securitymode");
         if (ssid.empty() || key.empty() || mode.empty()) {
             return false;
         }
 
-        std::string ep_path;
-        data->read_child<>(ep_path, "path");
-
-        auto endpoint_obj = m_ambiorix_cl->get_object(ep_path);
-        if (!endpoint_obj) {
-            LOG(ERROR) << "failed to get endpoint object, path:" << ep_path;
-            return false;
-        }
-        std::string ssid_ref, ssid_path;
-        ChannelFreqPair channel;
-        if (endpoint_obj->read_child<>(ssid_ref, "SSIDReference") &&
-            m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
-            auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
-            if (!ssid_obj) {
-                LOG(ERROR) << "failed to get ssid object";
-                return false;
-            }
-            std::string radio_path;
-            if (ssid_obj->read_child<>(radio_path, "LowerLayers")) {
-                if (!m_ambiorix_cl->get_param<>(channel.first, radio_path, "Channel")) {
-                    LOG(ERROR) << "failed to get channel from: " << radio_path;
-                    return false;
-                }
-            }
-        }
-
         WiFiSec sec     = utils_wlan_hal_whm::security_type_from_string(mode);
-        Profile profile = {-1, "WPS", ssid, bssid, sec, false, key, false, channel};
-        set_profile(profile);
+        Profile profile = {
+            .id           = -1,
+            .alias        = "WPS",
+            .ssid         = ssid,
+            .bssid        = "", // will be set in process_ep_event
+            .sec          = sec,
+            .mem_only_psk = false,
+            .pass         = key,
+            .hidden_ssid  = false,
+        };
+        return set_profile(profile);
     }
+
     return true;
 }
 
