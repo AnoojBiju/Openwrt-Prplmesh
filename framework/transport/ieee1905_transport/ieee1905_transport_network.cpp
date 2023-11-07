@@ -175,6 +175,14 @@ bool Ieee1905Transport::open_interface_socket(NetworkInterface &interface)
         return false;
     }
 
+    int buf           = 0;
+    socklen_t opt_len = sizeof(buf);
+    if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &buf, &opt_len) < 0) {
+        MAPF_ERR("Failed getting buffer size of RECVBUF: " << strerror(errno));
+    }
+
+    MAPF_ERR(" ***GILLI OBTAINED SIZE OF RCVBUF *****= " << buf);
+
     // bind to specified interface - note that we cannot use SO_BINDTODEVICE sockopt as it does not support AF_PACKET sockets
     struct sockaddr_ll sockaddr;
     memset(&sockaddr, 0, sizeof(struct sockaddr_ll));
@@ -440,7 +448,7 @@ void Ieee1905Transport::handle_interface_pollin_event(int fd)
     packet.ether_type   = ntohs(eh->ether_type);
     packet.header       = {.iov_base = buf, .iov_len = sizeof(struct ether_header)};
     packet.payload      = {.iov_base = buf + sizeof(struct ether_header),
-                      .iov_len  = len - sizeof(struct ether_header)};
+                           .iov_len  = len - sizeof(struct ether_header)};
 
     counters_[CounterId::INCOMMING_NETWORK_PACKETS]++;
     handle_packet(packet);
