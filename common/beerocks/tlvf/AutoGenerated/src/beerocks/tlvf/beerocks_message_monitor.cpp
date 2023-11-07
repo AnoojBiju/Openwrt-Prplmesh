@@ -2771,6 +2771,64 @@ bool cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST::init()
     return true;
 }
 
+cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST(uint8_t* buff, size_t buff_len, bool parse) :
+    BaseClass(buff, buff_len, parse) {
+    m_init_succeeded = init();
+}
+cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST(std::shared_ptr<BaseClass> base, bool parse) :
+BaseClass(base->getBuffPtr(), base->getBuffRemainingBytes(), parse){
+    m_init_succeeded = init();
+}
+cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::~cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST() {
+}
+void cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::class_swap()
+{
+    tlvf_swap(8*sizeof(eActionOp_MONITOR), reinterpret_cast<uint8_t*>(m_action_op));
+}
+
+bool cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::finalize()
+{
+    if (m_parse__) {
+        TLVF_LOG(DEBUG) << "finalize() called but m_parse__ is set";
+        return true;
+    }
+    if (m_finalized__) {
+        TLVF_LOG(DEBUG) << "finalize() called for already finalized class";
+        return true;
+    }
+    if (!isPostInitSucceeded()) {
+        TLVF_LOG(ERROR) << "post init check failed";
+        return false;
+    }
+    if (m_inner__) {
+        if (!m_inner__->finalize()) {
+            TLVF_LOG(ERROR) << "m_inner__->finalize() failed";
+            return false;
+        }
+        auto tailroom = m_inner__->getMessageBuffLength() - m_inner__->getMessageLength();
+        m_buff_ptr__ -= tailroom;
+    }
+    class_swap();
+    m_finalized__ = true;
+    return true;
+}
+
+size_t cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::get_initial_size()
+{
+    size_t class_size = 0;
+    return class_size;
+}
+
+bool cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST::init()
+{
+    if (getBuffRemainingBytes() < get_initial_size()) {
+        TLVF_LOG(ERROR) << "Not enough available space on buffer. Class init failed";
+        return false;
+    }
+    if (m_parse__) { class_swap(); }
+    return true;
+}
+
 cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE(uint8_t* buff, size_t buff_len, bool parse) :
     BaseClass(buff, buff_len, parse) {
     m_init_succeeded = init();
@@ -2783,6 +2841,10 @@ cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::~cACTION_MONITOR_CHANNEL_SCA
 }
 uint8_t& cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::success() {
     return (uint8_t&)(*m_success);
+}
+
+uint8_t& cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::is_on_boot() {
+    return (uint8_t&)(*m_is_on_boot);
 }
 
 void cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::class_swap()
@@ -2821,6 +2883,7 @@ size_t cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // success
+    class_size += sizeof(uint8_t); // is_on_boot
     return class_size;
 }
 
@@ -2831,6 +2894,11 @@ bool cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::init()
         return false;
     }
     m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_is_on_boot = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;

@@ -198,9 +198,13 @@ cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST:
   cert_mode: uint8_t
   scan_params: sTriggerChannelScanParams
 
+cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST:
+  _type: class
+
 cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE:
   _type: class
   success: uint8_t
+  is_on_boot: uint8_t
 
 cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST:
   _type: class

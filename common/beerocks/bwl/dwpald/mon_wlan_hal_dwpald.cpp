@@ -1135,7 +1135,7 @@ bool mon_wlan_hal_dwpal::sta_link_measurements_11k_request(const std::string &va
 
 bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
                                               const std::vector<unsigned int> &channel_pool,
-                                              bool cert_mode)
+                                              bool cert_mode, bool is_on_boot)
 {
     LOG(DEBUG) << "Channel scan trigger received on interface=" << m_radio_info.iface_name;
 
@@ -1191,9 +1191,9 @@ bool mon_wlan_hal_dwpal::channel_scan_trigger(int dwell_time_msec,
     }
 
     // get frequencies from channel pool and set in scan_params
-    if (!dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel,
-                                     m_radio_info.frequency_band, m_radio_info.iface_name,
-                                     channel_scan_params)) {
+    if (!is_on_boot && !dwpal_get_channel_scan_freq(channel_pool, m_radio_info.channel,
+                                                    m_radio_info.frequency_band,
+                                                    m_radio_info.iface_name, channel_scan_params)) {
         LOG(ERROR) << "Failed getting frequencies";
         return false;
     }

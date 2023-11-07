@@ -2411,6 +2411,10 @@ uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::success() {
     return (uint8_t&)(*m_success);
 }
 
+uint8_t& cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::is_on_boot() {
+    return (uint8_t&)(*m_is_on_boot);
+}
+
 void cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_BACKHAUL), reinterpret_cast<uint8_t*>(m_action_op));
@@ -2447,6 +2451,7 @@ size_t cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // success
+    class_size += sizeof(uint8_t); // is_on_boot
     return class_size;
 }
 
@@ -2457,6 +2462,11 @@ bool cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE::init()
         return false;
     }
     m_success = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_is_on_boot = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;

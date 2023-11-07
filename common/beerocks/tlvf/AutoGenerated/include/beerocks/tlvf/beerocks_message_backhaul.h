@@ -741,6 +741,7 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE : public BaseClass
             return (eActionOp_BACKHAUL)(ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE);
         }
         uint8_t& success();
+        uint8_t& is_on_boot();
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -749,6 +750,7 @@ class cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE : public BaseClass
         bool init();
         eActionOp_BACKHAUL* m_action_op = nullptr;
         uint8_t* m_success = nullptr;
+        uint8_t* m_is_on_boot = nullptr;
 };
 
 class cACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST : public BaseClass

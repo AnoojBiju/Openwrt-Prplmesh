@@ -249,6 +249,7 @@ public:
             // When set, radio can only be used for ZWDFS purpose.
             bool zwdfs;
             bool hybrid_mode_supported;
+            bool is_on_boot_scan_running = false;
 
             struct sBssid {
                 std::string iface_name;

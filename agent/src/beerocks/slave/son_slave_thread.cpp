@@ -3852,28 +3852,30 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
+        LOG(TRACE) << "Received ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
         auto response_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
-        if (!response_in) {
+        if (response_in == nullptr) {
             LOG(ERROR) << "addClass cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
             return false;
         }
+        LOG(DEBUG) << "Badhri response_in->is_on_boot() = " << response_in->is_on_boot();
+        if (response_in->is_on_boot() == false) {
+            auto response_out_controller = message_com::create_vs_message<
+                beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
+            if (!response_out_controller) {
+                LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
+                return false;
+            }
 
-        auto response_out_controller = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
-        if (!response_out_controller) {
-            LOG(ERROR) << "Failed building cACTION_CONTROL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
-            return false;
+            response_out_controller->success() = response_in->success();
+
+            send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         }
-
-        response_out_controller->success() = response_in->success();
-
-        send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
-
         auto response_out_backhaul = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>(cmdu_tx);
-        if (!response_out_backhaul) {
+        if (response_out_backhaul == nullptr) {
             LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
             return false;
         }
@@ -3888,6 +3890,8 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         auto action_header               = message_com::get_beerocks_header(cmdu_tx)->actionhdr();
         action_header->radio_mac()       = radio->front.iface_mac;
         response_out_backhaul->success() = response_in->success();
+        response_out_backhaul->is_on_boot() = response_in->is_on_boot();
+        LOG(DEBUG) << "Sending ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
         m_backhaul_manager_client->send_cmdu(cmdu_tx);
         break;
     }
@@ -4560,12 +4564,27 @@ bool slave_thread::agent_fsm()
                 }
             }
         }
-        m_radio_managers.do_on_each_radio_manager(
-            [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
-                auto db                                = AgentDB::get();
-                radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
-                return true;
-            });
+        m_radio_managers.do_on_each_radio_manager([&](sManagedRadio &radio_manager,
+                                                      const std::string &fronthaul_iface) -> bool {
+            auto db                                = AgentDB::get();
+            radio_manager.stop_on_failure_attempts = db->device_conf.stop_on_failure_attempts;
+            if (db->device_conf.certification_mode) {
+                auto radio       = db->radio(fronthaul_iface);
+                auto request_out = message_com::create_vs_message<
+                    beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST>(
+                    cmdu_tx);
+                LOG(DEBUG) << "Sending On Boot Scan Request to "
+                           << tlvf::mac_to_string(radio->front.iface_mac);
+                if (request_out == nullptr) {
+                    LOG(ERROR)
+                        << "Failed building "
+                           "ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_ON_BOOT_SCAN_REQUEST message!";
+                    return false;
+                }
+                send_cmdu(radio_manager.monitor_fd, cmdu_tx);
+            }
+            return true;
+        });
         break;
     }
     case STATE_STOPPED: {

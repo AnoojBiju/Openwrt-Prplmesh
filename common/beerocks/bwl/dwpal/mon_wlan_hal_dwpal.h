@@ -54,7 +54,7 @@ public:
                                                    const std::string &sta_mac) override;
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool,
-                                      bool cert_mode = false) override;
+                                      bool cert_mode = false, book is_on_boot = false) override;
     virtual bool channel_scan_dump_results() override;
     virtual bool channel_scan_dump_cached_results() override;
 

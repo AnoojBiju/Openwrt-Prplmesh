@@ -443,7 +443,7 @@ bool mon_wlan_hal_nl80211::sta_link_measurements_11k_request(const std::string &
 
 bool mon_wlan_hal_nl80211::channel_scan_trigger(int dwell_time_msec,
                                                 const std::vector<unsigned int> &channel_pool,
-                                                bool cert_mode)
+                                                bool cert_mode, bool is_on_boot)
 {
     LOG(TRACE) << __func__ << " - NOT IMPLEMENTED!";
     return false;

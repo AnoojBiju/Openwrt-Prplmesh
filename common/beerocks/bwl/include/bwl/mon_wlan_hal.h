@@ -79,7 +79,7 @@ public:
                                                    const std::string &sta_mac)           = 0;
     virtual bool channel_scan_trigger(int dwell_time_msec,
                                       const std::vector<unsigned int> &channel_pool,
-                                      bool cert_mode = false)                            = 0;
+                                      bool cert_mode = false, bool is_on_boot = false)   = 0;
     virtual bool channel_scan_dump_results()                                             = 0;
     virtual bool channel_scan_dump_cached_results()                                      = 0;
     /**

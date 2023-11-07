@@ -298,13 +298,19 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         auto response =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
-        if (!response) {
+        if (response == nullptr) {
             LOG(ERROR) << "addClass cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE failed";
             return false;
         }
 
+        //is_on_boot_scan = response->is_on_boot();
+        //m_current_scan_info.is_scan_currently_running = response->is_on_boot();
+        LOG(DEBUG) << "Badhri Current Scan State: "
+                   << m_states_string.at(m_current_scan_info.radio_scan->current_state);
+
         if (!is_current_scan_running() || !does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::PENDING_TRIGGER)) {
+            LOG(ERROR) << "Badhri Returning false";
             return false;
         }
 
@@ -870,7 +876,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
 
     const auto &perform_fresh_scan = channel_scan_request_tlv->perform_fresh_scan();
 
-    LOG(INFO) << "Received CHANNEL_SCAN_REQUEST_MESSAGE from "
+    LOG(INFO) << "Received CHANNEL_SCAN_REQUEST_MESSAGE from " << std::endl
               << "radio MAC: " << src_mac << " mid: " << std::hex << mid << "." << std::endl
               << "The perform_fresh_scan flag set to: \""
               << (perform_fresh_scan == wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan::
@@ -941,10 +947,10 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         }
         const auto radio_iface = radio->front.iface_name;
 
-        LOG(TRACE) << "radio_list[" << radio_i << "]:" << std::endl
-                   << "\tRadio iface: " << radio_iface << std::endl
-                   << "\tRadio MAC: " << radio_mac << std::endl
-                   << "\tOperating class list length:" << int(class_list_len);
+        LOG(TRACE) << "radio_list[" << radio_i << "]:" << std::endl;
+        LOG(TRACE) << "\tRadio iface: " << radio_iface << std::endl;
+        LOG(TRACE) << "\tRadio MAC: " << radio_mac << std::endl;
+        LOG(TRACE) << "\tOperating class list length:" << int(class_list_len);
 
         // Create new radio scan
         auto new_radio_scan = std::shared_ptr<sRadioScan>(new sRadioScan(), [](sRadioScan *ptr) {
@@ -1293,7 +1299,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     }
 
     if (results_vec->size() == 0) {
-        // No results are avaliable, sending an empty report.
+        LOG(DEBUG) << "No results are avaliable, sending an empty report.";
         if (!send_channel_scan_report_cmdu(request_info->src_mac, true)) {
             LOG(ERROR) << "Failed to Send Channel Scan Report Message";
             return false;
