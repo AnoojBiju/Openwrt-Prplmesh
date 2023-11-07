@@ -667,7 +667,6 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     if (endpoint_obj->read_child<>(profile_ref, "ProfileReference") &&
         m_ambiorix_cl->resolve_path(profile_ref + ".", profile_path)) {
         endpoint.active_profile_id = wbapi_utils::get_object_id(profile_path);
-        LOG(DEBUG) << "active profile id:" << endpoint.active_profile_id;
     }
 
     return true;
