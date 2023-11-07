@@ -29,18 +29,18 @@ void ire_network_optimization_task::work()
 {
     switch (state) {
 
-    case INIT: {
+    case IRE_TASK_INIT: {
         int prev_task_id = database.get_network_optimization_task_id();
         tasks.kill_task(prev_task_id);
 
         database.assign_network_optimization_task_id(id);
-        state = START;
+        state = IRE_TASK_START;
 
         //TODO disable optimal path for all clients when task is active
         break;
     }
 
-    case START: {
+    case IRE_TASK_START: {
         //database.network_changed_flag = false;
         direction = DIRECTION_UP;
 
@@ -48,11 +48,11 @@ void ire_network_optimization_task::work()
         ires = database.get_nodes_from_hierarchy(current_hierarchy, beerocks::TYPE_IRE_BACKHAUL);
         current_ire_it = ires.begin();
 
-        state = ITERATION;
+        state = IRE_TASK_ITERATION;
         break;
     }
 
-    case ITERATION: {
+    case IRE_TASK_ITERATION: {
         while (current_ire_it != ires.end() &&
                database.get_node_state(*current_ire_it) != beerocks::STATE_CONNECTED) {
             ++current_ire_it;
@@ -81,15 +81,15 @@ void ire_network_optimization_task::work()
                                                                 "ire_network_optimization_task");
             tasks.add_task(new_task);
             wait_for_task_end(new_task->id, 30000);
-            state = DELAY;
+            state = IRE_TASK_DELAY;
             ++current_ire_it;
         }
         break;
     }
 
-    case DELAY: {
+    case IRE_TASK_DELAY: {
         wait_for(2000);
-        state = ITERATION;
+        state = IRE_TASK_ITERATION;
         break;
     }
 
