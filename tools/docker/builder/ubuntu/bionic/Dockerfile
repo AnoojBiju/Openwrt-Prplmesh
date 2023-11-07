@@ -37,6 +37,7 @@ ARG PACKAGES_FOR_AMBIORIX="\
     liblua5.1-0-dev \
     build-essential \
     libxml2-dev \
+    libcap-ng-dev \
     "
 
 ARG PACKAGES_FOR_TEST="\
