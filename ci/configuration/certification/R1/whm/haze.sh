@@ -105,6 +105,24 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"
 
 sleep 10
 
+# Remove 6Ghz radio until it's supported
+# At least one of the controllers in R1 has a problem parsing M1's for 6GHz
+#ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan2.1\"]." }' && {
+#    ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan2.1\"]." }'
+#}
+#ubus call WiFi.SSID _get '{ "rel_path": ".[Name == \"wlan2\"]." }' && {
+#    ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan2\"]." }'
+#}
+#ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan2.1\"]." }' && {
+#    ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan2.1\"]." }'
+#}
+#ubus call WiFi.AccessPoint _get '{ "rel_path": ".[Alias == \"wlan2\"]." }' && {
+#    ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Alias == \"wlan2\"]." }'
+#}
+#ubus call WiFi.Radio _get '{ "rel_path": ".[Name == \"wlan2\"]." }' && {
+#    ubus call WiFi.Radio _del '{ "rel_path": ".[Name == \"wlan2\"]." }'
+#}
+
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 # Check the status of the LAN bridge
