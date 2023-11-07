@@ -172,9 +172,9 @@ main() {
         # Temporary workaround for Haze build failure
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-v3.0.0 + updk_9.1.30_wireless_onboarding fixes"
-        OPENWRT_TOOLCHAIN_VERSION='b9059d8828d09011c4e8d5ba4e1f6fb73dc939a6'
-        OPENWRT_VERSION='b9059d8828d09011c4e8d5ba4e1f6fb73dc939a6'
+        dbg "OSP platform, build on prplos master + updk_9.1.30_wireless_onboarding fixes + BW pWHM patch"
+        OPENWRT_TOOLCHAIN_VERSION='ba3deec5c586c18a6a0857cd92b2733eae66bc40'
+        OPENWRT_VERSION='ba3deec5c586c18a6a0857cd92b2733eae66bc40'
     else
         dbg "Building on prplOS-next"
     fi
