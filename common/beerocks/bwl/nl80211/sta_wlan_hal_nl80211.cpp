@@ -273,6 +273,15 @@ std::string sta_wlan_hal_nl80211::get_ssid() { return m_active_ssid; }
 
 std::string sta_wlan_hal_nl80211::get_bssid() { return m_active_bssid; }
 
+std::string sta_wlan_hal_nl80211::get_wireless_backhaul_mac()
+{
+    std::string mac;
+    if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name, mac)) {
+        LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
+    }
+    return mac;
+}
+
 bool sta_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
 {
     auto opcode = parsed_obj["_opcode"];

@@ -63,6 +63,7 @@ public:
 
     std::string get_ssid() override;
     std::string get_bssid() override;
+    std::string get_wireless_backhaul_mac() override;
 
 protected:
     // Overload for Monitor events
