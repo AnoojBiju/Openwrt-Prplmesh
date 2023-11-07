@@ -21,7 +21,7 @@ ARG PACKAGES_FOR_BUILD="\
     libssl-dev \
     ninja-build \
     pkg-config \
-    python3 \
+    python3.7 \
     python3-yaml \
     wget \
     "
@@ -82,9 +82,11 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     apt-get update && \
     apt-get install -y \
     liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
+    sed -i '1s/python/python3/g' /usr/bin/repo && \
     chmod +x /usr/bin/repo
 
 WORKDIR ambiorix
