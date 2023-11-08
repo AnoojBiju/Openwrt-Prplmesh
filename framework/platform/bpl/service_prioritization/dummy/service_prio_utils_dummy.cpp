@@ -18,19 +18,22 @@ bool ServicePrioritizationUtils_dummy::flush_rules()
     return false;
 }
 
-bool ServicePrioritizationUtils_dummy::apply_single_value_map(uint8_t pcp)
+bool ServicePrioritizationUtils_dummy::apply_single_value_map(
+    std::list<struct sInterfaceTagInfo> *iface_list, uint8_t pcp)
 {
     LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 
-bool ServicePrioritizationUtils_dummy::apply_dscp_map()
+bool ServicePrioritizationUtils_dummy::apply_dscp_map(
+    std::list<struct sInterfaceTagInfo> *iface_list, uint8_t default_pcp)
 {
     LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
 }
 
-bool ServicePrioritizationUtils_dummy::apply_up_map()
+bool ServicePrioritizationUtils_dummy::apply_up_map(std::list<struct sInterfaceTagInfo> *iface_list,
+                                                    uint8_t default_pcp)
 {
     LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;

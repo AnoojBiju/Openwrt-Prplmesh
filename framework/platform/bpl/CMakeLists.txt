@@ -71,7 +71,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
             ${MODULE_PATH}/db/uci/*.c*
             ${MODULE_PATH}/dhcp/uci/*.c*
             ${MODULE_PATH}/cfg/vendor/*.c*
-	    ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
+            ${MODULE_PATH}/service_prioritization/osp_mxl/service_prio_utils_osp_mxl.cpp
         )
 
         # UGW specific libraries
@@ -96,7 +96,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
           ${MODULE_PATH}/cfg/vendor/*.c*
           ${MODULE_PATH}/common/uci/*.c*
           ${MODULE_PATH}/board/system_ubus/*.c*
-	  ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
+          ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
         )
 
         find_package(ubus REQUIRED)
@@ -121,6 +121,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
         ${MODULE_PATH}/*/uci/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
 	${MODULE_PATH}/service_prioritization/cgr_mxl/service_prio_utils_cgr_mxl.cpp
+
     )
 
     # RDKB specific libraries
