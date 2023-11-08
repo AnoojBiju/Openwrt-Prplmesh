@@ -303,10 +303,9 @@ int main(int argc, char *argv[])
 
         // After the ap_manager finishes the attach process, start the monitor. There is no
         // point in starting it before.
-        auto ap_manager_state = ap_manager.get_state();
         // If the fronthaul is defined as ZWDFS, do not start the monitor since a ZWDFS interface
         // shall only be used for ZWDFS purpose, and shall not monitor anything by definition.
-        if (ap_manager_state == son::ApManager::eApManagerState::OPERATIONAL) {
+        if (ap_manager.is_operational()) {
             if (monitor_is_running || ap_manager.zwdfs_ap()) {
                 if (!monitor.is_running()) {
                     LOG(INFO) << "Restarting monitor thread";

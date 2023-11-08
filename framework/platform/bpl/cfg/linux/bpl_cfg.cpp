@@ -193,6 +193,8 @@ int cfg_get_management_mode()
     return RETURN_ERR;
 }
 
+int cfg_get_management_mode(std::string &mode) { return cfg_get_param("management_mode", mode); }
+
 int cfg_get_operating_mode()
 {
     std::string op_mode;

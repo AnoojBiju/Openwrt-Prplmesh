@@ -255,7 +255,9 @@ eActionOp_APMANAGER:
   ACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE: 73
   ACTION_APMANAGER_UNASSOC_STA_LINK_METRICS_RESPONSE: 74
 
-  ACTION_APMANAGER_ENUM_END: 75
+  ACTION_APMANAGER_STATE_NOTIFICATION: 75
+
+  ACTION_APMANAGER_ENUM_END: 76
 
 ####################################################
 ####################################################
@@ -499,3 +501,10 @@ eActionOp_BML:
   ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE: 240 
 
   ACTION_BML_ENUM_END: 241
+
+####################################################
+####################################################
+
+eActionOp_AP_MANAGER_STATE:
+  _type: enum_class
+  _enum_storage: uint8_t

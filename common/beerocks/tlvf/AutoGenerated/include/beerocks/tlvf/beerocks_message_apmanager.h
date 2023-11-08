@@ -1235,6 +1235,38 @@ class cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE : public BaseClass
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile* m_profile = nullptr;
 };
 
+class cACTION_APMANAGER_STATE_NOTIFICATION : public BaseClass
+{
+    public:
+        cACTION_APMANAGER_STATE_NOTIFICATION(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cACTION_APMANAGER_STATE_NOTIFICATION(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cACTION_APMANAGER_STATE_NOTIFICATION();
+
+        static eActionOp_APMANAGER get_action_op(){
+            return (eActionOp_APMANAGER)(ACTION_APMANAGER_STATE_NOTIFICATION);
+        }
+        std::string curstate_str();
+        char* curstate(size_t length = 0);
+        bool set_curstate(const std::string& str);
+        bool set_curstate(const char buffer[], size_t size);
+        std::string maxstate_str();
+        char* maxstate(size_t length = 0);
+        bool set_maxstate(const std::string& str);
+        bool set_maxstate(const char buffer[], size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        eActionOp_APMANAGER* m_action_op = nullptr;
+        char* m_curstate = nullptr;
+        size_t m_curstate_idx__ = 0;
+        int m_lock_order_counter__ = 0;
+        char* m_maxstate = nullptr;
+        size_t m_maxstate_idx__ = 0;
+};
+
 }; // close namespace: beerocks_message
 
 #endif //_BEEROCKS/TLVF_BEEROCKS_MESSAGE_APMANAGER_H_

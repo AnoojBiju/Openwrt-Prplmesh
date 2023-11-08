@@ -65,26 +65,7 @@ public:
         std::unordered_map<std::string, sRadioConfig> radios;
     };
 
-    enum eSlaveState {
-        // General
-        STATE_WAIT_BEFORE_INIT = 0,
-        STATE_INIT,
-        STATE_LOAD_PLATFORM_CONFIGURATION,
-        STATE_CONNECT_TO_PLATFORM_MANAGER,
-        STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE,
-        STATE_CONNECT_TO_BACKHAUL_MANAGER,
-        STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER,
-        STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE,
-        STATE_JOIN_INIT,
-        STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED,
-        STATE_BACKHAUL_ENABLE,
-        STATE_SEND_BACKHAUL_MANAGER_ENABLE,
-        STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION,
-        STATE_BACKHAUL_MANAGER_CONNECTED,
-        STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE,
-        STATE_OPERATIONAL,
-        STATE_STOPPED,
-    };
+    enum eSlaveState : int;
 
     slave_thread(sAgentConfig conf, logging &logger_);
     virtual ~slave_thread();
@@ -247,7 +228,7 @@ public:
 
     inline const sAgentConfig &get_agent_conf() { return config; }
 
-    inline void fsm_stop() { m_agent_state = STATE_STOPPED; }
+    void fsm_stop();
 
 private:
     /**
@@ -332,7 +313,15 @@ private:
     TaskPool m_task_pool;
 
     // Global FSM members:
-    eSlaveState m_agent_state;
+    class sSlaveState {
+        eSlaveState cur = {};
+        eSlaveState max = {};
+
+    public:
+        eSlaveState operator=(eSlaveState state);
+        operator eSlaveState() const { return cur; }
+    } m_agent_state;
+
     std::chrono::steady_clock::time_point m_agent_state_timer_sec =
         std::chrono::steady_clock::time_point::min();
 
@@ -351,6 +340,8 @@ public:
         int ap_manager_retries_counter = 0;
 
         int last_reported_backhaul_rssi = RSSI_INVALID;
+
+        std::string dm_instance;
     };
 
     class cRadioManagers {
