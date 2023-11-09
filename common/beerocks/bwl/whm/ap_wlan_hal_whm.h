@@ -159,6 +159,11 @@ private:
      */
     bool process_ap_bss_event(const std::string &interface,
                               const beerocks::wbapi::AmbiorixVariant *value);
+
+    /**
+     * @brief Process event "wpaCtrlEvents"
+     */
+    bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant *value) override;
 };
 
 } // namespace whm
