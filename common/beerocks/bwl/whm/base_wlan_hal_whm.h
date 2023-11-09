@@ -12,6 +12,7 @@
 #include "utils_wlan_hal_whm.h"
 #include <bcl/beerocks_state_machine.h>
 #include <bwl/base_wlan_hal.h>
+#include <bwl/key_value_parser.h>
 #include <bwl/nl80211_client.h>
 
 #include "ambiorix_client.h"
@@ -53,6 +54,10 @@ struct sStationInfo {
 class base_wlan_hal_whm : public virtual base_wlan_hal,
                           protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event> {
 
+    // Public types:
+public:
+    typedef std::unordered_map<std::string, std::string> parsed_obj_map_t;
+
     // Public methods:
 public:
     virtual ~base_wlan_hal_whm();
@@ -78,6 +83,8 @@ public:
      * @return True on success and false otherwise.
      */
     bool get_channel_utilization(uint8_t &channel_utilization) override;
+
+    void map_event_obj_parser(std::string event_str, parsed_obj_map_t &map_obj);
 
     // Protected methods
 protected:
@@ -120,6 +127,16 @@ protected:
      * @brief Process the event "ScanComplete" when received from the dm
      */
     virtual bool process_scan_complete_event(const std::string &result);
+
+    /**
+     * @brief Subscribe to Ap event "wpaCtrlEvents" from pwhm
+     */
+    void subscribe_to_wpaCtrl_events();
+
+    /**
+     * @brief Process event "wpaCtrlEvents"
+     */
+    virtual bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant *value);
 
     // Private data-members:
 private:
