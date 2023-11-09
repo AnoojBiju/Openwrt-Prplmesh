@@ -12,6 +12,7 @@
 #include "utils_wlan_hal_whm.h"
 #include <bcl/beerocks_state_machine.h>
 #include <bwl/base_wlan_hal.h>
+#include <bwl/key_value_parser.h>
 #include <bwl/nl80211_client.h>
 
 #include "ambiorix_client.h"
@@ -51,7 +52,8 @@ struct sStationInfo {
  * Base class for the whm abstraction layer.
  */
 class base_wlan_hal_whm : public virtual base_wlan_hal,
-                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event> {
+                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>,
+                          public KeyValueParser {
 
     // Public methods:
 public:
@@ -123,6 +125,11 @@ protected:
      * @brief Process the event "ScanComplete" when received from the dm
      */
     virtual bool process_scan_complete_event(const std::string &result);
+
+    /**
+     * @brief Process event "wpaCtrlEvents"
+     */
+    virtual bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data);
 
     // Private data-members:
 private:

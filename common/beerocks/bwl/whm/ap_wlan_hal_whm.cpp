@@ -33,6 +33,25 @@ namespace whm {
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static ap_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "CTRL-EVENT-EAP-FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
+    } else if (opcode == "CTRL-EVENT-EAP-FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure2;
+    } else if (opcode == "CTRL-EVENT-EAP-TIMEOUT-FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure;
+    } else if (opcode == "CTRL-EVENT-EAP-TIMEOUT-FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure2;
+    } else if (opcode == "CTRL-EVENT-SAE-UNKNOWN-PASSWORD-IDENTIFIER") {
+        return ap_wlan_hal::Event::WPA_Event_SAE_Unknown_Password_Identifier;
+    } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
+        return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    }
+
+    return ap_wlan_hal::Event::Invalid;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1165,6 +1184,76 @@ bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);
     }
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+{
+    std::string event_str;
+    if (!event_data.read_child<>(event_str, "eventData") || event_str.empty()) {
+        LOG(WARNING) << "Unable to retrieve wpaCtrl event data from pwhm notification";
+        return false;
+    }
+    LOG(DEBUG) << "wpaCtrl event: " << event_str;
+
+    std::string interface;
+    if (!event_data.read_child<>(interface, "ifName") || interface.empty()) {
+        LOG(WARNING) << "Unable to retrieve ifName from pwhm notification";
+        return false;
+    }
+    LOG(DEBUG) << "interface: " << interface;
+
+    bwl::parsed_line_t parsed_obj;
+    parse_event(event_str, parsed_obj);
+
+    std::string opcode;
+    if (!(parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
+          !(opcode = parsed_obj[bwl::EVENT_KEYLESS_PARAM_OPCODE]).empty())) {
+        return false;
+    }
+
+    auto event = wpaCtrl_to_bwl_event(opcode);
+
+    switch (event) {
+
+    case Event::WPA_Event_EAP_Failure:
+    case Event::WPA_Event_EAP_Failure2:
+    case Event::WPA_Event_EAP_Timeout_Failure:
+    case Event::WPA_Event_EAP_Timeout_Failure2:
+    case Event::WPA_Event_SAE_Unknown_Password_Identifier:
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+        auto vap_id    = get_vap_id_with_bss(interface);
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        if ((vap_id < 0) && (iface_ids.vap_id != beerocks::IFACE_RADIO_ID)) {
+            LOG(DEBUG) << "Unknown vap_id " << vap_id;
+        }
+
+        LOG(DEBUG) << "STA Connection Failure";
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sStaConnectionFail));
+        auto msg      = reinterpret_cast<sStaConnectionFail *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sStaConnectionFail));
+
+        // STA Mac Address
+        msg->sta_mac = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
+        LOG(DEBUG) << "STA connection failure: offending Sta MAC: " << msg->sta_mac;
+
+        // BSSID
+        msg->bssid = tlvf::mac_from_string(m_radio_info.available_vaps[vap_id].mac);
+        LOG(DEBUG) << "STA connection failure: interface BSSID: " << msg->bssid;
+
+        // Add the message to the queue
+        event_queue_push(event, msg_buff);
+        break;
+    }
+    // Unhandled events
+    default:
+        LOG(ERROR) << "Unhandled event received: " << int(event);
+        break;
+    }
+
     return true;
 }
 
