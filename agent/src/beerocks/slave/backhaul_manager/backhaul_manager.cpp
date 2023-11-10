@@ -904,17 +904,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-            for (auto &fd : radio_info->sta_hal_ext_events) {
-                if (fd > 0) {
-                    m_event_loop->remove_handlers(fd);
-                }
-            }
-            radio_info->sta_hal_ext_events.clear();
-            if (radio_info->sta_hal_int_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
+
+            clear_radio_handlers(*radio_info);
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves
@@ -952,6 +943,9 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     switch (m_eFSMState) {
     case EState::INIT_HAL: {
         skip_select = true;
+        for (auto &radio_info : m_radios_info) {
+            clear_radio_handlers(*radio_info);
+        }
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(WPA_ATTACH_TIMEOUT_SECONDS);
         FSM_MOVE_STATE(WPA_ATTACH);
@@ -3135,4 +3129,20 @@ bool BackhaulManager::handle_dev_set_config(
     return true;
 }
 
+void BackhaulManager::clear_radio_handlers(beerocks::BackhaulManager::sRadioInfo &radio_info)
+{
+    for (auto &fd : radio_info.sta_hal_ext_events) {
+        LOG(DEBUG) << "fd: " << fd;
+        if (fd > 0) {
+            m_event_loop->remove_handlers(fd);
+        }
+    }
+
+    radio_info.sta_hal_ext_events.clear();
+
+    if (radio_info.sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+        m_event_loop->remove_handlers(radio_info.sta_hal_int_events);
+        radio_info.sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    }
+}
 } // namespace beerocks
