@@ -9,12 +9,13 @@
 #ifndef ENCRYPTION_H_
 #define ENCRYPTION_H_
 
-#include <cstdint>
 #include <openssl/bn.h>
 #include <openssl/engine.h>
 #include <openssl/evp.h>
 #include <openssl/ossl_typ.h>
-#include <stddef.h>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace mapf {
 

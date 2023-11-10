@@ -108,7 +108,7 @@ diffie_hellman::diffie_hellman() : m_dh(nullptr), m_pubkey(nullptr)
     MAPF_DBG("Generating DH keypair");
 
     m_dh = DH_new();
-    if (m_dh == nullptr) {
+    if (!m_dh) {
         MAPF_ERR("Failed to allocate DH");
         return;
     }
@@ -155,7 +155,7 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
     MAPF_DBG("Computing DH shared key");
 
     BIGNUM *pub_key = BN_bin2bn(remote_pubkey, remote_pubkey_length, NULL);
-    if (pub_key == nullptr) {
+    if (!pub_key) {
         MAPF_ERR("Failed to set DH remote_pub_key");
         return 0;
     }
@@ -188,7 +188,7 @@ diffie_hellman::diffie_hellman() : m_evp(nullptr), m_pubkey(nullptr)
 
     std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx(
         EVP_PKEY_CTX_new_id(EVP_PKEY_DH, nullptr), &EVP_PKEY_CTX_free);
-    if (pctx == nullptr) {
+    if (!pctx) {
         MAPF_ERR("Failed to allocate parameter generation EVP_PKEY_CTX");
         return;
     }
@@ -209,7 +209,7 @@ diffie_hellman::diffie_hellman() : m_evp(nullptr), m_pubkey(nullptr)
 
     std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> kctx(
         EVP_PKEY_CTX_new(params.get(), nullptr), &EVP_PKEY_CTX_free);
-    if (kctx == nullptr) {
+    if (!kctx) {
         MAPF_ERR("Failed to allocate key generation EVP_PKEY_CTX");
         return;
     }
@@ -242,9 +242,7 @@ diffie_hellman::diffie_hellman() : m_evp(nullptr), m_pubkey(nullptr)
 
 diffie_hellman::~diffie_hellman()
 {
-    if (m_pubkey != nullptr) {
-        delete[] m_pubkey;
-    }
+    delete[] m_pubkey;
     if (m_evp != nullptr) {
         EVP_PKEY_free(m_evp);
     }
@@ -261,7 +259,7 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
 
     std::unique_ptr<BIGNUM, decltype(&BN_clear_free)> pub_key(
         BN_bin2bn(remote_pubkey, remote_pubkey_length, nullptr), &BN_clear_free);
-    if (pub_key == nullptr) {
+    if (!pub_key) {
         MAPF_ERR("Failed to set DH remote_pub_key");
         return false;
     }
@@ -309,7 +307,7 @@ sha256::~sha256() { EVP_MD_CTX_free(m_ctx); }
 
 bool sha256::update(const uint8_t *message, size_t message_length)
 {
-    if (m_ctx == nullptr) {
+    if (!m_ctx) {
         return false;
     }
     return EVP_DigestUpdate(m_ctx, message, message_length);
@@ -317,7 +315,7 @@ bool sha256::update(const uint8_t *message, size_t message_length)
 
 bool sha256::digest(uint8_t *digest)
 {
-    if (m_ctx == nullptr) {
+    if (!m_ctx) {
         return false;
     }
     unsigned int digest_length = 32;
@@ -329,7 +327,7 @@ public:
     Evp(const uint8_t *key, size_t key_length)
     {
         m_ctx = EVP_MD_CTX_new();
-        if (m_ctx == nullptr) {
+        if (!m_ctx) {
             MAPF_ERR("EVP_MD_CTX_new failed");
         }
 
