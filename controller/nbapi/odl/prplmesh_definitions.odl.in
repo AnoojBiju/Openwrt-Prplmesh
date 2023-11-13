@@ -118,38 +118,36 @@
 %define {
 
     // Define main data model
-@CONTROLLER_ROOT_DM_Header@
+    %persistent @CONTROLLER_ROOT_DM_Header@
+                %persistent object Configuration {
+                    %persistent bool BandSteeringEnabled = false;
+                    %persistent bool ClientRoamingEnabled = false;
 
-                object Configuration {
-                    bool BandSteeringEnabled = false;
-                    bool ClientRoamingEnabled = false;
-                    bool Client_11kRoaming = true;
-
-                    uint32 SteeringCurrentBonus = 0 {
+                    %persistent uint32 SteeringCurrentBonus = 0 {
                         on action validate call check_range [0, 10000];
                     }
-                    uint32 SteeringDisassociationTimer = 0;
+                    %persistent uint32 SteeringDisassociationTimer = 0;
 
                     // Link Metric Request Interval in Seconds
-                    uint32 LinkMetricsRequestInterval = 0;
+                    %persistent uint32 LinkMetricsRequestInterval = 0;
 
-                    bool ChannelSelectionTaskEnabled = false;
-                    bool DynamicChannelSelectionTaskEnabled = false;
-                    bool BackhaulOptimizationEnabled = false;
-                    bool LoadBalancingTaskEnabled = false;
-                    bool OptimalPathPreferSignalStrength = false;
-                    bool HealthCheckTaskEnabled = false;
-                    bool StatisticsPollingTaskEnabled = false;
-                    uint32 StatisticsPollingRateSec = 1 {
+                    %persistent bool ChannelSelectionTaskEnabled = false;
+                    %persistent bool DynamicChannelSelectionTaskEnabled = false;
+                    %persistent bool BackhaulOptimizationEnabled = false;
+                    %persistent bool LoadBalancingTaskEnabled = false;
+                    %persistent bool OptimalPathPreferSignalStrength = false;
+                    %persistent bool HealthCheckTaskEnabled = false;
+                    %persistent bool StatisticsPollingTaskEnabled = false;
+                    %persistent uint32 StatisticsPollingRateSec = 1 {
                         on action validate call check_range [1, 10000];
                     }
-                    bool DFSReentry = false;
-                    bool DaisyChainingDisabled = false;
-                    object QoS {
-                        uint32 SPRuleOutput = 0 {
+                    %persistent bool DFSReentry = false;
+                    %persistent bool DaisyChainingDisabled = false;
+                    %persistent object QoS {
+                        %persistent uint32 SPRuleOutput = 0 {
                             on action validate call check_range [0, 9];
                         }
-                        string DSCPMap {
+                        %persistent string DSCPMap {
                             on action validate call check_range [0, 64];
                         }
                     }
