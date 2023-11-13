@@ -23,7 +23,7 @@
 
         /**
         ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
-        ** from mids which defined in controller.odl
+        ** from mids which defined in prplmesh_definitions.odl.in
         **/
 
         %read-only uint32 LastDataDownlinkRate = 0;

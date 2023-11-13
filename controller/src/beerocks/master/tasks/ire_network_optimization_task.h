@@ -35,13 +35,13 @@ private:
     enum eMobilityDirection { DIRECTION_UP, DIRECTION_DOWN, DIRECTION_UNDEFINED };
 
     enum states {
-        INIT = 0,
-        START,
-        ITERATION,
-        DELAY,
+        IRE_TASK_INIT = 0,
+        IRE_TASK_START,
+        IRE_TASK_ITERATION,
+        IRE_TASK_DELAY,
     };
 
-    int state                         = INIT;
+    int state                         = IRE_TASK_INIT;
     eMobilityDirection direction      = eMobilityDirection::DIRECTION_UNDEFINED;
     bool original_client_roaming_flag = false;
 

@@ -21,7 +21,7 @@ ARG PACKAGES_FOR_BUILD="\
     libssl-dev \
     ninja-build \
     pkg-config \
-    python3 \
+    python3.7 \
     python3-yaml \
     wget \
     "
@@ -37,6 +37,7 @@ ARG PACKAGES_FOR_AMBIORIX="\
     liblua5.1-0-dev \
     build-essential \
     libxml2-dev \
+    libcap-ng-dev \
     "
 
 ARG PACKAGES_FOR_TEST="\
@@ -82,9 +83,10 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     apt-get install -y \
     liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 && \
     rm -rf /var/lib/apt/lists/* && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
+    sed -i '1s/python/python3/g' /usr/bin/repo && \
     chmod +x /usr/bin/repo
 
 WORKDIR ambiorix
@@ -110,7 +112,7 @@ RUN \
 # them in specific order.
 RUN \
     repo init -u https://gitlab.com/prpl-foundation/components/ambiorix/ambiorix.git \
-        -b refs/tags/v3.2.5 < /dev/null && \
+    -b refs/tags/v6.5.3 < /dev/null && \
     repo sync && \
     make install -C libraries/libamxc && \
     make install -C libraries/libamxp && \
@@ -118,6 +120,7 @@ RUN \
     make install -C libraries/libamxj && \
     make install -C libraries/libamxo && \
     make install -C libraries/libamxb && \
+    make install -C libraries/libamxrt && \
     make install -C applications/amxb-inspect && \
     make install -C applications/amxo-cg && \
     make install -C applications/amxo-xml-to && \

@@ -1,0 +1,22 @@
+%populate {
+	object '@CONTROLLER_ROOT_DM@' {
+		object 'Configuration' {
+			parameter 'BandSteering' = false;
+			parameter 'ClientRoaming' = false;
+			parameter 'DFSReentry' = false;
+			parameter 'ChannelSelection' = true;
+			parameter 'Client_11kRoaming' = true;
+			parameter 'DynamicChannelSelection' = true;
+			parameter 'StatisticsPolling' = true;
+			parameter 'StatisticsPollingRateSec' = 10;
+			parameter 'HealthCheck' = false;
+			parameter 'LinkMetricsRequestInterval' = 60;
+			parameter 'LoadBalancing' = false;
+			parameter 'BackhaulOptimization' = true;
+			parameter 'OptimalPathPreferSignalStrength' = false;
+			parameter 'SteeringCurrentBonus' = 10;
+			parameter 'SteeringDisassociationTimer' = 200;
+			parameter 'DaisyChainingDisabled' = false;
+		}
+	}
+}
