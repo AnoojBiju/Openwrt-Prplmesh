@@ -581,14 +581,14 @@ amxd_status_t trigger_set_spatial_reuse(amxd_object_t *object, amxd_function_t *
         std::string srg_bss_color_bitmap     = "";
         std::string srg_partial_bssid_bitmap = "";
 
-        srg_obsspd_min_offset = GET_UINT32(args, "srg_obsspd_min_offset")
-                                    ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMinOffset");
-        srg_obsspd_max_offset = GET_UINT32(args, "srg_obsspd_max_offset")
-                                    ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMaxOffset");
-        srg_bss_color_bitmap = GET_CHAR(args, "srg_bss_color_bitmap")
-                                   ?: get_param_string(spatial_reuse, "SRGBSSColorBitmap");
-        srg_partial_bssid_bitmap = GET_CHAR(args, "srg_partial_bssid_bitmap")
-                                       ?: get_param_string(spatial_reuse, "SRGPartialBSSIDBitmap");
+        srg_obsspd_min_offset         = GET_UINT32(args, "srg_obsspd_min_offset")
+                                            ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMinOffset");
+        srg_obsspd_max_offset         = GET_UINT32(args, "srg_obsspd_max_offset")
+                                            ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMaxOffset");
+        srg_bss_color_bitmap          = GET_CHAR(args, "srg_bss_color_bitmap")
+                                            ?: get_param_string(spatial_reuse, "SRGBSSColorBitmap");
+        srg_partial_bssid_bitmap      = GET_CHAR(args, "srg_partial_bssid_bitmap")
+                                            ?: get_param_string(spatial_reuse, "SRGPartialBSSIDBitmap");
         srg_bss_color_bitmap_uint     = get_uint64_from_bss_color_bitmap(srg_bss_color_bitmap);
         srg_partial_bssid_bitmap_uint = get_uint64_from_bss_color_bitmap(srg_partial_bssid_bitmap);
     }
@@ -1043,10 +1043,6 @@ amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_func
     return result;
 }
 
-// Events
-
-amxd_dm_t *g_data_model = nullptr;
-
 /**
  * @brief Renew configurations on agents.
  *
@@ -1076,7 +1072,8 @@ bool send_ap_config_renew()
 static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
 {
-    amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *configuration =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!configuration) {
         LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM ".Configuration";
@@ -1089,7 +1086,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
     nbapi_config.client_11k_roaming =
         amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
-        amxd_object_get_bool(configuration, "ClientRoamingEnabled", nullptr);
+        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{

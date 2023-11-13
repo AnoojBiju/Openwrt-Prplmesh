@@ -21,7 +21,7 @@
                 counted with AssociationEventDataNumberOfEntries;
                 /**
                 ** Need to add here HTCapabilities, VHTCapabilities, HECapabilities
-                ** from mids which defined in controller.odl
+                ** from mids which defined in prplmesh_definitions.odl.in
                 **/
                 %read-only string BSSID;  /* The MAC address of the logical BSS (BSSID) which is
                                             reporting the association event. */

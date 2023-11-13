@@ -2134,7 +2134,7 @@ public:
     /**
      * @brief Updates master configuration if a setting is changed through NBAPI.
      *
-     * Data model path : "Device.WiFi.DataElements.Configuration" defined in controller.odl
+     * Data model path : "Device.WiFi.DataElements.Configuration" defined in prplmesh.odl
      *
      * @param nbapi_config Settings read from datamodel with change action.
      * @return true on success, otherwise false.

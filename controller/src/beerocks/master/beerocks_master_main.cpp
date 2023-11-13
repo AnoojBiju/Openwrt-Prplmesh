@@ -38,7 +38,7 @@
 #endif // AMBIORIX_BUS_URI
 
 #ifndef CONTROLLER_DATAMODEL_PATH
-#define CONTROLLER_DATAMODEL_PATH "config/odl/controller.odl"
+#define CONTROLLER_DATAMODEL_PATH "config/odl/prplmesh.odl"
 #endif
 
 #endif //#else // ENABLE_NBAPI
@@ -69,14 +69,14 @@ static void handle_signal()
 
     switch (s_signal) {
 
-    // Terminate
+        // Terminate
     case SIGTERM:
     case SIGINT:
         LOG(INFO) << "Caught signal '" << strsignal(s_signal) << "' Exiting...";
         g_running = false;
         break;
 
-    // Roll log file
+        // Roll log file
     case SIGUSR1: {
         LOG(INFO) << "LOG Roll Signal!";
         if (!s_pLogger) {
@@ -88,7 +88,14 @@ static void handle_signal()
         LOG(INFO) << "--- Start of file after roll ---";
         break;
     }
-
+#ifdef ENABLE_NBAPI
+    // Handle SIGALRM signal indicating that one of amxp's timers is expired.
+    case SIGALRM:
+        LOG(INFO) << "LOG amxp Tik tak!";
+        amxp_timers_calculate();
+        amxp_timers_check();
+        break;
+#endif //ENABLE_NBAPI
     default:
         LOG(WARNING) << "Unhandled Signal: '" << strsignal(s_signal) << "' Ignoring...";
         break;
@@ -119,23 +126,13 @@ static void init_signals()
     sigemptyset(&sigusr1_action.sa_mask);
     sigusr1_action.sa_flags = 0;
     sigaction(SIGUSR1, &sigusr1_action, NULL);
-}
-
-static bool parse_arguments(int argc, char *argv[])
-{
-    int opt;
-    while ((opt = getopt(argc, argv, "k")) != -1) {
-        switch (opt) {
-        case 'k': {
-            s_kill_master = true;
-            break;
-        }
-        case '?': {
-            return false;
-        }
-        }
-    }
-    return true;
+#ifdef ENABLE_NBAPI
+    struct sigaction sigalrm_action;
+    sigalrm_action.sa_handler = signal_handler;
+    sigemptyset(&sigalrm_action.sa_mask);
+    sigalrm_action.sa_flags = 0;
+    sigaction(SIGALRM, &sigalrm_action, NULL);
+#endif //ENABLE_NBAPI
 }
 
 static void fill_master_config(son::db::sDbMasterConfig &master_conf,
@@ -550,77 +547,30 @@ static void fill_master_config(son::db::sDbMasterConfig &master_conf,
     }
 }
 
-/**
- * @brief Fills Device.WiFi.DataElements.Configuration datamodels according to master config.
- *
- * @param ambiorix_datamodel datamodel pointer.
- * @param master_conf master configuration object to read settings.
- * @return True if success otherwise false.
- */
-static bool
-fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> ambiorix_datamodel,
-                                   son::db::sDbMasterConfig &master_conf)
+#ifdef ENABLE_NBAPI
+int beerocks::nbapi::Amxrt::index = 0;
+
+static int handle_cmd_line_arg(amxc_var_t *config, int arg_id, const char *value)
 {
-    bool ret_val = true;
+    (void)config;
 
-    // ambiorix->set methods trigger data change event. It is not harmfull, but needed to be remembered.
-
-    const std::string configuration_path = CONTROLLER_ROOT_DM ".Configuration";
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "BandSteeringEnabled",
-                                       master_conf.load_client_band_steering);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "ClientRoamingEnabled",
-                                       master_conf.load_client_optimal_path_roaming);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "SteeringCurrentBonus",
-                                       master_conf.roaming_hysteresis_percent_bonus);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "SteeringDisassociationTimer",
-                                       master_conf.steering_disassoc_timer_msec.count());
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "LinkMetricsRequestInterval",
-                                       master_conf.link_metrics_request_interval_seconds.count());
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "ChannelSelectionTaskEnabled",
-                                       master_conf.load_channel_select_task);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "BackhaulOptimizationEnabled",
-                                       master_conf.load_ire_roaming);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "DynamicChannelSelectionTaskEnabled",
-                                       master_conf.load_dynamic_channel_select_task);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "LoadBalancingTaskEnabled",
-                                       master_conf.load_load_balancing);
-
-    ret_val &=
-        ambiorix_datamodel->set(configuration_path, "OptimalPathPreferSignalStrength",
-                                master_conf.load_optimal_path_roaming_prefer_signal_strength);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "HealthCheckTaskEnabled",
-                                       master_conf.load_health_check);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "StatisticsPollingRateSec",
-                                       master_conf.diagnostics_measurements_polling_rate_sec);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "StatisticsPollingTaskEnabled",
-                                       master_conf.load_diagnostics_measurements);
-
-    ret_val &=
-        ambiorix_datamodel->set(configuration_path, "DFSReentry", master_conf.load_dfs_reentry);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "Client_11kRoaming",
-                                       master_conf.load_client_11k_roaming);
-
-    ret_val &= ambiorix_datamodel->set(configuration_path, "DaisyChainingDisabled",
-                                       master_conf.daisy_chaining_disabled);
-
-    return ret_val;
+    int rv = -1;
+    switch (arg_id) {
+    case 'k': {
+        s_kill_master = true;
+        break;
+    }
+    default:
+        break;
+    }
+    return rv;
 }
+
+#endif
 
 int main(int argc, char *argv[])
 {
+
     std::cout << "Beerocks Controller Process Start" << std::endl;
 
     init_signals();
@@ -632,10 +582,32 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    //get command line options
-    if (!parse_arguments(argc, argv)) {
-        std::cout << "Usage: " << argv[0] << " -k {kill master}" << std::endl;
-        return 1;
+#ifdef ENABLE_NBAPI
+    //init amxrt and parse command line options
+    auto amrt_obj = std::make_shared<beerocks::nbapi::Amxrt>();
+    amxrt_cmd_line_add_option(0, 'k', "kill", no_argument, "kill the process", nullptr);
+    beerocks::nbapi::Amxrt::Initialize(argc, argv, handle_cmd_line_arg);
+#else
+    int opt;
+
+    while ((opt = getopt(argc, argv, "kh")) != -1) {
+        switch (opt) {
+        case 'k':
+            s_kill_master = true;
+            break;
+        case 'h':
+            std::cout << "Usage: " << argv[0] << " -k {kill master}" << std::endl;
+            return 1;
+        default:
+            std::cerr << "Unknown option: " << static_cast<char>(optopt) << std::endl;
+            return 1;
+        }
+    }
+#endif
+
+    // only kill and exit
+    if (s_kill_master) {
+        return 0;
     }
 
     // Initialize the BPL (Beerocks Platform Library)
@@ -683,21 +655,19 @@ int main(int argc, char *argv[])
     //kill running master
     beerocks::os_utils::kill_pid(beerocks_master_conf.temp_path + "pid/", base_master_name);
 
-    // only kill and exit
-    if (s_kill_master) {
-        return 0;
-    }
-
     //init logger
     beerocks::logging logger(base_master_name, beerocks_master_conf.sLog);
     s_pLogger = &logger;
     logger.apply_settings();
+
     LOG(INFO) << std::endl
               << "Running " << base_master_name << " Version " << BEEROCKS_VERSION << " Build date "
               << BEEROCKS_BUILD_DATE << std::endl
               << std::endl;
+
     beerocks::version::log_version(argc, argv);
     versionfile.open(beerocks_master_conf.temp_path + "beerocks_master_version");
+
     versionfile << BEEROCKS_VERSION << std::endl << BEEROCKS_REVISION;
     versionfile.close();
 
@@ -706,7 +676,6 @@ int main(int argc, char *argv[])
         beerocks::os_utils::redirect_console_std(beerocks_master_conf.sLog.files_path +
                                                  base_master_name + "_std.log");
     }
-
     //write pid file
     beerocks::os_utils::write_pid_file(beerocks_master_conf.temp_path, base_master_name);
     std::string pid_file_path =
@@ -746,15 +715,14 @@ int main(int argc, char *argv[])
     }
 
 #ifdef ENABLE_NBAPI
-    // Prepare vector with actions: name and pointer to function
     auto on_action_handlers = prplmesh::controller::actions::get_actions_callback_list();
     auto events_list        = prplmesh::controller::actions::get_events_list();
     auto funcs_list         = prplmesh::controller::actions::get_func_list();
-
-    auto controller_dm_path = mapf::utils::get_install_path() + "config/odl/controller.odl";
+    auto controller_dm_path = mapf::utils::get_install_path() + CONTROLLER_DATAMODEL_PATH;
     auto amb_dm_obj         = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
         event_loop, on_action_handlers, events_list, funcs_list);
     LOG_IF(!amb_dm_obj, FATAL) << "Unable to create Ambiorix!";
+
     LOG_IF(!amb_dm_obj->init(AMBIORIX_BACKEND_PATH, AMBIORIX_BUS_URI, controller_dm_path), FATAL)
         << "Unable to init ambiorix object!";
 #else
@@ -773,13 +741,6 @@ int main(int argc, char *argv[])
     }
 
     son::db master_db(master_conf, logger, tlvf::mac_from_string(bridge_info.mac), amb_dm_obj);
-
-#ifdef ENABLE_NBAPI
-    prplmesh::controller::actions::g_database   = &master_db;
-    prplmesh::controller::actions::g_data_model = beerocks::nbapi::g_data_model;
-#endif
-
-    fill_nbapi_config_from_master_conf(amb_dm_obj, master_conf);
 
     // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
     // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of
@@ -854,7 +815,6 @@ int main(int argc, char *argv[])
     }
 
     s_pLogger = nullptr;
-
     controller.stop();
 
     return 0;
