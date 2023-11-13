@@ -367,6 +367,12 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
         << "Unable to create CMDU server for platform manager!";
 
 #ifdef ENABLE_NBAPI
+    auto amxrt = std::make_shared<beerocks::nbapi::Amxrt>();
+    if (auto init = (amxrt->Initialize(argc, argv, nullptr) != 0)) {
+        std::cout << "Beerocks Agent Process Failed to initalize the amxrt lib."
+                  << "amxrt_config_init returned : " << init << " shutting down!" << std::endl;
+        return init;
+    }
     auto agent_dm_path = mapf::utils::get_install_path() + AGENT_DATAMODEL_PATH;
     auto amb_dm_obj    = std::make_shared<beerocks::nbapi::AmbiorixImpl>(
         event_loop, std::vector<beerocks::nbapi::sActionsCallback>(),

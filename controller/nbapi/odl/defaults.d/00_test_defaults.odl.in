@@ -1,4 +1,8 @@
 %populate {
+    object @CONTROLLER_ROOT_DM@.Configuration {
+        parameter StatisticsPollingRateSec = 200;
+        
+    }
     object @CONTROLLER_ROOT_DM@.Network.Device {
         instance add() {
             object Radio {
@@ -13,14 +17,6 @@
 
                     object CurrentOperatingClasses {
                         instance add() {}
-                    }
-
-                    object Capabilities {
-                        instance add() {
-                            object OperatingClasses {
-                                instance add() {}
-                            }
-                        }
                     }
 
                     object UnassociatedSTA {
@@ -42,22 +38,6 @@
                     }
                 }
             }
-        }
-    }
-}
-
-%populate {
-    object AssociationEvent {
-        object AssociationEventData {
-            instance add() {}
-        }
-    }
-}
-
-%populate {
-    object DisassociationEvent {
-        object DisassociationEventData {
-            instance add() {}
         }
     }
 }

@@ -1097,8 +1097,6 @@ amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_func
 
 // Events
 
-amxd_dm_t *g_data_model = nullptr;
-
 /**
  * @brief Renew configurations on agents.
  *
@@ -1128,7 +1126,8 @@ bool send_ap_config_renew()
 static void event_configuration_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
 {
-    amxd_object_t *configuration = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *configuration =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!configuration) {
         LOG(WARNING) << "Failed to get object " CONTROLLER_ROOT_DM ".Configuration";
