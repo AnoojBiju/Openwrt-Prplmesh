@@ -104,7 +104,7 @@ enum class eMessageType : uint16_t {
     VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE = 0x8040,
     VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE = 0x8041,
     VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE = 0x8042,
-    VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE = 0x8044,
+    VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE = 0x8048,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
 // clang-format off
@@ -289,7 +289,7 @@ public:
         case 0x8040:
         case 0x8041:
         case 0x8042:
-        case 0x8044:
+        case 0x8048:
                 ret = true;
                 break;
             default:
