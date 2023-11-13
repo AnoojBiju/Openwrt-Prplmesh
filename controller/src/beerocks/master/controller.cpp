@@ -88,6 +88,8 @@
 #include <tlvf/wfa_map/tlvRadioOperationRestriction.h>
 #include <tlvf/wfa_map/tlvSearchedService.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
+#include <tlvf/wfa_map/tlvSpatialReuseReport.h>
+#include <tlvf/wfa_map/tlvSpatialReuseRequest.h>
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvSteeringBTMReport.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
@@ -2054,6 +2056,14 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_m
                       << ", operating_channel=" << int(channel);
 
             database.add_current_op_class(ruid, operating_class, channel, tx_power);
+        }
+    }
+
+    for (const auto &spatial_reuse_report_tlv :
+         cmdu_rx.getClassList<wfa_map::tlvSpatialReuseReport>()) {
+
+        if (!database.add_spatial_reuse_parameters(*spatial_reuse_report_tlv)) {
+            LOG(ERROR) << "Couldn't set values for ap SpatialReuse data model";
         }
     }
 
@@ -4099,6 +4109,61 @@ bool Controller::trigger_scan(
     m_task_pool.push_event(database.get_dynamic_channel_selection_r2_task_id(),
                            dynamic_channel_selection_r2_task::eEvent::TRIGGER_SINGLE_SCAN,
                            &new_event);
+    return true;
+}
+
+bool Controller::trigger_set_spatial_reuse(
+    const sMacAddr &ruid, uint32_t bss_color, const bool hesiga_spr_value15_allowed,
+    const bool srg_information_valid, const bool non_srg_offset_valid, const bool psr_disallowed,
+    uint32_t non_srg_obsspd_max_offset, uint32_t srg_obsspd_min_offset,
+    uint32_t srg_obsspd_max_offset, uint64_t srg_bss_color_bitmap,
+    uint64_t srg_partial_bssid_bitmap)
+{
+    LOG(DEBUG) << "Spatial reuse parameters. BSSColor: " << bss_color
+               << ", HESIGASpatialReuseValue15Allowed: " << hesiga_spr_value15_allowed
+               << ", SRGInformationValid: " << srg_information_valid
+               << ", NonSRGOffsetValid: " << non_srg_offset_valid
+               << ", PSRDisallowed: " << psr_disallowed
+               << ", NonSRGOBSSPDMaxOffset: " << non_srg_obsspd_max_offset
+               << ", SRGOBSSPDMinOffset: " << srg_obsspd_min_offset
+               << ", SRGOBSSPDMaxOffset: " << srg_obsspd_max_offset
+               << ", SRGBSSColorBitmap: " << srg_bss_color_bitmap
+               << ", SRGPartialBSSIDBitmap: " << srg_partial_bssid_bitmap;
+
+    // Need to create CHANNEL_SELECTION_REQUEST_MESSAGE with spatial reuse and send it to the agent.
+    if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+        LOG(ERROR) << "CMDU creation of type CHANNEL_SELECTION_REQUEST_MESSAGE, has failed";
+        return false;
+    }
+
+    auto spatial_reuse_request_tlv = cmdu_tx.addClass<wfa_map::tlvSpatialReuseRequest>();
+    if (!spatial_reuse_request_tlv) {
+        LOG(ERROR) << "addClass wfa_map::tlvSpatialReuseRequest has failed";
+        return false;
+    }
+
+    spatial_reuse_request_tlv->radio_uid()        = ruid;
+    spatial_reuse_request_tlv->flags1().bss_color = bss_color;
+    spatial_reuse_request_tlv->flags2().hesiga_spatial_reuse_value15_allowed =
+        hesiga_spr_value15_allowed;
+    spatial_reuse_request_tlv->flags2().srg_information_valid = srg_information_valid;
+    spatial_reuse_request_tlv->flags2().non_srg_offset_valid  = non_srg_offset_valid;
+    spatial_reuse_request_tlv->flags2().psr_disallowed        = psr_disallowed;
+    if (non_srg_offset_valid) {
+        spatial_reuse_request_tlv->non_srg_obsspd_max_offset() = non_srg_obsspd_max_offset;
+    }
+    if (srg_information_valid) {
+        spatial_reuse_request_tlv->srg_obsspd_min_offset()    = srg_obsspd_min_offset;
+        spatial_reuse_request_tlv->srg_obsspd_max_offset()    = srg_obsspd_max_offset;
+        spatial_reuse_request_tlv->srg_bss_color_bitmap()     = srg_bss_color_bitmap;
+        spatial_reuse_request_tlv->srg_partial_bssid_bitmap() = srg_partial_bssid_bitmap;
+    }
+    for (const auto &agent : database.get_all_connected_agents()) {
+        son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database);
+        LOG(DEBUG) << "send CHANNEL_SELECTION_REQUEST_MESSAGE with spatial reuse to agent with "
+                      "mac_address "
+                   << tlvf::mac_to_string(agent->al_mac);
+    }
     return true;
 }
 

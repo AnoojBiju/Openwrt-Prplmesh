@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <iostream>
 #include <locale.h>
+#include <sstream>
 #include <time.h>
 
 using namespace beerocks;
@@ -189,6 +190,44 @@ static bool get_param_bool(amxd_object_t *object, const char *param_name)
     }
     amxc_var_clean(&param);
     return param_val;
+}
+
+static bool get_param_uint32(amxd_object_t *object, const char *param_name)
+{
+    amxc_var_t param;
+    uint32_t param_val = false;
+
+    amxc_var_init(&param);
+    if (amxd_object_get_param(object, param_name, &param) == amxd_status_ok) {
+        param_val = amxc_var_dyncast(uint32_t, &param);
+    } else {
+        LOG(ERROR) << "Fail to get param: " << param_name;
+    }
+    amxc_var_clean(&param);
+    return param_val;
+}
+
+/**
+* @brief Converting string of decimal values(ex. "1 3 5 63") to uint64.
+* Set corresponding bits at result variable to 1.
+* Ex. if we have string "0 1 5 63" then 1st, 2d, 6th and 64th bit will be set to 1.
+* Decimal values range [0-63].
+*/
+static uint64_t get_uint64_from_bss_color_bitmap(const std::string &decimal_str)
+{
+    std::istringstream iss(decimal_str);
+    uint64_t result = 0;
+
+    for (int decimal = 0; iss >> decimal;) {
+        // Ensure that the decimal value is within the valid range (0-63)
+        if (decimal <= 63) {
+            // Set corresponding bits at result variable to 1.
+            result |= 1ULL << decimal;
+        } else {
+            LOG(WARNING) << "Invalid decimal value: " << decimal;
+        }
+    }
+    return result;
 }
 
 /**
@@ -465,6 +504,103 @@ amxd_status_t btm_request(amxd_object_t *mapsta_object, amxd_function_t *func, a
                                          bss_termination_duration, validity_interval,
                                          steering_timer, station_mac, target_bssid);
     }
+    return amxd_status_ok;
+}
+
+/**
+ * @brief Initiates setting spatial reuse parameters and bss color with the Creation TLV at the current Radio and the given parameters
+ *
+ * Example of usage:
+ * ubus call Device.WiFi.DataElements.Network.Device.1.Radio.1 SetSpatialReuse
+ * '{"bss_color": "1", "hesiga_spr_value15_allowed": "true", "srg_information_valid": "true",
+ * "non_srg_offset_valid": "true", "psr_disallowed": "true", "non_srg_obsspd_max_offset": "0",
+ * "srg_obsspd_min_offset": "0", "srg_obsspd_max_offset": "0", "srg_bss_color_bitmap": "1 2 10 63",
+ * "srg_partial_bssid_bitmap": "0 1 3 63"}'
+ *
+ * If some input parameter(s) are not provided, then the corresponding existing parameter in SpatialReuse applies.
+ *
+ */
+amxd_status_t trigger_set_spatial_reuse(amxd_object_t *object, amxd_function_t *func,
+                                        amxc_var_t *args, amxc_var_t *ret)
+{
+    auto controller_ctx = g_database->get_controller_ctx();
+
+    if (!controller_ctx) {
+        LOG(ERROR) << "Failed to get controller context.";
+        return amxd_status_unknown_error;
+    }
+
+    amxc_var_t value;
+    amxc_var_init(&value);
+    amxd_object_get_param(object, "ID", &value);
+    std::string radio_mac_str = amxc_var_constcast(cstring_t, &value);
+
+    if (radio_mac_str.empty()) {
+        LOG(ERROR) << "radio_mac is empty";
+        return amxd_status_parameter_not_found;
+    }
+
+    sMacAddr radio_uid = tlvf::mac_from_string(radio_mac_str);
+
+    amxc_var_clean(ret);
+    amxd_object_t *spatial_reuse = amxd_object_get_child(object, "SpatialReuse");
+
+    if (!spatial_reuse) {
+        LOG(WARNING) << "Fail to get SpatialReuse object from data model";
+        return amxd_status_unknown_error;
+    }
+
+    // Input parameters are not mandatory.
+    // If some parameter(s) are not provided then the corresponding existing parameter in SpatialReuse applies.
+    uint32_t bss_color;
+    bool hesiga_spr_value15_allowed;
+    bool srg_information_valid;
+    bool non_srg_offset_valid;
+    bool psr_disallowed;
+    uint32_t non_srg_obsspd_max_offset     = 0;
+    uint32_t srg_obsspd_min_offset         = 0;
+    uint32_t srg_obsspd_max_offset         = 0;
+    uint64_t srg_bss_color_bitmap_uint     = 0;
+    uint64_t srg_partial_bssid_bitmap_uint = 0;
+
+    bss_color = GET_UINT32(args, "bss_color") ?: get_param_uint32(spatial_reuse, "BSSColor");
+    hesiga_spr_value15_allowed = GET_BOOL(args, "hesiga_spr_value15_allowed") ||
+                                 get_param_bool(spatial_reuse, "HESIGASpatialReuseValue15Allowed");
+    srg_information_valid = GET_BOOL(args, "srg_information_valid") ||
+                            get_param_bool(spatial_reuse, "SRGInformationValid");
+    non_srg_offset_valid = GET_BOOL(args, "non_srg_offset_valid") ||
+                           get_param_bool(spatial_reuse, "NonSRGOffsetValid");
+    psr_disallowed =
+        GET_BOOL(args, "psr_disallowed") || get_param_bool(spatial_reuse, "PSRDisallowed");
+
+    if (non_srg_offset_valid) {
+        non_srg_obsspd_max_offset = GET_UINT32(args, "non_srg_obsspd_max_offset")
+                                        ?: get_param_uint32(spatial_reuse, "NonSRGOBSSPDMaxOffset");
+    }
+    if (srg_information_valid) {
+        std::string srg_bss_color_bitmap     = "";
+        std::string srg_partial_bssid_bitmap = "";
+
+        srg_obsspd_min_offset = GET_UINT32(args, "srg_obsspd_min_offset")
+                                    ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMinOffset");
+        srg_obsspd_max_offset = GET_UINT32(args, "srg_obsspd_max_offset")
+                                    ?: get_param_uint32(spatial_reuse, "SRGOBSSPDMaxOffset");
+        srg_bss_color_bitmap = GET_CHAR(args, "srg_bss_color_bitmap")
+                                   ?: get_param_string(spatial_reuse, "SRGBSSColorBitmap");
+        srg_partial_bssid_bitmap = GET_CHAR(args, "srg_partial_bssid_bitmap")
+                                       ?: get_param_string(spatial_reuse, "SRGPartialBSSIDBitmap");
+        srg_bss_color_bitmap_uint     = get_uint64_from_bss_color_bitmap(srg_bss_color_bitmap);
+        srg_partial_bssid_bitmap_uint = get_uint64_from_bss_color_bitmap(srg_partial_bssid_bitmap);
+    }
+
+    if (!controller_ctx->trigger_set_spatial_reuse(
+            radio_uid, bss_color, hesiga_spr_value15_allowed, srg_information_valid,
+            non_srg_offset_valid, psr_disallowed, non_srg_obsspd_max_offset, srg_obsspd_min_offset,
+            srg_obsspd_max_offset, srg_bss_color_bitmap_uint, srg_partial_bssid_bitmap_uint)) {
+        LOG(ERROR) << "Failed to set spatial reuse parametrs";
+        return amxd_status_unknown_error;
+    }
+
     return amxd_status_ok;
 }
 
@@ -1106,6 +1242,8 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void)
         {"trigger_scan", CONTROLLER_ROOT_DM ".Network.Device.Radio.ScanTrigger", trigger_scan},
         {"BTMRequest", CONTROLLER_ROOT_DM ".Network.Device.Radio.BSS.STA.MultiAPSTA.BTMRequest",
          btm_request},
+        {"trigger_set_spatial_reuse", CONTROLLER_ROOT_DM ".Network.Device.Radio.SetSpatialReuse",
+         trigger_set_spatial_reuse},
         {"update_vbss_capabilities", CONTROLLER_ROOT_DM ".Network.Device.UpdateVBSSCapabilities",
          update_vbss_capabilities},
         {"trigger_vbss_creation", CONTROLLER_ROOT_DM ".Network.Device.Radio.TriggerVBSSCreation",
