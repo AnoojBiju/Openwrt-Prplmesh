@@ -64,6 +64,8 @@ const std::string ControllerConnectivityTask::fsm_state_to_string(eState status)
         return "BACKHAUL_LINK_DISCONNECTED";
     case eState::RECONNECTION:
         return "RECONNECTION";
+    case eState::WAIT_FOR_RECONNECT:
+        return "WAIT_FOR_RECONNECT";
     default:
         LOG(ERROR) << "state argument doesn't have an enum";
         break;
@@ -167,6 +169,16 @@ void ControllerConnectivityTask::work()
     case eState::RECONNECTION: {
         LOG(DEBUG) << "state RECONNECTION";
         send_reconnect_to_backhaul_manager();
+        reconnect_timeout =
+            std::chrono::steady_clock::now() + std::chrono::seconds(RECONNECT_TIMEOUT_SEC);
+
+        FSM_MOVE_STATE(WAIT_FOR_RECONNECT);
+        break;
+    }
+    case eState::WAIT_FOR_RECONNECT: {
+        if (std::chrono::steady_clock::now() > reconnect_timeout) {
+            FSM_MOVE_STATE(RECONNECTION);
+        }
         break;
     }
     default:

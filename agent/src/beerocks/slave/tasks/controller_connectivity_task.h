@@ -83,6 +83,7 @@ private:
         CONNECTION_TIMEOUT,
         BACKHAUL_LINK_DISCONNECTED,
         RECONNECTION,
+        WAIT_FOR_RECONNECT,
     };
 
     struct sConfigurationParams {
@@ -133,6 +134,16 @@ private:
      * @brief Last time point when heartbeat message is being send to Controller
      */
     std::chrono::steady_clock::time_point m_last_heartbeat_send_time;
+
+    /**
+     * @brief Time point when waiting for reconnection exceeds
+     */
+    std::chrono::steady_clock::time_point reconnect_timeout;
+
+    /**
+     * @brief Timeout to reconnect to the controller in seconds.
+     */
+    const int RECONNECT_TIMEOUT_SEC = 120;
 
     /**
      * @brief Convert enum of task state to string.
