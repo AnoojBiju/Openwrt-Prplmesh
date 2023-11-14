@@ -11,11 +11,14 @@
 #include "../son_slave_thread.h"
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 
+#include <bcl/beerocks_utils.h>
+#include <bcl/network/network_utils.h>
 #include <bpl/bpl_service_prio_utils.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
 #include <tlvf/wfa_map/tlvProfile2ErrorCode.h>
 
 namespace beerocks {
+using namespace net;
 
 ServicePrioritizationTask::ServicePrioritizationTask(slave_thread &btl_ctx,
                                                      ieee1905_1::CmduMessageTx &cmdu_tx)
@@ -152,6 +155,102 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
     }
 }
 
+void ServicePrioritizationTask::gather_iface_details(
+    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> *iface_tag_info_list)
+{
+    auto db                                                  = AgentDB::get();
+    bpl::ServicePrioritizationUtils::sInterfaceTagInfo iface = {};
+
+    // bridge interface is configured as Primary VLAN ID untagged Port with primary VLAN ID
+    iface.iface_name = db->bridge.iface_name;
+    iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
+    iface_tag_info_list->push_back(iface);
+
+    // Update WAN and LAN Ports.
+    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
+        iface.iface_name = db->ethernet.wan.iface_name;
+        iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
+        iface_tag_info_list->push_back(iface);
+    }
+    for (const auto &lan_iface_info : db->ethernet.lan) {
+        iface            = {0};
+        iface.iface_name = lan_iface_info.iface_name;
+        iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
+        iface_tag_info_list->push_back(iface);
+    }
+
+    // Wireless Backhaul
+    if (!db->device_conf.local_gw && !db->backhaul.selected_iface_name.empty() &&
+        db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
+        iface      = {};
+        auto radio = db->radio(db->backhaul.selected_iface_name);
+        if (!radio) {
+            LOG(ERROR) << "Could not find Backhaul Radio interface!";
+            return;
+        }
+        iface.iface_name = radio->back.iface_name;
+        iface.tag_info =
+            db->backhaul.bssid_multi_ap_profile > 1
+                ? bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_TAGGED
+                : bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
+        iface_tag_info_list->push_back(iface);
+    }
+
+    for (auto radio : db->get_radios_list()) {
+        if (!radio) {
+            continue;
+        }
+
+        for (const auto &bss : radio->front.bssids) {
+            // Skip unconfigured BSS.
+            if (bss.ssid.empty()) {
+                continue;
+            }
+            iface = {};
+
+            LOG(DEBUG) << "BSS " << bss.mac << ", ssid:" << bss.ssid;
+
+            std::string bss_iface;
+
+            if (!network_utils::linux_iface_get_name(bss.mac, bss_iface)) {
+                LOG(WARNING) << "Interface with MAC " << bss.mac << " does not exist";
+                continue;
+            }
+
+            if (bss.fronthaul_bss && !bss.backhaul_bss) { // fBSS
+                iface.iface_name = bss_iface;
+                iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
+                iface_tag_info_list->push_back(iface);
+            } else if (!bss.fronthaul_bss && bss.backhaul_bss) { // bBSS
+                auto bss_iface_netdevs =
+                    network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
+
+                for (const auto &bss_iface_netdev : bss_iface_netdevs) {
+                    iface.iface_name = bss_iface_netdev;
+                    iface.tag_info =
+                        bss.backhaul_bss_disallow_profile1_agent_association
+                            ? bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_TAGGED
+                            : bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
+                    iface_tag_info_list->push_back(iface);
+                }
+            } else { // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
+                iface.iface_name = bss_iface;
+                iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
+                iface_tag_info_list->push_back(iface);
+
+                auto bss_iface_netdevs =
+                    network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
+
+                for (const auto &bss_iface_netdev : bss_iface_netdevs) {
+                    iface.iface_name = bss_iface_netdev;
+                    iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
+                    iface_tag_info_list->push_back(iface);
+                }
+            }
+        }
+    }
+}
+
 bool ServicePrioritizationTask::qos_apply_active_rule()
 {
     const auto &rules = AgentDB::get()->service_prioritization.rules;
@@ -208,20 +307,32 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
         return false;
     }
 
+    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> iface_list;
+    ServicePrioritizationTask::gather_iface_details(&iface_list);
+
     //TODO: PPM-2389, drive ebtables or external software
     // as per vendor specific in the Service Prioritization utility
-    return service_prio_utils->apply_single_value_map(pcp);
+    return service_prio_utils->apply_single_value_map(&iface_list, pcp);
 }
 
 bool ServicePrioritizationTask::qos_setup_dscp_map()
 {
+    uint8_t pcp = 0;
+    auto db     = AgentDB::get();
+
     LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - DSCP custom map used for PCP";
+
+    pcp = db->traffic_separation.default_pcp;
+    LOG(DEBUG) << "Default PCP = " << pcp;
+
+    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> iface_list;
+    ServicePrioritizationTask::gather_iface_details(&iface_list);
 
     qos_flush_setup();
 
     //TODO: PPM-2389, drive ebtables or external software
     // as per vendor specific in the Service Prioritization utility
-    return service_prio_utils->apply_dscp_map();
+    return service_prio_utils->apply_dscp_map(&iface_list, pcp);
 }
 
 bool ServicePrioritizationTask::qos_setup_up_map()
@@ -230,9 +341,13 @@ bool ServicePrioritizationTask::qos_setup_up_map()
 
     qos_flush_setup();
 
+    uint8_t pcp = AgentDB::get()->traffic_separation.default_pcp;
+    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> iface_list;
+    ServicePrioritizationTask::gather_iface_details(&iface_list);
+
     //TODO: PPM-2389, drive ebtables or external software
     // as per vendor specific in the Service Prioritization utility
-    return service_prio_utils->apply_up_map();
+    return service_prio_utils->apply_up_map(&iface_list, pcp);
 }
 
 bool ServicePrioritizationTask::send_service_prio_config(
