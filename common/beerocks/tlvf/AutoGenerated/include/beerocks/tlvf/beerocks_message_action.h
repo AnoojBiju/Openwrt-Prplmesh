@@ -228,7 +228,8 @@ enum eActionOp_APMANAGER: uint8_t {
     ACTION_APMANAGER_CHANNELS_LIST_RESPONSE = 0x48,
     ACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE = 0x49,
     ACTION_APMANAGER_UNASSOC_STA_LINK_METRICS_RESPONSE = 0x4a,
-    ACTION_APMANAGER_ENUM_END = 0x4b,
+    ACTION_APMANAGER_STATE_NOTIFICATION = 0x4b,
+    ACTION_APMANAGER_ENUM_END = 0x4c,
 };
 
 enum eActionOp_MONITOR: uint8_t {
@@ -430,6 +431,23 @@ enum eActionOp_BML: uint8_t {
     ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_REQUEST = 0xef,
     ACTION_BML_GET_UNASSOC_STA_QUERY_RESULT_RESPONSE = 0xf0,
     ACTION_BML_ENUM_END = 0xf1,
+};
+
+enum class eActionOp_AP_MANAGER_STATE : uint8_t {
+};
+class eActionOp_AP_MANAGER_STATEValidate {
+public:
+    static bool check(uint8_t value) {
+        bool ret = false;
+        switch (value) {
+                ret = true;
+                break;
+            default:
+                ret = false;
+                break;
+        }
+        return ret;
+    }
 };
 
 

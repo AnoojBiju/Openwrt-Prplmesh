@@ -394,6 +394,13 @@ int cfg_get_operating_mode();
 int cfg_get_management_mode();
 
 /**
+ * Returns the current management mode configuration
+ * 
+ * @returns <0 on error
+ */
+int cfg_get_management_mode(std::string &mode);
+
+/**
  * Returns certification mode value.
  *
  * @return BPL_CERTIFICATION_MODE_ON Certification mode is ON.
