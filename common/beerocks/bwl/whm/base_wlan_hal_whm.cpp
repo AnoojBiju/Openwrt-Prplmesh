@@ -580,7 +580,6 @@ bool base_wlan_hal_whm::refresh_vap_info(int id, const AmbiorixVariant &ap_obj)
             m_vapsExtInfo.erase(m_radio_info.available_vaps[id].bss);
             m_radio_info.available_vaps.erase(id);
         }
-        LOG(ERROR) << "VAP MAC empty return early";
         return true;
     }
 
