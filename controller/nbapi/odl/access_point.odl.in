@@ -10,10 +10,10 @@
     select @CONTROLLER_ROOT_DM@.Network.AccessPoint {
         string SSID = "prplMesh";
         object Security {
-            /*
-            ** Strings PreSharedKey, KeyPassphrase, SAEPassphrase added
-            ** here when ModeEnabled set to "WPA2-Personal"
-            */
+            string PreSharedKey;
+            string KeyPassphrase;
+            string SAEPassphrase;
+
             string ModeEnabled {
                 default "None";
                 on action validate call check_enum [
@@ -37,14 +37,4 @@
         bool Band5GH = false;
         bool Band6G = false;
     }
-}
-
-%populate {
-    on event "dm:object-changed" call event_rm_params
-        filter 'object matches "@CONTROLLER_ROOT_DM_literal@\.Network\.AccessPoint\.[0-9]*\.Security\." &&
-                parameters.ModeEnabled.from == "WPA2-Personal"';
-
-    on event "dm:object-changed" call event_add_hidden_params
-        filter 'object matches "@CONTROLLER_ROOT_DM_literal@\.Network\.AccessPoint\.[0-9]*\.Security\." &&
-                parameters.ModeEnabled.to == "WPA2-Personal"';
 }
