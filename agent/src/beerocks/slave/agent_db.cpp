@@ -177,7 +177,9 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
     if (idx) {
         m_ambiorix_datamodel->remove_instance("X_PRPL-ORG.prplMeshAgent.Fronthaul", idx);
     }
-
+#ifndef ENABLE_NBAPI
+    return "";
+#else
     auto inst = m_ambiorix_datamodel->add_instance("X_PRPL-ORG.prplMeshAgent.Fronthaul");
     LOG_IF(!inst.size(), FATAL)
         << "Could not create X_PRPL-ORG.prplMeshAgent.Fronthaul instance for " << iface;
@@ -188,6 +190,7 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
     m_ambiorix_datamodel->set(inst, "BestState", std::string("INIT (0)"));
 
     return inst;
+#endif
 }
 
 void AgentDB::dm_update_fronthaul_object(const std::string &path, const std::string &cur,
