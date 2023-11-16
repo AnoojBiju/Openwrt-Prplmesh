@@ -816,7 +816,7 @@ bool ap_wlan_hal_whm::generate_connected_clients_events(
                 continue;
             }
             std::string frame_body_str;
-            if (!answer->read_child<>(frame_body_str, "frame") || frame_body_str.empty()) {
+            if (!answer->read_child(frame_body_str, "frame") || frame_body_str.empty()) {
                 LOG(WARNING) << "STA connected without previously receiving a "
                                 "(re-)association frame!";
             } else {
@@ -1058,7 +1058,7 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
             msg->params.association_frame_length = 0;
 
             std::string frame_body_str;
-            if (!answer->read_child<>(frame_body_str, "frame") || frame_body_str.empty()) {
+            if (!answer->read_child(frame_body_str, "frame") || frame_body_str.empty()) {
                 LOG(WARNING) << "STA connected without previously receiving a "
                                 "(re-)association frame!";
             } else {
@@ -1167,8 +1167,9 @@ bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
     } else if (name_notification == AMX_CL_MGMT_ACT_FRAME_EVT) {
 
         std::string frame_body_str;
-        if (!event_data->read_child<>(frame_body_str, "frame") || frame_body_str.empty()) {
+        if (!event_data->read_child(frame_body_str, "frame") || frame_body_str.empty()) {
             LOG(WARNING) << "Unable to retrieve MGMT Frame from pwhm notification";
+            return false;
         }
 
         auto management_frame = create_mgmt_frame_notification(frame_body_str.c_str());

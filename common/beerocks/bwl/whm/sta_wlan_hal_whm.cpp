@@ -60,7 +60,7 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
         sta_wlan_hal_whm *hal = (static_cast<sta_wlan_hal_whm *>(context));
         std::string ep_path;
-        if (!event_data.read_child<>(ep_path, "path") || ep_path.empty()) {
+        if (!event_data.read_child(ep_path, "path") || ep_path.empty()) {
             return;
         }
 
@@ -652,20 +652,20 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
         return false;
     }
 
-    endpoint_obj->read_child<>(endpoint.connection_status, "ConnectionStatus");
+    endpoint_obj->read_child(endpoint.connection_status, "ConnectionStatus");
 
     std::string ssid_ref, ssid_path;
-    if (endpoint_obj->read_child<>(ssid_ref, "SSIDReference") &&
+    if (endpoint_obj->read_child(ssid_ref, "SSIDReference") &&
         m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
         auto ssid_obj = m_ambiorix_cl->get_object(ssid_path);
         if (!ssid_obj) {
             LOG(ERROR) << "failed to get ssid object";
             return false;
         }
-        ssid_obj->read_child<>(endpoint.bssid, "BSSID");
-        ssid_obj->read_child<>(endpoint.ssid, "SSID");
+        ssid_obj->read_child(endpoint.bssid, "BSSID");
+        ssid_obj->read_child(endpoint.ssid, "SSID");
         std::string radio_path;
-        if (ssid_obj->read_child<>(radio_path, "LowerLayers")) {
+        if (ssid_obj->read_child(radio_path, "LowerLayers")) {
             m_radio_path = radio_path;
         }
         if (!m_ambiorix_cl->get_param<>(endpoint.channel, m_radio_path, "Channel")) {
@@ -675,7 +675,7 @@ bool sta_wlan_hal_whm::read_status(Endpoint &endpoint)
     }
 
     std::string profile_ref, profile_path;
-    if (endpoint_obj->read_child<>(profile_ref, "ProfileReference") &&
+    if (endpoint_obj->read_child(profile_ref, "ProfileReference") &&
         m_ambiorix_cl->resolve_path(profile_ref + ".", profile_path)) {
         endpoint.active_profile_id = wbapi_utils::get_object_id(profile_path);
     }

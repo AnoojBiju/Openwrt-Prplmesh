@@ -61,13 +61,13 @@ bool mon_wlan_hal_whm::update_radio_stats(SRadioStats &radio_stats)
         return true;
     }
 
-    stats_obj->read_child<>(radio_stats.tx_bytes_cnt, "BytesSent");
-    stats_obj->read_child<>(radio_stats.rx_bytes_cnt, "BytesReceived");
-    stats_obj->read_child<>(radio_stats.tx_packets_cnt, "PacketsSent");
-    stats_obj->read_child<>(radio_stats.rx_packets_cnt, "PacketsReceived");
-    stats_obj->read_child<>(radio_stats.errors_sent, "ErrorsSent");
-    stats_obj->read_child<>(radio_stats.errors_received, "ErrorsReceived");
-    stats_obj->read_child<>(radio_stats.noise, "Noise");
+    stats_obj->read_child(radio_stats.tx_bytes_cnt, "BytesSent");
+    stats_obj->read_child(radio_stats.rx_bytes_cnt, "BytesReceived");
+    stats_obj->read_child(radio_stats.tx_packets_cnt, "PacketsSent");
+    stats_obj->read_child(radio_stats.rx_packets_cnt, "PacketsReceived");
+    stats_obj->read_child(radio_stats.errors_sent, "ErrorsSent");
+    stats_obj->read_child(radio_stats.errors_received, "ErrorsReceived");
+    stats_obj->read_child(radio_stats.noise, "Noise");
 
     return true;
 }
@@ -82,13 +82,13 @@ bool mon_wlan_hal_whm::update_vap_stats(const std::string &vap_iface_name, SVapS
         return true;
     }
 
-    ssid_stats_obj->read_child<>(vap_stats.tx_bytes_cnt, "BytesSent");
-    ssid_stats_obj->read_child<>(vap_stats.rx_bytes_cnt, "BytesReceived");
-    ssid_stats_obj->read_child<>(vap_stats.tx_packets_cnt, "PacketsSent");
-    ssid_stats_obj->read_child<>(vap_stats.rx_packets_cnt, "PacketsReceived");
-    ssid_stats_obj->read_child<>(vap_stats.errors_sent, "ErrorsSent");
-    ssid_stats_obj->read_child<>(vap_stats.errors_received, "ErrorsReceived");
-    ssid_stats_obj->read_child<>(vap_stats.retrans_count, "RetransCount");
+    ssid_stats_obj->read_child(vap_stats.tx_bytes_cnt, "BytesSent");
+    ssid_stats_obj->read_child(vap_stats.rx_bytes_cnt, "BytesReceived");
+    ssid_stats_obj->read_child(vap_stats.tx_packets_cnt, "PacketsSent");
+    ssid_stats_obj->read_child(vap_stats.rx_packets_cnt, "PacketsReceived");
+    ssid_stats_obj->read_child(vap_stats.errors_sent, "ErrorsSent");
+    ssid_stats_obj->read_child(vap_stats.errors_received, "ErrorsReceived");
+    ssid_stats_obj->read_child(vap_stats.retrans_count, "RetransCount");
 
     return true;
 }
@@ -497,14 +497,14 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         uint8_t operating_class(0);
         std::string time_stamp_str;
         std::string mac_address_amx;
-        non_ass_device.second.read_child<>(mac_address_amx, "MACAddress");
+        non_ass_device.second.read_child(mac_address_amx, "MACAddress");
         if (mac_address_amx.empty()) {
             continue;
         }
-        non_ass_device.second.read_child<>(signal_strength, "SignalStrength");
-        non_ass_device.second.read_child<>(channel, "Channel");
-        non_ass_device.second.read_child<>(operating_class, "OperatingClass");
-        non_ass_device.second.read_child<>(time_stamp_str, "TimeStamp");
+        non_ass_device.second.read_child(signal_strength, "SignalStrength");
+        non_ass_device.second.read_child(channel, "Channel");
+        non_ass_device.second.read_child(operating_class, "OperatingClass");
+        non_ass_device.second.read_child(time_stamp_str, "TimeStamp");
 
         amxc_ts_t time;
         memset(&time, 0, sizeof(amxc_ts_t));
