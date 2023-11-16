@@ -304,6 +304,8 @@ private:
      * class constructor.
      */
     std::unique_ptr<beerocks::CmduClient> m_slave_client;
+
+    bool certification_mode = false;
 };
 
 } // namespace son

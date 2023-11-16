@@ -1793,7 +1793,8 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
 	 * issues in WFA EasyMesh cert testing as mentioned in PPM-2638.
 	 * Needs to be removed once sniffer issues resolved.
 	 */
-        bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
+        //bool certification_mode = beerocks::bpl::cfg_get_certification_mode();
+        bool certification_mode = get_hal_conf().certification_mode;
         if (certification_mode) {
             LOG(INFO) << "In Certification mode, overriding bw to 20MHz";
             cmd = "CHAN_SWITCH " + std::to_string(csa_beacon_count) + " " + freq_str +
