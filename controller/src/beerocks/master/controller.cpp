@@ -922,6 +922,11 @@ bool Controller::autoconfig_wsc_authentication(WSC::m1 &m1, WSC::m2 &m2, uint8_t
     // Since m1 is parsed, it is in host byte order, and needs to be swapped.
     // m2 is created, and already finalized so its in network byte order, so no
     // need to swap it.
+    if (m1.getMessageLength() <= WSC::cWscAttrAuthenticator::get_initial_size() ||
+        m2.getMessageLength() <= WSC::cWscAttrAuthenticator::get_initial_size()) {
+        LOG(ERROR) << "Bad message length failure";
+        return false;
+    }
     m1.swap();
     uint8_t buf[m1.getMessageLength() + m2.getMessageLength() -
                 WSC::cWscAttrAuthenticator::get_initial_size()];
