@@ -11,14 +11,16 @@
 namespace beerocks {
 namespace bpl {
 
-class ServicePrioritizationUtils_dummy : public ServicePrioritizationUtils {
+class ServicePrioritizationUtils_cgr_mxl : public ServicePrioritizationUtils {
     virtual bool flush_rules() override;
     virtual bool apply_single_value_map(std::list<struct sInterfaceTagInfo> *iface_list,
                                         uint8_t pcp) override;
     virtual bool apply_dscp_map(std::list<struct sInterfaceTagInfo> *iface_list,
-                                struct sDscpMap *map, uint8_t default_pcp) override;
+                                struct sDscpMap *map, uint8_t default_pcp = 0) override;
     virtual bool apply_up_map(std::list<struct sInterfaceTagInfo> *iface_list,
-                              uint8_t default_pcp) override;
+                              uint8_t default_pcp = 0) override;
+
+    std::string dscp_proc_file_name = "/proc/dscp-prio-table";
 };
 
 } // namespace bpl

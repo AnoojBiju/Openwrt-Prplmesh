@@ -39,6 +39,10 @@ public:
         std::string iface_name;
         enum ePortMode tag_info;
     };
+#define DSCP_MAP_LENGTH 64
+    struct sDscpMap {
+        uint8_t dscp[DSCP_MAP_LENGTH];
+    };
 
     virtual bool flush_rules() { return false; }
     virtual bool apply_single_value_map(std::list<struct sInterfaceTagInfo> *iface_list,
@@ -47,7 +51,7 @@ public:
         return false;
     }
     virtual bool apply_dscp_map(std::list<struct sInterfaceTagInfo> *iface_list,
-                                uint8_t default_pcp = 0)
+                                struct sDscpMap *map, uint8_t default_pcp = 0)
     {
         return false;
     }
