@@ -164,6 +164,10 @@ uint8_t& cACTION_APMANAGER_CONFIGURE::channel() {
     return (uint8_t&)(*m_channel);
 }
 
+uint8_t& cACTION_APMANAGER_CONFIGURE::certification_mode() {
+    return (uint8_t&)(*m_certification_mode);
+}
+
 void cACTION_APMANAGER_CONFIGURE::class_swap()
 {
     tlvf_swap(8*sizeof(eActionOp_APMANAGER), reinterpret_cast<uint8_t*>(m_action_op));
@@ -200,6 +204,7 @@ size_t cACTION_APMANAGER_CONFIGURE::get_initial_size()
 {
     size_t class_size = 0;
     class_size += sizeof(uint8_t); // channel
+    class_size += sizeof(uint8_t); // certification_mode
     return class_size;
 }
 
@@ -210,6 +215,11 @@ bool cACTION_APMANAGER_CONFIGURE::init()
         return false;
     }
     m_channel = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
+    m_certification_mode = reinterpret_cast<uint8_t*>(m_buff_ptr__);
     if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
         return false;
