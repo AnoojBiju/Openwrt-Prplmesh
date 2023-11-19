@@ -2362,9 +2362,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             PLOG(FATAL) << "getsockopt SO_PEERCRED failed";
         }
 
-        auto db                   = AgentDB::get();
-        config_msg->channel()     = db->device_conf.front_radio.config.at(iface).configured_channel;
-        radio_manager.dm_instance = db->dm_create_fronthaul_object(iface, ucred.pid);
+        auto db               = AgentDB::get();
+        config_msg->channel() = db->device_conf.front_radio.config.at(iface).configured_channel;
+        config_msg->certification_mode() = db->device_conf.certification_mode;
+        radio_manager.dm_instance        = db->dm_create_fronthaul_object(iface, ucred.pid);
 
         return send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
     }

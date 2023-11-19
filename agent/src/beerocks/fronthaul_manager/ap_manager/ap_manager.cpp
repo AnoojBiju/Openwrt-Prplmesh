@@ -369,7 +369,8 @@ bool ApManager::create_ap_wlan_hal()
     using namespace std::placeholders; // for `_1`
 
     bwl::hal_conf_t hal_conf;
-    hal_conf.ap_acs_enabled = acs_enabled;
+    hal_conf.ap_acs_enabled     = acs_enabled;
+    hal_conf.certification_mode = certification_mode;
 
     if (!beerocks::bpl::bpl_cfg_get_hostapd_ctrl_path(m_iface, hal_conf.wpa_ctrl_path)) {
         LOG(ERROR) << "Couldn't get hostapd control path for interface " << m_iface;
@@ -1168,6 +1169,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         }
 
         acs_enabled = config->channel() == 0;
+
+        certification_mode = config->certification_mode();
 
         if (create_ap_wlan_hal()) {
             LOG(DEBUG) << "Move to ATTACHING state";
