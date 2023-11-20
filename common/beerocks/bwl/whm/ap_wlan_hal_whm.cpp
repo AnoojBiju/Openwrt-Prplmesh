@@ -104,13 +104,27 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
 
 bool ap_wlan_hal_whm::enable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
+    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
+    new_obj.add_child("Enable", true);
+    bool ret = m_ambiorix_cl->update_object(wifi_ap_path, new_obj);
+    if (!ret) {
+        LOG(ERROR) << "Failed to enable ap: " << wifi_ap_path;
+        return false;
+    }
     return true;
 }
 
 bool ap_wlan_hal_whm::disable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
+    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
+    new_obj.add_child("Enable", false);
+    bool ret = m_ambiorix_cl->update_object(wifi_ap_path, new_obj);
+    if (!ret) {
+        LOG(ERROR) << "Failed to disable ap: " << wifi_ap_path;
+        return false;
+    }
     return true;
 }
 
