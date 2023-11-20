@@ -1795,9 +1795,20 @@ bool Controller::handle_tlv_associated_sta_extended_link_metrics(const sMacAddr 
         auto metrics = std::get<1>(metrics_list);
 
         // Verify reported BSSID and data model registered STAs BSSID is same.
-        if (database.get_node_parent(
-                tlvf::mac_to_string(sta_extended_link_metric->associated_sta())) !=
-            tlvf::mac_to_string(metrics.bssid)) {
+        auto station = database.get_station(sta_extended_link_metric->associated_sta());
+        if (!station) {
+            LOG(ERROR) << "Failed to get station on db with mac: "
+                       << sta_extended_link_metric->associated_sta();
+            continue;
+        }
+
+        auto parent_bss = station->get_bss();
+        if (!parent_bss) {
+            LOG(ERROR) << "Connected BSS of the station is not found, sta mac="
+                       << sta_extended_link_metric->associated_sta();
+            continue;
+        }
+        if (parent_bss->bssid != metrics.bssid) {
             LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
                       << metrics.bssid;
             continue;
