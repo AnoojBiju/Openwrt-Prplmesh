@@ -128,6 +128,8 @@ public:
 
     virtual bool configure_service_priority(const uint8_t *data) override;
 
+    typedef std::unordered_map<std::string, std::string> parsed_obj_map_t;
+
     // Protected methods:
 protected:
     // Overload for AP events
@@ -159,6 +161,12 @@ private:
      */
     bool process_ap_bss_event(const std::string &interface,
                               const beerocks::wbapi::AmbiorixVariant *value);
+
+    /**
+     * @brief Process event "wpaCtrlEvents"
+     */
+    bool process_wpaCtrl_events(const std::string &interface,
+                                const beerocks::wbapi::AmbiorixVariant *value);
 };
 
 } // namespace whm

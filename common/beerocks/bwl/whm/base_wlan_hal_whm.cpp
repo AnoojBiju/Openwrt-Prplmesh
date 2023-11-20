@@ -47,6 +47,42 @@ base_wlan_hal_whm::base_wlan_hal_whm(HALType type, const std::string &iface_name
 
 base_wlan_hal_whm::~base_wlan_hal_whm() { base_wlan_hal_whm::detach(); }
 
+void base_wlan_hal_whm::map_event_obj_parser(std::string event_str, parsed_obj_map_t &map_obj)
+{
+    // eliminate event log level from the begining of the event string : "<3>"
+    auto idx_start = event_str.find_first_of(">");
+    if (idx_start != std::string::npos) {
+        idx_start++;
+    } else {
+        LOG(WARNING) << "empty event! event_string: " << event_str;
+        return;
+    }
+
+    // Parse all the args
+    std::stringstream ss(event_str.c_str() + idx_start);
+    std::string str_storage;
+    bool opcode = false;
+    bool mac    = false;
+    int arg     = 0;
+
+    while (std::getline(ss, str_storage, ' ')) {
+        auto idx = str_storage.find_first_of('=', idx_start);
+        if (idx == std::string::npos) {
+            if (!opcode) {
+                map_obj[bwl::EVENT_KEYLESS_PARAM_OPCODE] = str_storage;
+                opcode                                   = true;
+            } else if (!mac && beerocks::net::network_utils::is_valid_mac(str_storage)) {
+                map_obj[bwl::EVENT_KEYLESS_PARAM_MAC] = str_storage;
+                mac                                   = true;
+            } else {
+                map_obj["_arg" + std::to_string(arg++)] = str_storage;
+            }
+        } else {
+            map_obj[str_storage.substr(0, idx)] = str_storage.substr(idx + 1, std::string::npos);
+        }
+    }
+}
+
 void base_wlan_hal_whm::subscribe_to_radio_events()
 {
     // subscribe to the WiFi.Radio.iface_name.Status
@@ -268,6 +304,8 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
 }
 
 bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
+bool base_wlan_hal_whm::process_wpaCtrl_events(const std::string &interface, const beerocks::wbapi::AmbiorixVariant *value) { return true; }
 
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
@@ -714,6 +752,38 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 
     m_ambiorix_cl->subscribe_to_object_event(m_radio_path, event_handler, filter);
+}
+
+void base_wlan_hal_whm::subscribe_to_wpaCtrl_events()
+{
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string ap_path;
+        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        auto &vapsExtInfo    = hal->m_vapsExtInfo;
+        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                            [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == vapsExtInfo.end()) {
+            LOG(DEBUG) << "vap_it not found";
+            return;
+        }
+        LOG(DEBUG) << "event from iface " << vap_it->first;
+        hal->process_wpaCtrl_events(vap_it->first, &event_data);
+    };
+    event_handler->context = this;
+
+    std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
+                         "[0-9]+.$')"
+                         " && (notification == '" +
+                         AMX_CL_WPA_CTRL_EVT + "')";
+
+    m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
 
 } // namespace whm
