@@ -356,8 +356,10 @@ bool bml_internal::connect_to_platform()
 bool bml_internal::handle_nw_map_query_update(int elements_num, int last_node, void *data_buffer,
                                               bool is_query)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__ << "is_query: " << is_query;
     // Exit gracefully is no callback function has been registered
     if ((is_query && !m_cbNetMapQuery) || (!is_query && !m_cbNetMapUpdate)) {
+        LOG(DEBUG) << "Badhri Exiting gracefully as no callback is registered";
         return (true);
     }
     // Create an instance of the node iterator class
@@ -370,17 +372,17 @@ bool bml_internal::handle_nw_map_query_update(int elements_num, int last_node, v
     sNodeIter.ctx       = this;
     sNodeIter.nodes_num = elements_num;
     sNodeIter.last_node = last_node;
-
+    LOG(DEBUG) << "Badhri Above first";
     // first()
     static __thread std::function<int()> node_iter_first_cb_wrapper;
     node_iter_first_cb_wrapper = [&]() -> int { return (cNodeIter.first()); };
     sNodeIter.first            = []() -> int { return (node_iter_first_cb_wrapper()); };
-
+    LOG(DEBUG) << "Badhri Above next";
     // next()
     static __thread std::function<int()> node_iter_next_cb_wrapper;
     node_iter_next_cb_wrapper = [&]() -> int { return (cNodeIter.next()); };
     sNodeIter.next            = []() -> int { return (node_iter_next_cb_wrapper()); };
-
+    LOG(DEBUG) << "Badhri Above get_node()";
     // get_node()
     static __thread std::function<void *()> node_iter_get_node_cb_wrapper;
     node_iter_get_node_cb_wrapper = [&]() -> void * { return (cNodeIter.data()); };
@@ -388,7 +390,7 @@ bool bml_internal::handle_nw_map_query_update(int elements_num, int last_node, v
         return ((BML_NODE *)node_iter_get_node_cb_wrapper());
     };
 
-    // Execute the callback
+    LOG(DEBUG) << "Badhri Execute the callback";
     is_query ? m_cbNetMapQuery(&sNodeIter) : m_cbNetMapUpdate(&sNodeIter);
 
     return (true);
@@ -574,9 +576,10 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
         case beerocks_message::ACTION_BML_NW_MAP_RESPONSE: {
             auto response =
                 beerocks_header->addClass<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>();
+            LOG(DEBUG) << "Badhri Received ACTION_BML_NW_MAP_RESPONSE";
             uint32_t num_of_nodes = response->node_num();
             char *firstNode       = (char *)((num_of_nodes > 0) ? response->buffer(0) : nullptr);
-
+            LOG(DEBUG) << "Badhri Calling handle_nw_map_query_update()";
             // Process the message
             handle_nw_map_query_update(num_of_nodes, (int)beerocks_header->actionhdr()->last(),
                                        firstNode, true);
@@ -2838,6 +2841,7 @@ int bml_internal::unregister_topology_discovery_response()
 
 int bml_internal::nw_map_query()
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     // Command supported only on local master
     if (!is_local_master()) {
         LOG(ERROR) << "Command supported only on local master!";
@@ -2846,6 +2850,7 @@ int bml_internal::nw_map_query()
 
     // If the socket is not valid, attempt to re-establish the connection
     if (m_sockMaster == nullptr) {
+        LOG(DEBUG) << "Badhri SockMaster is null";
         int iRet = connect_to_master();
         if (iRet != BML_RET_OK)
             return iRet;
@@ -2856,7 +2861,7 @@ int bml_internal::nw_map_query()
         LOG(WARNING) << "Network map callback function was NOT registered...";
         return (-BML_RET_OP_NOT_SUPPORTED);
     }
-
+    LOG(DEBUG) << "Badhri Creating ACTION_BML_NW_MAP_REQUEST";
     // Build and send the NW_MAP_REQUEST message
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_REQUEST>(cmdu_tx);

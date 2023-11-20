@@ -29,12 +29,13 @@ using namespace son;
 void network_map::send_bml_network_map_message(db &database, int fd,
                                                ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     auto controller_ctx = database.get_controller_ctx();
     if (!controller_ctx) {
         LOG(ERROR) << "controller_ctx == nullptr";
         return;
     }
-
+    LOG(DEBUG) << "Badhri Creating ACTION_BML_NW_MAP_RESPONSE";
     auto response =
         message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(cmdu_tx, id);
     if (response == nullptr) {
@@ -71,6 +72,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     std::unordered_set<std::string> ap_list;
 
     while (!last || !get_next_node) {
+        LOG(DEBUG) << "Badhri Inside while";
         if (get_next_node) {
             n    = nullptr;
             last = database.get_next_node(n);
@@ -114,6 +116,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 controller_ctx->send_cmdu(fd, cmdu_tx);
 
                 get_next_node = false;
+                LOG(DEBUG) << "Badhri Creating ACTION_BML_NW_MAP_RESPONSE";
                 response =
                     message_com::create_vs_message<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>(
                         cmdu_tx, id);
@@ -149,6 +152,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     }
 
     beerocks_header->actionhdr()->last() = 1;
+    LOG(DEBUG) << "Badhri Sending ACTION_BML_NW_MAP_RESPONSE";
     controller_ctx->send_cmdu(fd, cmdu_tx);
     //LOG(DEBUG) << "sending message, last=1";
 }
@@ -158,6 +162,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_ma
                                                const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     auto n = database.get_node(node_mac);
     if (n == nullptr) {
         LOG(ERROR) << "get_node(), node_mac=" << node_mac << " , n == nullptr !!!";
@@ -172,6 +177,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                                                const std::ptrdiff_t &buffer_size,
                                                bool force_client_disconnect)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     auto node = (BML_NODE *)tx_buffer;
 
     if (n == nullptr) {
@@ -349,6 +355,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
             }
         }
     }
+    LOG(DEBUG) << "Badhri Reached EOF of " << __func__;
     return node_len;
 }
 

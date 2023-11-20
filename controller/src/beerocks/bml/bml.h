@@ -101,6 +101,9 @@ int bml_ping(BML_CTX ctx);
  * @return BML_RET_OK on success.
  */
 int bml_nw_map_register_query_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb);
+void connection_map_to_console_cb(const struct BML_NODE_ITER *node_iter);
+void connection_map_cb(const struct BML_NODE_ITER *node_iter, bool to_console);
+int bml_nw_map_register_external_query_cb(BML_CTX ctx);
 
 /**
  * Registers a callback functions for the network map update operation.

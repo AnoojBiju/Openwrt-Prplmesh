@@ -168,10 +168,54 @@ int bml_nw_map_register_query_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
     bml_internal *pBML = static_cast<bml_internal *>(ctx);
-
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     pBML->register_nw_map_query_cb(cb);
 
     return (BML_RET_OK);
+}
+
+int bml_nw_map_register_external_query_cb(BML_CTX ctx)
+{
+    if (!ctx)
+        return (-BML_RET_INVALID_ARGS);
+    bml_internal *pBML = static_cast<bml_internal *>(ctx);
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
+    pBML->register_nw_map_query_cb(connection_map_to_console_cb);
+
+    return (BML_RET_OK);
+}
+
+void connection_map_to_console_cb(const struct BML_NODE_ITER *node_iter)
+{
+    LOG(DEBUG) << "connection_map_to_console_cb entrance";
+    connection_map_cb(node_iter, true);
+}
+
+void connection_map_cb(const struct BML_NODE_ITER *node_iter, bool to_console)
+{
+    LOG(DEBUG) << "connection_map_cb entrance";
+    char *data = (char *)bml_get_user_data(node_iter->ctx);
+    if (!data) {
+        LOG(DEBUG) << "connection_map_cd data is NULL!!!";
+        return;
+    }
+
+    LOG(DEBUG) << "connection_map_cd data: " << data;
+
+    if (!to_console) {
+        return;
+    }
+
+    struct BML_NODE *current_node;
+    if (node_iter->first() != BML_RET_OK) {
+        LOG(ERROR) << "node_iter->first() != BML_RET_OK!!!";
+        return;
+    }
+
+    current_node = node_iter->get_node();
+    if (!current_node) {
+        LOG(ERROR) << "current_node is empty";
+    }
 }
 
 int bml_nw_map_register_update_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
@@ -187,10 +231,11 @@ int bml_nw_map_register_update_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
 
 int bml_nw_map_query(BML_CTX ctx)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     if (!ctx)
         return (-BML_RET_INVALID_ARGS);
     bml_internal *pBML = static_cast<bml_internal *>(ctx);
-
+    LOG(DEBUG) << "Badhri Calling nw_map_query";
     return (pBML->nw_map_query());
 }
 

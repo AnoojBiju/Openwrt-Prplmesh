@@ -732,6 +732,7 @@ void cli_bml::map_query_cb(const struct BML_NODE_ITER *node_iter, bool to_consol
 
 void cli_bml::connection_map_cb(const struct BML_NODE_ITER *node_iter, bool to_console)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     cli_bml *pThis = (cli_bml *)bml_get_user_data(node_iter->ctx);
 
     if (!pThis) {
@@ -785,6 +786,7 @@ void cli_bml::map_query_to_console_cb(const struct BML_NODE_ITER *node_iter)
 
 void cli_bml::connection_map_to_console_cb(const struct BML_NODE_ITER *node_iter)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     cli_bml::connection_map_cb(node_iter, true);
     cli_bml *pThis = (cli_bml *)bml_get_user_data(node_iter->ctx);
     if (!pThis) {
