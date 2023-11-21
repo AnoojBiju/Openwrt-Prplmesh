@@ -81,7 +81,8 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     apt-get update && \
     apt-get install -y \
     liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
     chmod +x /usr/bin/repo
