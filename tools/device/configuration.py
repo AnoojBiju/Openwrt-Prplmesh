@@ -62,13 +62,11 @@ def configure_device(device: GenericDevice, configuration_file: Path):
         shell.expect(device.serial_prompt)
         shell.sendline("sysctl -w kernel.printk='0 4 1 7'")
         shell.expect(device.serial_prompt)
-        shell.sendline(f"rm -rf {conf_file_location} && touch {conf_file_location}")
-        shell.expect(device.serial_prompt)
         shell.sendline(f"cat << 'END_OF_TRANSMISSION' > {conf_file_location}")
         shell.expect("> ")
         with open(str(configuration_file)) as config_file:
             # Write the configuration file line by line on the device:
-            for line in config_file.readlines():
+            for line in config_file:
                 shell.sendstring(line)
                 shell.expect("> ")
                 md5.update(line.encode())
