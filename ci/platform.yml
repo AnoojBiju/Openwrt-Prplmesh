@@ -198,8 +198,6 @@ test-on-turris-omnia:
     TARGET_DEVICE_NAME: turris-omnia-1
     OPENWRT_IMAGE: "${TURRIS_OMNIA_FULLIMAGE}"
   needs: ["build-for-turris-omnia"]
-  # remove once PCF-695 is fixed:
-  retry: 1
 
 test-on-turris-omnia-legacy:
   extends: .test-on-target-legacy
@@ -220,8 +218,6 @@ test-on-glinet-b1300:
     OPENWRT_IMAGE: "${GLINET_B1300_FULLIMAGE}"
   needs: ["build-for-glinet-b1300"]
   allow_failure: true
-  # remove once PCF-695 is fixed:
-  retry: 1
 
 test-on-glinet-b1300-legacy:
   extends: .test-on-target-legacy
@@ -266,6 +262,7 @@ boardfarm-on-nec-wx3000hp-stability:
   parallel: 10
   rules:
     - if: '$STABILITY_TESTS == "yes"'
+  retry: 0
 
 boardfarm-on-turris-omnia-rdkb:
   extends: .test-on-rdkb
@@ -295,6 +292,7 @@ boardfarm-on-turris-omnia-rdkb-stability:
   parallel: 10
   rules:
     - if: '$STABILITY_TESTS == "yes"'
+  retry: 0
 
 run-certification-tests-R1-platform-essensium:
   extends: .run-certification-tests-R1

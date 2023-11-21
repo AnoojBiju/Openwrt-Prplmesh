@@ -283,6 +283,7 @@ test-gw-repeater:
     - job: build-in-docker-legacy
   tags:
     - docker-test
+  retry: 2
 
 boardfarm-tests:
   stage: test
@@ -299,12 +300,14 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
   timeout: 30m
+  retry: 2
 
 boardfarm-stability-tests:
   extends: boardfarm-tests
   parallel: 10
   rules:
     - if: "$STABILITY_TESTS"
+  retry: 0
 
 run-certification-tests-R1-prplmesh-essensium:
   extends: .run-certification-tests-R1

@@ -136,7 +136,7 @@
     - targets
   timeout: 20m
   # remove once PCF-695 is fixed:
-  retry: 1
+  retry: 2
 
 .test-on-target-legacy:
   extends: .test-on-target
@@ -151,6 +151,8 @@
     - for i in $ALL_TARGETS ; do ssh "$i" 'pgrep -f beerocks | xargs kill -9 2>/dev/null' || true ; done
     - tools/deploy_firmware.py --device "$TARGET_DEVICE" --target-name "$TARGET_DEVICE_NAME" --image "$OPENWRT_IMAGE" --configuration ci/configuration/boardfarm/"$TARGET_DEVICE_NAME".sh
     - tools/deploy_ipk.sh $TARGET_DEVICE_NAME "build/$TARGET_DEVICE/"prplmesh.ipk
+  # remove once PCF-695 is fixed:
+  retry: 2
 
 .test-on-rdkb:
   stage: test
@@ -173,6 +175,8 @@
   tags:
     - targets
   timeout: 20m
+  # remove once PCF-695 is fixed:
+  retry: 2
 
 .run-certification-tests:
   interruptible: false
