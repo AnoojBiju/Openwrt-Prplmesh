@@ -43,7 +43,6 @@
 
 #include <iterator>
 #include <numeric>
-#include <type_traits>
 
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////// Local Module Definitions //////////////////////////
@@ -297,63 +296,11 @@ static void build_channels_list(ieee1905_1::CmduMessageTx &cmdu_tx,
 using namespace beerocks;
 using namespace son;
 
-#define EACH_AP_MAN_STATE(DO)                                                                      \
-    DO(INIT)                                                                                       \
-    DO(WAIT_FOR_CONFIGURATION)                                                                     \
-    DO(ATTACHING)                                                                                  \
-    DO(ATTACHED)                                                                                   \
-    DO(OPERATIONAL)                                                                                \
-    DO(TERMINATED)
-
-enum class ApManager::eApManagerState {
-#define DEFINE_eApManagerState(X) X,
-    EACH_AP_MAN_STATE(DEFINE_eApManagerState)
-#undef DEFINE_eApManagerState
-};
-
-auto ApManager::sApManagerState::operator=(eApManagerState state) -> eApManagerState
-{
-    cur = state;
-    max = std::min(eApManagerState::OPERATIONAL, std::max(max, cur));
-
-    // The UDS server does not expect messages yet
-    if (cur == eApManagerState::INIT) {
-        return cur;
-    }
-
-    auto to_string = [](eApManagerState e) {
-        const char *arr[] = {
-#define eApManagerState_to_string(x) #x " (",
-            EACH_AP_MAN_STATE(eApManagerState_to_string)
-#undef eApManagerState_to_string
-        };
-        auto i = (std::underlying_type<eApManagerState>::type)e;
-
-        return arr[i] + std::to_string(i) + ')';
-    };
-
-    auto request = beerocks::message_com::create_vs_message<
-        beerocks_message::cACTION_APMANAGER_STATE_NOTIFICATION>(parent->cmdu_tx);
-    if (!request) {
-        LOG(ERROR) << "Failed building message!";
-        return cur;
-    }
-
-    request->set_curstate(to_string(cur));
-    request->set_maxstate(to_string(max));
-    parent->send_cmdu(parent->cmdu_tx);
-
-    return cur;
-}
-
-#undef EACH_AP_MAN_STATE
-
 ApManager::ApManager(const std::string &iface, beerocks::logging &logger,
                      std::shared_ptr<beerocks::CmduClientFactory> slave_cmdu_client_factory,
                      std::shared_ptr<beerocks::TimerManager> timer_manager,
                      std::shared_ptr<beerocks::EventLoop> event_loop)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), m_logger(logger),
-      m_state({this, eApManagerState::TERMINATED}),
       m_slave_cmdu_client_factory(slave_cmdu_client_factory), m_timer_manager(timer_manager),
       m_event_loop(event_loop)
 {
@@ -3111,8 +3058,6 @@ void ApManager::allow_expired_clients()
         }
     }
 }
-
-bool ApManager::is_operational() const { return m_state == eApManagerState::OPERATIONAL; }
 
 bool ApManager::zwdfs_ap() const
 {

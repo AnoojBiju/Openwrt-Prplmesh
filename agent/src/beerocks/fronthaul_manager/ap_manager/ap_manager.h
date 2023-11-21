@@ -45,7 +45,14 @@ public:
      */
     bool stop();
 
-    enum class eApManagerState;
+    enum class eApManagerState {
+        INIT,
+        WAIT_FOR_CONFIGURATION,
+        ATTACHING,
+        ATTACHED,
+        OPERATIONAL,
+        TERMINATED
+    };
 
     /**
      * disallowed client parameters
@@ -59,7 +66,7 @@ public:
         std::chrono::steady_clock::time_point timeout;
     };
 
-    bool is_operational() const;
+    eApManagerState get_state() const { return m_state; }
 
     /**
      * @brief Returns 'true' if the AP support ZWDFS.
@@ -225,15 +232,7 @@ private:
 
     int bss_steer_valid_int          = BSS_STEER_VALID_INT_BTT;
     int bss_steer_imminent_valid_int = BSS_STEER_IMMINENT_VALID_INT_BTT;
-    struct sApManagerState {
-        ApManager *parent;
-        eApManagerState cur;
-        eApManagerState max;
-
-        eApManagerState operator=(eApManagerState state);
-
-        operator eApManagerState() const { return cur; }
-    } m_state;
+    eApManagerState m_state          = eApManagerState::TERMINATED;
     std::chrono::steady_clock::time_point m_state_timeout;
     std::vector<disallowed_client_t> m_disallowed_clients;
 

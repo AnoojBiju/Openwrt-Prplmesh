@@ -32,12 +32,12 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
-#include <beerocks/tlvf/beerocks_message_action.h>
 #include <beerocks/tlvf/beerocks_message_apmanager.h>
 #include <beerocks/tlvf/beerocks_message_backhaul.h>
 #include <beerocks/tlvf/beerocks_message_control.h>
 #include <beerocks/tlvf/beerocks_message_monitor.h>
 #include <beerocks/tlvf/beerocks_message_platform.h>
+#include <easylogging++.h>
 #include <mapf/common/utils.h>
 #include <tlvf/AttrList.h>
 #include <tlvf/ieee_1905_1/tlvAlMacAddress.h>
@@ -70,12 +70,6 @@
 #include <bpl/bpl_cfg.h>
 #include <bpl/bpl_err.h>
 
-#include <easylogging++.h>
-
-#include <cstring>
-
-#include <sys/socket.h>
-
 //////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// Constatnts /////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -99,52 +93,6 @@ constexpr std::chrono::seconds WAIT_FOR_FRONTHAUL_JOINED_TIMEOUT_SEC  = std::chr
 using namespace beerocks;
 using namespace net;
 using namespace son;
-
-#define EACH_SLAVESTATE(DO)                                                                        \
-    DO(STATE_WAIT_BEFORE_INIT)                                                                     \
-    DO(STATE_INIT)                                                                                 \
-    DO(STATE_LOAD_PLATFORM_CONFIGURATION)                                                          \
-    DO(STATE_CONNECT_TO_PLATFORM_MANAGER)                                                          \
-    DO(STATE_WAIT_FOR_PLATFORM_MANAGER_REGISTER_RESPONSE)                                          \
-    DO(STATE_CONNECT_TO_BACKHAUL_MANAGER)                                                          \
-    DO(STATE_WAIT_RETRY_CONNECT_TO_BACKHAUL_MANAGER)                                               \
-    DO(STATE_WAIT_FOR_BACKHAUL_MANAGER_REGISTER_RESPONSE)                                          \
-    DO(STATE_JOIN_INIT)                                                                            \
-    DO(STATE_WAIT_FOR_FRONTHAUL_THREADS_JOINED)                                                    \
-    DO(STATE_BACKHAUL_ENABLE)                                                                      \
-    DO(STATE_SEND_BACKHAUL_MANAGER_ENABLE)                                                         \
-    DO(STATE_WAIT_FOR_BACKHAUL_MANAGER_CONNECTED_NOTIFICATION)                                     \
-    DO(STATE_BACKHAUL_MANAGER_CONNECTED)                                                           \
-    DO(STATE_WAIT_FOR_AUTO_CONFIGURATION_COMPLETE)                                                 \
-    DO(STATE_OPERATIONAL)                                                                          \
-    DO(STATE_STOPPED)
-
-enum slave_thread::eSlaveState : int {
-#define DEFINE_eSlaveState(X) X,
-    EACH_SLAVESTATE(DEFINE_eSlaveState)
-#undef DEFINE_eSlaveState
-};
-
-auto slave_thread::sSlaveState::operator=(eSlaveState state) -> eSlaveState
-{
-    cur = state;
-    max = std::min(STATE_OPERATIONAL, std::max(max, cur));
-
-    auto to_string = [](eSlaveState e) {
-        const char *arr[] = {
-#define eSlaveState_to_string(x) #x " (",
-            EACH_SLAVESTATE(eSlaveState_to_string)
-#undef eSlaveState_to_string
-        };
-
-        return arr[e] + (sizeof("STATE_") - 1) + std::to_string(e) + ')';
-    };
-
-    AgentDB::get()->dm_set_agent_state(to_string(cur), to_string(max));
-
-    return state;
-}
-#undef EACH_SLAVESTATE
 
 slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
     : cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer)), config(conf), logger(logger_)
@@ -548,11 +496,6 @@ bool slave_thread::read_platform_configuration()
         return false;
     }
     db->device_conf.local_controller = temp_int;
-
-    std::string mgmt_mode;
-    bpl::cfg_get_management_mode(mgmt_mode);
-    db->dm_set_management_and_controller_mode(mgmt_mode);
-
     if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'operating_mode'";
         return false;
@@ -2347,7 +2290,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
 
         radio_manager.ap_manager_fd = fd;
 
-        m_cmdu_server->set_client_name(fd, std::string("ap manager") + iface);
+        static const std::string client_name("ap manager ");
+        m_cmdu_server->set_client_name(fd, client_name + iface);
 
         auto config_msg =
             message_com::create_vs_message<beerocks_message::cACTION_APMANAGER_CONFIGURE>(cmdu_tx);
@@ -2356,15 +2300,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        ucred ucred;
-        socklen_t len = sizeof(ucred);
-        if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
-            PLOG(FATAL) << "getsockopt SO_PEERCRED failed";
-        }
-
-        auto db                   = AgentDB::get();
-        config_msg->channel()     = db->device_conf.front_radio.config.at(iface).configured_channel;
-        radio_manager.dm_instance = db->dm_create_fronthaul_object(iface, ucred.pid);
+        auto db               = AgentDB::get();
+        config_msg->channel() = db->device_conf.front_radio.config.at(iface).configured_channel;
 
         return send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
     }
@@ -2375,21 +2312,6 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
     }
 
     auto &radio_manager = m_radio_managers[fronthaul_iface];
-
-    if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_STATE_NOTIFICATION) {
-        auto notification =
-            beerocks_header->addClass<beerocks_message::cACTION_APMANAGER_STATE_NOTIFICATION>();
-
-        if (!notification) {
-            LOG(ERROR) << "addClass cACTION_APMANAGER_STATE_NOTIFICATION failed";
-            return false;
-        }
-
-        AgentDB::get()->dm_update_fronthaul_object(
-            radio_manager.dm_instance, notification->curstate_str(), notification->maxstate_str());
-
-        return true;
-    }
 
     if (beerocks_header->action_op() == beerocks_message::ACTION_APMANAGER_HEARTBEAT_NOTIFICATION) {
         radio_manager.ap_manager_last_seen       = std::chrono::steady_clock::now();
@@ -4788,8 +4710,6 @@ bool slave_thread::send_cmdu_to_controller(const std::string &fronthaul_iface,
 
     return m_broker_client->send_cmdu(cmdu_tx, dst_addr, db->bridge.mac);
 }
-
-void slave_thread::fsm_stop() { m_agent_state = STATE_STOPPED; }
 
 bool slave_thread::send_cmdu(int fd, ieee1905_1::CmduMessageTx &cmdu_tx)
 {

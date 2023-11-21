@@ -278,12 +278,3 @@ cACTION_APMANAGER_CHANNELS_LIST_RESPONSE:
 cACTION_APMANAGER_SET_MAP_CONTROLLER_PROFILE:
   _type: class
   profile: wfa_map::tlvProfile2MultiApProfile::eMultiApProfile
-
-cACTION_APMANAGER_STATE_NOTIFICATION:
-  _type: class
-  curstate:
-    _type: char
-    _length: [32]
-  maxstate:
-    _type: char
-    _length: [32]
