@@ -166,15 +166,21 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos master (wps fix)"
-        OPENWRT_TOOLCHAIN_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
-        OPENWRT_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
+        dbg "Haze platform, build on prplos master + PWHM 5.15.3"
+        OPENWRT_TOOLCHAIN_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
+        OPENWRT_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
         # Temporary workaround for Haze build failure
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
+    elif [[ "turris-omnia" == "$TARGET_DEVICE" ]] ; then
+        dbg "Turris platform, build on prplos master + PWHM 5.15.3"
+        OPENWRT_TOOLCHAIN_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
+        OPENWRT_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
+        # Temporary workaround for Turris build failure
+        sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-v3.0.0"
-        OPENWRT_TOOLCHAIN_VERSION='43a0c60e0268a208bb65e55ce472392faa9c04d7'
-        OPENWRT_VERSION='43a0c60e0268a208bb65e55ce472392faa9c04d7'
+        dbg "OSP platform, build on prplos master + PWHM 5.15.3"
+        OPENWRT_TOOLCHAIN_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
+        OPENWRT_VERSION='7474c6c20f877d47fc5dcdd888d6b5e9f4273be6'
     else
         dbg "Building on prplOS-next"
     fi
