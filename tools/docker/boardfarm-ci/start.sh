@@ -1,4 +1,4 @@
 #!/bin/bash
 echo 'wait for DUTs'
-sleep 20
+sleep 30
 echo 'starting boardfarm'
