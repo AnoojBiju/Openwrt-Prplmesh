@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
                 return !set_ssid(argc, argv);
             } else if (command_string == "set_security") {
                 return !set_security(argc, argv);
+            } else if (command_string == "version") {
+                prpl_cli.print_version();
             } else if (command_string == "help") {
                 prpl_cli.print_help();
             } else {

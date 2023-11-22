@@ -1254,9 +1254,8 @@ bool network_utils::arp_send(const std::string &iface, const std::string &dst_ip
     // Send ethernet frame to socket.
     for (int i = 0; i < count; i++) {
         // LOG_MONITOR(DEBUG) << "ARP to ip=" << dest_ip << " mac=" << dest_mac;
-        if (sendto(arp_socket, packet_buffer, tx_len, 0, (struct sockaddr *)&sock, sizeof(sock)) <=
-            0) {
-            LOG(ERROR) << "sendto() failed";
+        if (sendto(arp_socket, packet_buffer, tx_len, 0, (sockaddr *)&sock, sizeof(sock)) <= 0) {
+            PLOG(ERROR) << "sendto(" << arp_socket << ") failed";
         }
     }
     if (new_socket) {

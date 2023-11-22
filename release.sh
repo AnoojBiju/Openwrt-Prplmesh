@@ -27,12 +27,12 @@ sed -ri "s/prplmesh_VERSION \"[0-9]+\.[0-9]+\.[0-9]+\"/prplmesh_VERSION \"$VERSI
 # date gen_changelog.py will use at the next invocation will not be
 # the same as the one stored in the CHANGELOG.md file (as the tag will
 # have been moved a few seconds later).
-git tag "$VERSION" -m "prplMesh release $VERSION"
+git tag -a "$VERSION" -m "prplMesh release $VERSION"
 tools/gen_changelog.py -U > CHANGELOG.md
 
 git add "$VERSION_FILE"
 git add CHANGELOG.md
 git commit -s -m "Prepare release $VERSION"
 # Move the tag to our final commit:
-git tag -f "$VERSION" -m "prplMesh release $VERSION"
+git tag -a -f "$VERSION" -m "prplMesh release $VERSION"
 echo "The release has been created, check the result before pushing it."
