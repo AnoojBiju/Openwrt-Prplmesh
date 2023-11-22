@@ -318,21 +318,24 @@ bool ServicePrioritizationTask::qos_setup_single_value_map(uint8_t pcp)
 bool ServicePrioritizationTask::qos_setup_dscp_map()
 {
     uint8_t pcp = 0;
-    auto db     = AgentDB::get();
+    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> iface_list;
+    bpl::ServicePrioritizationUtils::sDscpMap dscp_map = {};
+    auto db                                            = AgentDB::get();
 
     LOG(DEBUG) << "ServicePrioritizationTask::qos_setup_dscp_map - DSCP custom map used for PCP";
 
     pcp = db->traffic_separation.default_pcp;
     LOG(DEBUG) << "Default PCP = " << pcp;
 
-    std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> iface_list;
     ServicePrioritizationTask::gather_iface_details(&iface_list);
+    std::copy(db->service_prioritization.dscp_mapping_table.begin(),
+              db->service_prioritization.dscp_mapping_table.end(), dscp_map.dscp);
 
     qos_flush_setup();
 
     //TODO: PPM-2389, drive ebtables or external software
     // as per vendor specific in the Service Prioritization utility
-    return service_prio_utils->apply_dscp_map(&iface_list, pcp);
+    return service_prio_utils->apply_dscp_map(&iface_list, &dscp_map, pcp);
 }
 
 bool ServicePrioritizationTask::qos_setup_up_map()

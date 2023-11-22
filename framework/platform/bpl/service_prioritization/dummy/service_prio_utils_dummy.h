@@ -16,7 +16,7 @@ class ServicePrioritizationUtils_dummy : public ServicePrioritizationUtils {
     virtual bool apply_single_value_map(std::list<struct sInterfaceTagInfo> *iface_list,
                                         uint8_t pcp) override;
     virtual bool apply_dscp_map(std::list<struct sInterfaceTagInfo> *iface_list,
-                                uint8_t default_pcp) override;
+                                struct sDscpMap *map, uint8_t default_pcp) override;
     virtual bool apply_up_map(std::list<struct sInterfaceTagInfo> *iface_list,
                               uint8_t default_pcp) override;
 };
