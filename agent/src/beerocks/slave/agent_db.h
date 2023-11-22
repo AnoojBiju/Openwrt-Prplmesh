@@ -18,16 +18,13 @@
 #include <beerocks/tlvf/enums/eDfsState.h>
 #include <beerocks/tlvf/structs/sSupportedBandwidth.h>
 #include <bwl/sta_wlan_hal.h>
+#include <memory>
+#include <mutex>
 #include <tlvf/WSC/configData.h>
 #include <tlvf/wfa_map/tlvChannelPreference.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2MultiApProfile.h>
 #include <tlvf/wfa_map/tlvServicePrioritizationRule.h>
-
-#include <cstdint>
-#include <memory>
-#include <mutex>
-#include <string>
 #include <unordered_set>
 
 #ifdef ENABLE_NBAPI
@@ -538,15 +535,6 @@ public:
      * @return True if success otherwise false.
      */
     bool dm_set_agent_mac(const std::string &mac);
-
-    void dm_set_management_and_controller_mode(const std::string &mgmt_mode);
-
-    void dm_set_agent_state(const std::string &cur, const std::string &max);
-
-    std::string dm_create_fronthaul_object(const std::string &iface, int32_t pid);
-
-    void dm_update_fronthaul_object(const std::string &path, const std::string &cur,
-                                    const std::string &max);
 
     /**
      * @brief 1905.1 Neighbor device information

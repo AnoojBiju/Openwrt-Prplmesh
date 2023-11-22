@@ -10,19 +10,7 @@
 %define {
 
     // Define main data model
-    object X_PRPL-ORG {
-        %read-only object prplMeshAgent {
-            %read-only string MACAddress = "00:00:00:00:00:00";
-            %read-only string CurrentState = "";
-            %read-only string BestState = "";
-            %read-only string ManagementMode = "";
-            %read-only object Fronthaul [] {
-                counted with FronthaulNumberOfEntries;
-                %read-only string Iface = "";
-                %read-only int32 PID = 0;
-                %read-only string CurrentState = "";
-                %read-only string BestState = "";
-            }
-        }
+    object Agent {
+        %read-only string MACAddress = "00:00:00:00:00:00";
     }
 }

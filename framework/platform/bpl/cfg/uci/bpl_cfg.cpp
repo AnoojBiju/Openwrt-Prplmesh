@@ -92,12 +92,6 @@ int cfg_get_management_mode()
     return retVal;
 }
 
-int cfg_get_management_mode(std::string &mode)
-{
-    mode.resize(BPL_GW_DB_MANAGE_MODE_LEN);
-    return cfg_get_prplmesh_param("management_mode", &mode[0], BPL_GW_DB_MANAGE_MODE_LEN);
-}
-
 int cfg_get_operating_mode()
 {
     int retVal                            = 0;
