@@ -136,7 +136,8 @@ bool write_dscp_map_to_proc(uint8_t *dscp, std::string filename)
     }
 
     for (i = 0; i < DSCP_MAP_LENGTH; i++) {
-        dscp_proc_entry << "dscp " << i << " " << dscp[i];
+        dscp_proc_entry << "dscp " << i << " " << std::to_string(dscp[i]) << std::endl;
+        LOG(DEBUG) << "dscp " << i << " " << std::to_string(dscp[i]) << std::endl;
     }
 
     dscp_proc_entry.close();
