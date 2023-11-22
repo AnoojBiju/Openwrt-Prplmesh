@@ -94,5 +94,5 @@ RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
 ADD get-git-hash.sh /bin/
 
 RUN get-git-hash.sh meta-prplmesh && \
-    get-git-hash.sh meta-amx && \
-    get-git-hash.sh meta-componentlst
+    get-git-hash.sh meta-amx
+    
