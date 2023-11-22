@@ -6,81 +6,48 @@
 * See LICENSE file for more details.
 */
 
-#include <bcl/beerocks_os_utils.h>
-#include <bcl/beerocks_string_utils.h>
-#include <easylogging++.h>
+#include "service_prio_utils_cgr_mxl.h"
 
 #include <bcl/beerocks_event_loop_impl.h>
+#include <bcl/beerocks_os_utils.h>
+#include <bcl/beerocks_string_utils.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 
-#include "service_prio_utils_osp_mxl.h"
+#include <easylogging++.h>
 
 namespace beerocks {
 namespace bpl {
 
-enum routing_direction {
-    PREROUTING,
-    POSTROUTING,
-};
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-const char *routing_direction_str(routing_direction enum_value) {
-    switch (enum_value) {
-    case PREROUTING:  return "PREROUTING";
-    case POSTROUTING: return "POSTROUTING";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
+void create_custom_ebtable_chains(const std::string &prerouting_chain_name,
+                                  const std::string &postrouting_chain_name)
+{
+    std::string cmd_preset;
+    std::string cmd;
+
+    // create custom chains
+    cmd_preset = "ebtables -t nat -N ";
+    cmd        = cmd_preset + prerouting_chain_name;
+    beerocks::os_utils::system_call(cmd);
+    cmd = cmd_preset + postrouting_chain_name;
+    beerocks::os_utils::system_call(cmd);
+
+    // Append custom chains in PREROUTING and POSTROUTING NAT tables
+    cmd_preset = "ebtables -t nat -A ";
+    cmd        = cmd_preset + "PREROUTING -j " + prerouting_chain_name;
+    beerocks::os_utils::system_call(cmd);
+    cmd = cmd_preset + "POSTROUTING -j " + postrouting_chain_name;
+    beerocks::os_utils::system_call(cmd);
 }
-std::ostream &operator<<(std::ostream &out, routing_direction value) { return out << routing_direction_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
 
-enum ebtables_remove_action {
-    FLUSH_RULE,
-    DELETE_RULE,
-    DELETE_CHAIN,
-};
-// Enum AutoPrint generated code snippet begining- DON'T EDIT!
-// clang-format off
-const char *ebtables_remove_action_str(ebtables_remove_action enum_value) {
-    switch (enum_value) {
-    case FLUSH_RULE:   return "FLUSH_RULE";
-    case DELETE_RULE:  return "DELETE_RULE";
-    case DELETE_CHAIN: return "DELETE_CHAIN";
-    }
-    static std::string out_str = std::to_string(int(enum_value));
-    return out_str.c_str();
-}
-std::ostream &operator<<(std::ostream &out, ebtables_remove_action value) { return out << ebtables_remove_action_str(value); }
-// clang-format on
-// Enum AutoPrint generated code snippet end
-
-#define PREROUTING_CHAIN_NAME "service_prio_in"
-#define POSTROUTING_CHAIN_NAME "service_prio_out"
-
-static void apply_ebtables_rules(const std::string &prerouting_chain_name,
-                                 const std::string &postrouting_chain_name,
-                                 const std::string &iface_name,
-                                 ServicePrioritizationUtils::ePortMode tag_mode,
-                                 uint8_t default_pcp)
+void apply_ebtables_rules(const std::string &prerouting_chain_name,
+                          const std::string &postrouting_chain_name, const std::string &iface_name,
+                          ServicePrioritizationUtils::ePortMode tag_mode, uint8_t default_pcp)
 {
     std::string cmd_preset = "ebtables -t nat -A ";
     std::string cmd;
     LOG(DEBUG) << "Apply rules for " << iface_name;
     cmd.reserve(200);
-
-    // create custom chains
-    cmd = "ebtables -t nat -N " + prerouting_chain_name;
-    beerocks::os_utils::system_call(cmd);
-    cmd = "ebtables -t nat -N " + postrouting_chain_name;
-    beerocks::os_utils::system_call(cmd);
-
-    cmd = cmd_preset + "PREROUTING -j " + prerouting_chain_name;
-    beerocks::os_utils::system_call(cmd);
-    cmd = cmd_preset + "POSTROUTING -j " + postrouting_chain_name;
-    beerocks::os_utils::system_call(cmd);
 
     /* Below are the example commands for different tagged modes
 TAGGED_PORT_PRIMARY_TAGGED
@@ -124,7 +91,7 @@ UNTAGGED_PORT
     }
 }
 
-void remove_ebtables_rules(std::string custom_chain_name, bool flush_rule, bool delete_rule,
+void remove_ebtables_rules(const std::string &custom_chain_name, bool flush_rule, bool delete_rule,
                            bool delete_chain, enum routing_direction route)
 {
     std::string cmd;
@@ -154,44 +121,80 @@ void remove_ebtables_rules(std::string custom_chain_name, bool flush_rule, bool 
     }
 }
 
-bool ServicePrioritizationUtils_osp_mxl::flush_rules()
+bool write_dscp_map_to_proc(uint8_t *dscp, const std::string &filename)
 {
-    LOG(DEBUG) << "Flushing ebtables rules";
+    int i = 0;
+    std::ofstream dscp_proc_entry(filename);
+
+    if (!dscp_proc_entry) {
+        LOG(ERROR) << "unable to open DSCP proc file " << filename;
+        return false;
+    }
+
+    for (i = 0; i < DSCP_MAP_LENGTH; i++) {
+        dscp_proc_entry << "dscp " << i << " " << std::to_string(dscp[i]) << std::endl;
+    }
+
+    dscp_proc_entry.close();
+
+    return true;
+}
+
+bool ServicePrioritizationUtils_cgr_mxl::flush_rules()
+{
+    LOG(ERROR) << "Flushing ebtable rules";
     remove_ebtables_rules(PREROUTING_CHAIN_NAME, true, true, true, PREROUTING);
     remove_ebtables_rules(POSTROUTING_CHAIN_NAME, true, true, true, POSTROUTING);
     return true;
 }
 
-bool ServicePrioritizationUtils_osp_mxl::apply_single_value_map(
+bool ServicePrioritizationUtils_cgr_mxl::apply_single_value_map(
     std::list<struct sInterfaceTagInfo> *iface_list, uint8_t pcp)
 {
-    LOG(ERROR) << __func__ << ":not Supported in OSP";
+    LOG(ERROR) << "apply_single_value_map: not Supported in CGR";
     return false;
 }
 
-bool ServicePrioritizationUtils_osp_mxl::apply_dscp_map(
+bool ServicePrioritizationUtils_cgr_mxl::apply_dscp_map(
     std::list<struct sInterfaceTagInfo> *iface_list, struct sDscpMap *map, uint8_t default_pcp)
 {
-    LOG(DEBUG) << "Applying ebtables rules";
+    LOG(DEBUG) << "Applying Ebtables";
+
+    if (map == NULL) {
+        LOG(ERROR) << "DSCP map value is null";
+        return false;
+    }
+
+    LOG(DEBUG) << "Interface details are";
+    for (auto itr = iface_list->rbegin(); itr != iface_list->rend(); itr++) {
+        LOG(DEBUG) << "Iface name = " << itr->iface_name << ", type = " << itr->tag_info;
+    }
+
+    create_custom_ebtable_chains(PREROUTING_CHAIN_NAME, POSTROUTING_CHAIN_NAME);
 
     for (auto itr = iface_list->rbegin(); itr != iface_list->rend(); itr++) {
         apply_ebtables_rules(PREROUTING_CHAIN_NAME, POSTROUTING_CHAIN_NAME, itr->iface_name,
                              itr->tag_info, default_pcp);
     }
 
+    if (!write_dscp_map_to_proc(map->dscp, dscp_proc_file_name)) {
+        LOG(ERROR) << "DSCP proc writing failed";
+        return false;
+    }
+
     return true;
 }
 
-bool ServicePrioritizationUtils_osp_mxl::apply_up_map(
+bool ServicePrioritizationUtils_cgr_mxl::apply_up_map(
     std::list<struct sInterfaceTagInfo> *iface_list, uint8_t default_pcp)
 {
-    LOG(ERROR) << __func__ << ":not Supported in OSP";
+    LOG(ERROR) << "apply_up_map: not Supported in CGR";
     return false;
 }
 
 std::shared_ptr<ServicePrioritizationUtils> register_service_prio_utils()
 {
-    return std::make_shared<bpl::ServicePrioritizationUtils_osp_mxl>();
+    return std::make_shared<bpl::ServicePrioritizationUtils_cgr_mxl>();
 }
 
 } // namespace bpl

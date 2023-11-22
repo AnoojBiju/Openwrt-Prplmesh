@@ -1215,10 +1215,9 @@ bool ap_wlan_hal_whm::set_no_deauth_unknown_sta(const std::string &ifname, bool 
     return true;
 }
 
-bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
+bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *dscp)
 {
     unsigned char i = 0, j = 0, k = 0;
-    unsigned char dscp[beerocks::message::DSCP_MAPPING_LIST_LENGTH] = {};
     struct range_t {
         int start;
         int end;
@@ -1229,7 +1228,6 @@ bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *data)
         int pcp;
     } exception[64] = {};
     std::stringstream ss;
-    std::copy(data, data + beerocks::message::DSCP_MAPPING_LIST_LENGTH, dscp);
 
     for (i = 0; i < 8; i++) {
         range[i].start = -1;

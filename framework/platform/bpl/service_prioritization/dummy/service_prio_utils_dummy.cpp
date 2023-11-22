@@ -26,7 +26,7 @@ bool ServicePrioritizationUtils_dummy::apply_single_value_map(
 }
 
 bool ServicePrioritizationUtils_dummy::apply_dscp_map(
-    std::list<struct sInterfaceTagInfo> *iface_list, uint8_t default_pcp)
+    std::list<struct sInterfaceTagInfo> *iface_list, struct sDscpMap *map, uint8_t default_pcp)
 {
     LOG(ERROR) << __func__ << ":not Supported in Dummy";
     return false;
