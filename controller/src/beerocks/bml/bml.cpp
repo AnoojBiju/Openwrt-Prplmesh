@@ -9,8 +9,10 @@
 #include "bml.h"
 #include "internal/bml_internal.h"
 
+#include <../cli/beerocks_cli_bml.h>
 #include <bcl/beerocks_logging.h>
 #include <bcl/beerocks_string_utils.h>
+#include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 
@@ -174,6 +176,206 @@ int bml_nw_map_register_query_cb(BML_CTX ctx, BML_NW_MAP_QUERY_CB cb)
     return (BML_RET_OK);
 }
 
+using namespace beerocks;
+static std::string &ind_inc(std::string &ind)
+{
+    static const std::string basic_ind("    "); // 4 spaces
+    ind += basic_ind;
+    return ind;
+}
+
+static std::string &ind_dec(std::string &ind)
+{
+    ind.erase(ind.end() - 4, ind.end()); // erase last 4 space chars
+    return ind;
+}
+
+static std::string node_type_to_conn_map_string(uint8_t type)
+{
+    std::string ret;
+
+    switch (type) {
+    case BML_NODE_TYPE_GW:
+        ret = "GW_BRIDGE:";
+        break;
+    case BML_NODE_TYPE_IRE:
+        ret = "IRE_BRIDGE:";
+        break;
+    case BML_NODE_TYPE_CLIENT:
+        ret = "CLIENT:";
+        break;
+
+    default:
+        ret = "N/A";
+    }
+
+    return ret;
+}
+
+static void bml_utils_dump_conn_map_external(
+    std::unordered_multimap<std::string, std::shared_ptr<cli_bml::conn_map_node_t>> &conn_map_nodes,
+    const std::string &parent_bssid, const std::string &ind, std::stringstream &ss)
+{
+    std::string ind_str = ind;
+    // ss << "***" << " parent mac: " << parent_bssid << "***" << std::endl;
+    auto range = conn_map_nodes.equal_range(parent_bssid);
+    for (auto it = range.first; it != range.second; it++) {
+        auto node = it->second;
+
+        // ss << "***" << " node mac: " << node->mac << "***" << std::endl;
+
+        // CLIENT
+        if (node->type == BML_NODE_TYPE_CLIENT) {
+            ss << ind_inc(ind_str) << node_type_to_conn_map_string(node->type)
+               << " mac: " << node->mac << ", ipv4: " << node->ip_v4 << ", name: " << node->name;
+            if (node->channel) { // channel != 0
+                ss << ", ch: " << std::to_string(node->channel) << ", bw: "
+                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                   << utils::convert_channel_ext_above_to_string(node->channel_ext_above_secondary,
+                                                                 (beerocks::eWiFiBandwidth)node->bw)
+                   << ", rx_rssi: " << std::to_string(node->rx_rssi);
+            }
+            ss << std::endl;
+
+        } else { //PLATFORM
+
+            // IRE BACKHAUL
+            if (node->type == BML_NODE_TYPE_IRE) {
+                ss << ind_inc(ind_str) << "IRE_BACKHAUL:"
+                   << " mac: " << node->gw_ire.backhaul_mac
+                   << ", ch: " << std::to_string(node->channel) << ", bw: "
+                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                   << utils::convert_channel_ext_above_to_string(node->channel_ext_above_secondary,
+                                                                 (beerocks::eWiFiBandwidth)node->bw)
+                   //<< ", rx_rssi: "       << std::to_string(node->rx_rssi)
+                   << std::endl;
+            }
+
+            // BRIDGE
+            if (parent_bssid != network_utils::ZERO_MAC_STRING)
+                ind_inc(ind_str);
+
+            ss << ind_str << node_type_to_conn_map_string(node->type) << " name: " << node->name
+               << ", mac: " << node->mac << ", ipv4: " << node->ip_v4 << std::endl;
+
+            // ETHERNET
+            // generate eth address from bridge address
+            auto eth_sw_mac_binary =
+                network_utils::get_eth_sw_mac_from_bridge_mac(tlvf::mac_from_string(node->mac));
+            auto eth_mac = tlvf::mac_to_string(eth_sw_mac_binary);
+            ss << ind_inc(ind_str) << "ETHERNET:"
+               << " mac: " << eth_mac << std::endl;
+            // add clients which are connected to the Ethernet
+            bml_utils_dump_conn_map_external(conn_map_nodes, eth_mac, ind_str, ss);
+
+            // RADIO
+            for (auto radio : node->gw_ire.radio) {
+
+                ss << ind_str << "RADIO: " << radio->ifname << " mac: " << radio->radio_mac
+                   << ", ch: "
+                   << (radio->channel != 255 ? std::to_string(radio->channel) : std::string("N/A"))
+                   << ((son::wireless_utils::is_dfs_channel(radio->channel) &&
+                        !radio->cac_completed)
+                           ? std::string("(CAC)")
+                           : std::string())
+                   << ", bw: "
+                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)radio->bw)
+                   << utils::convert_channel_ext_above_to_string(
+                          radio->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)radio->bw)
+                   << ", freq: "
+                   << std::to_string(son::wireless_utils::channel_to_freq(
+                          radio->channel, static_cast<beerocks::eFreqType>(radio->freq_type)))
+                   << "MHz" << std::endl;
+
+                // VAP
+                ind_inc(ind_str);
+                uint8_t j = 0;
+                for (auto vap = radio->vap.begin(); vap != radio->vap.end(); vap++) {
+                    if ((*vap)->bssid != network_utils::ZERO_MAC_STRING) {
+                        ss << ind_str << std::string((*vap)->backhaul_vap ? "b" : "f") << "VAP["
+                           << int(j) << "]:"
+                           << " "
+                           << ((*vap)->vap_id >= 0
+                                   ? (radio->ifname + "." + std::to_string((*vap)->vap_id))
+                                   : "")
+                           << " bssid: " << (*vap)->bssid << ", ssid: " << (*vap)->ssid
+                           << std::endl;
+                        // add clients which are connected to the vap
+                        bml_utils_dump_conn_map_external(conn_map_nodes, (*vap)->bssid, ind_str,
+                                                         ss);
+                        j++;
+                    }
+                }
+                ind_dec(ind_str);
+            }
+        }
+        ind_str = ind; // return the indentation to original level
+    }
+}
+
+static void fill_conn_map_node_external(
+    std::unordered_multimap<std::string, std::shared_ptr<cli_bml::conn_map_node_t>> &conn_map_nodes,
+    struct BML_NODE *node)
+{
+    auto n                         = std::make_shared<cli_bml::conn_map_node_t>();
+    n->type                        = node->type;
+    n->state                       = node->state;
+    n->channel                     = node->channel;
+    n->bw                          = node->bw;
+    n->freq_type                   = node->freq_type;
+    n->channel_ext_above_secondary = node->channel_ext_above_secondary;
+    n->rx_rssi                     = node->rx_rssi;
+    n->mac                         = tlvf::mac_to_string(node->mac);
+    n->ip_v4                       = network_utils::ipv4_to_string(node->ip_v4);
+    n->name.assign(node->name[0] ? node->name : "N/A");
+
+    if (node->type != BML_NODE_TYPE_CLIENT) { // GW or IRE
+
+        n->gw_ire.backhaul_mac = tlvf::mac_to_string(node->data.gw_ire.backhaul_mac);
+
+        // RADIO
+        int radio_length = sizeof(node->data.gw_ire.radio) / sizeof(node->data.gw_ire.radio[0]);
+        for (int i = 0; i < radio_length; i++) {
+            if (node->data.gw_ire.radio[i].channel != 0 && node->data.gw_ire.radio[i].ap_active) {
+                auto r           = std::make_shared<cli_bml::conn_map_node_t::gw_ire_t::radio_t>();
+                r->channel       = node->data.gw_ire.radio[i].channel;
+                r->cac_completed = node->data.gw_ire.radio[i].cac_completed;
+                r->bw            = node->data.gw_ire.radio[i].bw;
+                r->freq_type     = node->data.gw_ire.radio[i].freq_type;
+                r->channel_ext_above_secondary =
+                    node->data.gw_ire.radio[i].channel_ext_above_secondary;
+                r->radio_identifier =
+                    tlvf::mac_to_string(node->data.gw_ire.radio[i].radio_identifier);
+                r->radio_mac = tlvf::mac_to_string(node->data.gw_ire.radio[i].radio_mac);
+                r->ifname.assign(node->data.gw_ire.radio[i].iface_name);
+
+                // VAP
+                int vap_length = sizeof(node->data.gw_ire.radio[i].vap) /
+                                 sizeof(node->data.gw_ire.radio[i].vap[0]);
+
+                // The index of of the VAP 'j' represents the VAP ID.
+                for (int j = 0; j < vap_length; j++) {
+                    auto vap_mac = tlvf::mac_to_string(node->data.gw_ire.radio[i].vap[j].bssid);
+                    if (vap_mac != network_utils::ZERO_MAC_STRING) {
+                        auto v =
+                            std::make_shared<cli_bml::conn_map_node_t::gw_ire_t::radio_t::vap_t>();
+                        v->bssid = vap_mac;
+                        v->ssid.assign(node->data.gw_ire.radio[i].vap[j].ssid[0]
+                                           ? node->data.gw_ire.radio[i].vap[j].ssid
+                                           : std::string("N/A"));
+                        v->backhaul_vap = node->data.gw_ire.radio[i].vap[j].backhaul_vap;
+                        v->vap_id       = j;
+                        r->vap.push_back(v);
+                    }
+                }
+                n->gw_ire.radio.push_back(r);
+            }
+        }
+    }
+
+    conn_map_nodes.insert({tlvf::mac_to_string(node->parent_bssid), n});
+}
+
 int bml_nw_map_register_external_query_cb(BML_CTX ctx)
 {
     if (!ctx)
@@ -187,34 +389,54 @@ int bml_nw_map_register_external_query_cb(BML_CTX ctx)
 
 void connection_map_to_console_cb(const struct BML_NODE_ITER *node_iter)
 {
-    LOG(DEBUG) << "connection_map_to_console_cb entrance";
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     connection_map_cb(node_iter, true);
 }
 
 void connection_map_cb(const struct BML_NODE_ITER *node_iter, bool to_console)
 {
-    LOG(DEBUG) << "connection_map_cb entrance";
-    char *data = (char *)bml_get_user_data(node_iter->ctx);
-    if (!data) {
-        LOG(DEBUG) << "connection_map_cd data is NULL!!!";
-        return;
-    }
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
+    cli_bml *pThis = (cli_bml *)bml_get_user_data(node_iter->ctx);
 
-    LOG(DEBUG) << "connection_map_cd data: " << data;
-
-    if (!to_console) {
+    if (!pThis) {
+        std::cout << "ERROR: Internal error - invalid context!" << std::endl;
         return;
     }
 
     struct BML_NODE *current_node;
     if (node_iter->first() != BML_RET_OK) {
-        LOG(ERROR) << "node_iter->first() != BML_RET_OK!!!";
+        std::cout << "map_query_cb: node_iter.first() != BML_RET_OK, map_query_cb stops"
+                  << std::endl;
         return;
     }
 
     current_node = node_iter->get_node();
-    if (!current_node) {
-        LOG(ERROR) << "current_node is empty";
+    if (current_node) {
+        LOG(DEBUG) << "Badhri Calling fill_conn_map_node_external";
+        fill_conn_map_node_external(pThis->conn_map_nodes, current_node);
+
+        while (node_iter->next() == BML_RET_OK) {
+            current_node = node_iter->get_node();
+            LOG(DEBUG) << "Badhri Calling fill_conn_map_node_external";
+            fill_conn_map_node_external(pThis->conn_map_nodes, current_node);
+        }
+    }
+
+    if (node_iter->last_node) {
+        std::stringstream ss;
+        std::string ind;
+        if (pThis->conn_map_nodes.empty()) {
+            ss << "Connection map is empty..." << std::endl;
+        } else {
+            LOG(DEBUG) << "Badhri Calling bml_utils_dump_conn_map_external";
+            bml_utils_dump_conn_map_external(pThis->conn_map_nodes, network_utils::ZERO_MAC_STRING,
+                                             ind, ss);
+            pThis->conn_map_nodes.clear();
+        }
+        LOG(DEBUG) << "Printing the connection map";
+        std::cout << std::endl << ss.str();
+        //No need to wait anymore - this is the last fragment
+        pThis->pending_response = false;
     }
 }
 

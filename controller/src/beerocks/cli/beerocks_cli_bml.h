@@ -63,6 +63,9 @@ public:
 
         } gw_ire;
     };
+    std::unordered_multimap<std::string, std::shared_ptr<conn_map_node_t>>
+        conn_map_nodes; // key=parent_mac, val=conn_map_node_t
+    bool pending_response = false;
 
     explicit cli_bml(const std::string &beerocks_conf_path_);
     virtual ~cli_bml();
@@ -244,13 +247,10 @@ private:
     BML_CTX ctx = nullptr;
     char print_buffer[PRINT_BUFFER_LENGTH];
     int is_onboarding;
-    bool pending_response = false;
 
     bool is_analyzer = false;
     static SocketClient *m_analyzer_socket;
     SocketSelect select;
-    std::unordered_multimap<std::string, std::shared_ptr<conn_map_node_t>>
-        conn_map_nodes; // key=parent_mac, val=conn_map_node_t
 
     uint8_t rx_buffer[message::MESSAGE_BUFFER_LENGTH];
 
