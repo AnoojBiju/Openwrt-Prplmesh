@@ -151,6 +151,11 @@ public:
 
     // Forward declaration
     struct sRadioInfo;
+    /**
+     * @brief Removes the handlers for the external and internal events 
+     *        as well as the events themselves for the given radio.
+     */
+    void clear_radio_handlers(beerocks::BackhaulManager::sRadioInfo &radio_info);
 
 private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
