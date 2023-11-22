@@ -17,6 +17,12 @@
 namespace bwl {
 namespace dwpal {
 
+enum eConstant {
+    PCP_RANGE_LEN                      = 8,
+    DSCP_MAP_LIST_LEN                  = 64,
+    DSCP_MAX_EXCEPTION_HOSTAPD_SUPPORT = 21,
+};
+
 /*!
  * Hardware abstraction layer for WLAN Access Point.
  */
