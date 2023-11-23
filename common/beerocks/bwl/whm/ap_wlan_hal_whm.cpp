@@ -104,27 +104,21 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
 
 bool ap_wlan_hal_whm::enable()
 {
-    std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
-    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
-    new_obj.add_child("Enable", true);
-    bool ret = m_ambiorix_cl->update_object(wifi_ap_path, new_obj);
-    if (!ret) {
-        LOG(ERROR) << "Failed to enable ap: " << wifi_ap_path;
-        return false;
-    }
+    // API enable is not required with "PWHM",
+    // it's usage is only during WPS (some propietary use-case) in non PWHM scenario.
+    // WPS functionality in with PWHM scenario works as expected.
+    // Conclusion: API usuage during WPS (propietary use-case), not needed with PWHM.
+    // Hence no implementation is required.
     return true;
 }
 
 bool ap_wlan_hal_whm::disable()
 {
-    std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
-    AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
-    new_obj.add_child("Enable", false);
-    bool ret = m_ambiorix_cl->update_object(wifi_ap_path, new_obj);
-    if (!ret) {
-        LOG(ERROR) << "Failed to disable ap: " << wifi_ap_path;
-        return false;
-    }
+    // API disable is not required with "PWHM",
+    // it's usage is only during WPS (some propietary use-case) in non PWHM scenario.
+    // WPS functionality in with PWHM scenario works as expected.
+    // Conclusion: API usuage during WPS (propietary use-case), not needed with PWHM.
+    // Hence no implementation is required.
     return true;
 }
 
