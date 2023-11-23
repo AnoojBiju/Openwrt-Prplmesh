@@ -28,7 +28,7 @@
 #endif
 
 #ifndef AMBIORIX_USP_BACKEND_PATH
-#define AMBIORIX_USP_BACKEND_PATH "/usr/bin/mods/amxb/mod-amxb-usp.so"
+#define AMBIORIX_USP_BACKEND_PATH "/usr/bin/mods/usp/mod-amxb-usp.so"
 #endif
 
 #ifndef AMBIORIX_PWHM_USP_BACKEND_URI
