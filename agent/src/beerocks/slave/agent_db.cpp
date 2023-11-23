@@ -186,8 +186,8 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
 
     m_ambiorix_datamodel->set(inst, "Iface", iface);
     m_ambiorix_datamodel->set(inst, "PID", pid);
-    m_ambiorix_datamodel->set(inst, "CurrentState", std::string("INIT (0)"));
-    m_ambiorix_datamodel->set(inst, "BestState", std::string("INIT (0)"));
+    m_ambiorix_datamodel->set(inst, "CurrentState", "INIT (0)");
+    m_ambiorix_datamodel->set(inst, "BestState", "INIT (0)");
 
     return inst;
 #endif

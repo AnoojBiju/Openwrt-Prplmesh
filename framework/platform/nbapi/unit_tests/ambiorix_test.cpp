@@ -213,7 +213,7 @@ TEST_F(AmbiorixTest, set_string_should_succeed)
     ASSERT_TRUE(obj);
     EXPECT_EQ(amxd_object_set_cstring_t(obj, g_param_name_string, g_param_value_bar),
               amxd_status_ok);
-    EXPECT_TRUE(m_ambiorix->set(g_param_path, g_param_name_string, std::string(g_param_value_foo)));
+    EXPECT_TRUE(m_ambiorix->set(g_param_path, g_param_name_string, g_param_value_foo));
     amxd_status_t status;
     char *value = amxd_object_get_cstring_t(obj, g_param_name_string, &status);
     EXPECT_EQ(status, amxd_status_ok);
@@ -223,8 +223,7 @@ TEST_F(AmbiorixTest, set_string_should_succeed)
 
 TEST_F(AmbiorixTest, set_string_should_fail)
 {
-    EXPECT_FALSE(
-        m_ambiorix->set(g_param_path, g_param_name_unknown, std::string(g_param_value_foo)));
+    EXPECT_FALSE(m_ambiorix->set(g_param_path, g_param_name_unknown, g_param_value_foo));
 }
 
 /*
