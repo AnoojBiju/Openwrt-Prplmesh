@@ -61,6 +61,7 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
         return false;
     }
 
+    LOG(DEBUG) << "*******GILLI GOING INSIDE LOG DEBUG*******";
     if (!init_signal_loop()) {
         LOG(ERROR) << "Failed to initialize event handlers for the Ambiorix signals in the "
                       "event loop.";
@@ -161,6 +162,7 @@ bool AmbiorixImpl::init_event_loop()
 
 bool AmbiorixImpl::init_signal_loop()
 {
+    LOG(DEBUG) << "*******GILLI INSIDE INIT_SIGNAL_LOOP*******";
     LOG(DEBUG) << "Register event handlers for the Ambiorix signals fd in the event loop.";
 
     auto ambiorix_fd = amxp_signal_fd();
@@ -173,6 +175,7 @@ bool AmbiorixImpl::init_signal_loop()
         .name = "ambiorix_signal",
         .on_read =
             [&](int fd, EventLoop &loop) {
+                LOG(DEBUG) << "*****GILLI INSIDE LAMBDA FUNCTION******";
                 amxp_signal_read();
                 return true;
             },
@@ -188,6 +191,7 @@ bool AmbiorixImpl::init_signal_loop()
             },
     };
 
+    LOG(DEBUG) << "******GILLI BEFORE REGISTER HANDLERS****";
     if (!m_event_loop->register_handlers(ambiorix_fd, handlers)) {
         LOG(ERROR) << "Couldn't register event handlers for the Ambiorix signals in the "
                       "event loop.";
@@ -196,6 +200,8 @@ bool AmbiorixImpl::init_signal_loop()
 
     LOG(DEBUG) << "Event handlers for the Ambiorix signals fd: " << ambiorix_fd
                << " successfully registered in the event loop.";
+
+    LOG(DEBUG) << "*****GILLI INIT SIGNAL RETURN*****";
 
     return true;
 }

@@ -66,7 +66,7 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
 
     // Make sure that the file descriptor is not already part of the poll
     if (m_fd_to_event_handlers.find(fd) != m_fd_to_event_handlers.end()) {
-        LOG(WARNING) << "Requested to add FD (" << fd << ") to the poll, but it's already there";
+        LOG(DEBUG) << "Requested to add FD (" << fd << ") to the poll, but it's already there";
         return false;
     }
 
@@ -79,11 +79,13 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
     // EPOLLRDHUP: Socket peer closed connection, or shut down writing half of connection.
     // EPOLLERR: Error condition happened on the associated fd.
     // EPOLLHUP: Hang up happened on the associated fd.
+
     auto add_fd_to_epoll = [&](int fd) -> bool {
         epoll_event event = {};
         event.data.fd     = fd;
         event.events      = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
 
+        LOG(DEBUG) << "*****GILLI INSIDE add_fd_to_epol *****";
         // If read handler was set, also listen for POLL-IN events
         if (handlers.on_read) {
             event.events |= EPOLLIN;
@@ -108,9 +110,11 @@ bool EventLoopImpl::register_handlers(int fd, const EventLoop::EventHandlers &ha
 
     // Add the file descriptor to the poll
     if (!add_fd_to_epoll(fd)) {
+        LOG(DEBUG) << "*****GILLI FAILED IN FD EPOLL****";
         return false;
     }
 
+    LOG(DEBUG) << "******GILLI RETURN REGISTER HANDLERS *******";
     return true;
 }
 
