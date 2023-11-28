@@ -52,6 +52,7 @@ RUN apt-get update \
     openjdk-8-jdk \
     openjdk-8-jre \
     && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
     # Ubuntu has a repo package, but it's too old
     && wget -O /usr/bin/repo https://storage.googleapis.com/git-repo-downloads/repo \
     && chmod +x /usr/bin/repo \
