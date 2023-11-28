@@ -20,8 +20,11 @@ if data_overlay_not_initialized; then
     sleep 2
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
+  sleep 20
 fi
-sleep 20
+
+sh /etc/init.d/tr181-upnp stop || true
+rm -f /etc/rc.d/S*tr181-upnp
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
@@ -139,6 +142,8 @@ if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo 
 # Stop and disable the firewall:
 /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
+
+iptables -P INPUT ACCEPT
 
 # Start an ssh server on the control interfce
 dropbear -F -T 10 -p192.168.250.170:22 &
