@@ -121,6 +121,11 @@ public:
      */
     bool update_vaps_info(const std::string &iface, const beerocks_message::sVapInfo vaps[]);
 
+    /**
+     * @brief Dispatch CONTROLLER_DISCOVERED event
+     */
+    void notify_controller_discovery();
+
 private:
     /**
      * @brief Handles received CMDU message.

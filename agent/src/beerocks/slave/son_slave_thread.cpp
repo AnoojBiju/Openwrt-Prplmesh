@@ -4612,9 +4612,6 @@ bool slave_thread::agent_fsm()
             LOG(TRACE) << "goto STATE_OPERATIONAL";
             m_agent_state = STATE_OPERATIONAL;
 
-            m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
-                                   ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
-
             // Make sure OPERATIONAL state will be done right away.
             return agent_fsm();
         }
@@ -5286,4 +5283,10 @@ bool slave_thread::update_vaps_info(const std::string &iface,
                    << ", p2_dis: " << bss.backhaul_bss_disallow_profile2_agent_association;
     }
     return true;
+}
+
+void slave_thread::notify_controller_discovery()
+{
+    m_task_pool.send_event(eTaskType::CONTROLLER_CONNECTIVITY,
+                           ControllerConnectivityTask::eEvent::CONTROLLER_DISCOVERED);
 }

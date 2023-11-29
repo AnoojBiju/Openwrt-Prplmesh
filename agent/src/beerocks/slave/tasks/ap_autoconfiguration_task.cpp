@@ -1010,6 +1010,8 @@ void ApAutoConfigurationTask::handle_ap_autoconfiguration_response(
         LOG(WARNING)
             << "Invalid tlvSupportedService - supported service is not MULTI_AP_CONTROLLER";
         return;
+    } else {
+        m_btl_ctx.notify_controller_discovery();
     }
 
     // Mark discovery status completed on band mentioned on the response and fill AgentDB fields.

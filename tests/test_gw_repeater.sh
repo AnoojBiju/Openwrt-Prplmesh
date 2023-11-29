@@ -153,7 +153,7 @@ REMOVE=false
 START_GATEWAY=true
 START_REPEATER=true
 UNIQUE_ID=${SUDO_USER:-${USER}}
-DELAY=10
+DELAY=20
 docker_opts=()
 
 main "$@"
