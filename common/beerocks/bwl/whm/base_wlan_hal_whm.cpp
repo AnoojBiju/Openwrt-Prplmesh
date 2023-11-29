@@ -50,11 +50,11 @@ base_wlan_hal_whm::~base_wlan_hal_whm() { base_wlan_hal_whm::detach(); }
 void base_wlan_hal_whm::subscribe_to_radio_events()
 {
     // subscribe to the WiFi.Radio.iface_name.Status
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
-        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
-        auto parameters        = event_data.find_child("parameters");
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_OBJECT_CHANGED_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
+        auto parameters = event_data.find_child("parameters");
         if (!parameters || parameters->empty()) {
             return;
         }
@@ -68,10 +68,9 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
             if (key.empty() || !value || value->empty()) {
                 continue;
             }
-            hal->process_radio_event(hal->get_iface_name(), key, value.get());
+            process_radio_event(get_iface_name(), key, value.get());
         }
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + m_radio_path +
                          "$')"
@@ -85,21 +84,20 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
 
 void base_wlan_hal_whm::subscribe_to_ap_events()
 {
-    std::string wifi_ap_path   = wbapi_utils::search_path_ap();
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
-        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+    std::string wifi_ap_path  = wbapi_utils::search_path_ap();
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_OBJECT_CHANGED_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ap_path;
         if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
             return;
         }
-        auto &vapsExtInfo = hal->m_vapsExtInfo;
-        auto vap_it       = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
-                                       return element.second.path == ap_path;
-                                   });
-        if (vap_it == vapsExtInfo.end()) {
+
+        auto vap_it =
+            std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                         [&](const auto &element) { return element.second.path == ap_path; });
+        if (vap_it == m_vapsExtInfo.end()) {
             return;
         }
         LOG(WARNING) << "event from iface " << vap_it->first;
@@ -119,18 +117,17 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
             }
             if (key == "Status") {
                 auto status = value->get<std::string>();
-                if (status == "Enabled" && !hal->has_enabled_vap()) {
-                    hal->process_radio_event(hal->get_iface_name(), "AccessPointNumberOfEntries",
-                                             AmbiorixVariant::copy(1).get());
+                if (status == "Enabled" && !has_enabled_vap()) {
+                    process_radio_event(get_iface_name(), "AccessPointNumberOfEntries",
+                                        AmbiorixVariant::copy(1).get());
                 }
-                hal->process_ap_event(vap_it->first, key, value.get());
+                process_ap_event(vap_it->first, key, value.get());
                 vap_it->second.status = status;
             } else {
-                hal->process_ap_event(vap_it->first, key, value.get());
+                process_ap_event(vap_it->first, key, value.get());
             }
         }
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + wifi_ap_path +
                          "[0-9]+.$')"
@@ -144,43 +141,41 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
 
 void base_wlan_hal_whm::subscribe_to_sta_events()
 {
-    std::string wifi_ad_path   = wbapi_utils::search_path_ap() + "[0-9]+.AssociatedDevice.";
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
-        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+    std::string wifi_ad_path  = wbapi_utils::search_path_ap() + "[0-9]+.AssociatedDevice.";
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_OBJECT_CHANGED_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string sta_path;
         if (!event_data.read_child(sta_path, "path") || sta_path.empty()) {
             return;
         }
         std::string ap_path = wbapi_utils::get_path_ap_of_assocDev(sta_path);
-        auto &vapsExtInfo   = hal->m_vapsExtInfo;
-        auto vap_it         = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
-                                       return element.second.path == ap_path;
-                                   });
-        if (vap_it == vapsExtInfo.end()) {
+
+        auto vap_it =
+            std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                         [&](const auto &element) { return element.second.path == ap_path; });
+        if (vap_it == m_vapsExtInfo.end()) {
             return;
         }
-        auto &stations = hal->m_stations;
-        auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
-                                       return element.second.path == sta_path;
-                                   });
+
+        auto sta_it = std::find_if(m_stations.begin(), m_stations.end(), [&](const auto &element) {
+            return element.second.path == sta_path;
+        });
         std::string sta_mac;
         auto sta_mac_obj = event_data.find_child_deep("parameters.MACAddress.to");
         if (sta_mac_obj && !sta_mac_obj->empty()) {
             sta_mac = sta_mac_obj->get<std::string>();
-        } else if (sta_it != stations.end()) {
+        } else if (sta_it != m_stations.end()) {
             sta_mac = sta_it->first;
-        } else if (!hal->m_ambiorix_cl->get_param<>(sta_mac, sta_path, "MACAddress")) {
+        } else if (!m_ambiorix_cl->get_param<>(sta_mac, sta_path, "MACAddress")) {
             LOG(WARNING) << "unknown sta path " << sta_path;
             return;
         }
-        if (sta_it != stations.end()) {
+        if (sta_it != m_stations.end()) {
             sta_it->second.path = sta_path;
         } else if (!sta_mac.empty()) {
-            stations.insert(std::make_pair(sta_mac, sStationInfo(sta_path)));
+            m_stations.insert(std::make_pair(sta_mac, sStationInfo(sta_path)));
         } else {
             LOG(WARNING) << "missing station mac";
             return;
@@ -199,10 +194,9 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
             if (key.empty() || key == "MACAddress" || !value || value->empty()) {
                 continue;
             }
-            hal->process_sta_event(vap_it->first, sta_mac, key, value.get());
+            process_sta_event(vap_it->first, sta_mac, key, value.get());
         }
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + wifi_ad_path +
                          "[0-9]+.$')"
@@ -216,10 +210,10 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
     m_ambiorix_cl->subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 
     // station instances cleanup
-    auto sta_del_event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    sta_del_event_handler->event_type  = AMX_CL_INSTANCE_REMOVED_EVT;
-    sta_del_event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
-        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+    auto sta_del_event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    sta_del_event_handler->event_type = AMX_CL_INSTANCE_REMOVED_EVT;
+
+    sta_del_event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string sta_templ_path;
         uint32_t sta_index;
         if (!event_data.read_child(sta_templ_path, "path") || sta_templ_path.empty() ||
@@ -228,17 +222,15 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         std::string sta_path = sta_templ_path + std::to_string(sta_index) + ".";
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
-        auto &stations = hal->m_stations;
-        auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                   [&](const std::pair<std::string, sStationInfo> &element) {
-                                       return element.second.path == sta_path;
-                                   });
-        if (sta_it != stations.end()) {
+
+        auto sta_it = std::find_if(m_stations.begin(), m_stations.end(), [&](const auto &element) {
+            return element.second.path == sta_path;
+        });
+        if (sta_it != m_stations.end()) {
             LOG(DEBUG) << "Clearing Station " << sta_it->first;
-            stations.erase(sta_it);
+            m_stations.erase(sta_it);
         }
     };
-    sta_del_event_handler->context = this;
 
     filter = "(path matches '" + wifi_ad_path +
              "$')"
@@ -469,10 +461,9 @@ bool base_wlan_hal_whm::get_radio_vaps(AmbiorixVariantList &aps)
 
 bool base_wlan_hal_whm::has_enabled_vap() const
 {
-    auto vap_it = std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
-                               [&](const std::pair<std::string, VAPExtInfo> &element) {
-                                   return element.second.status == "Enabled";
-                               });
+    auto vap_it =
+        std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                     [&](const auto &element) { return element.second.status == "Enabled"; });
     return (vap_it != m_vapsExtInfo.end());
 }
 
@@ -680,9 +671,10 @@ bool base_wlan_hal_whm::get_channel_utilization(uint8_t &channel_utilization)
 void base_wlan_hal_whm::subscribe_to_scan_complete_events()
 {
 
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_SCAN_COMPLETE_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_SCAN_COMPLETE_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         if (!event_data) {
             return;
         }
@@ -696,7 +688,6 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
                        << " instead of: " << AMX_CL_SCAN_COMPLETE_EVT;
             return;
         }
-        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
 
         std::string result;
         if (!event_data.read_child(result, "Result")) {
@@ -704,10 +695,10 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
             return;
         }
 
-        hal->process_scan_complete_event(result);
+        process_scan_complete_event(result);
     };
-    event_handler->context = this;
-    std::string filter     = "(path matches '" + m_radio_path +
+
+    std::string filter = "(path matches '" + m_radio_path +
                          "[0-9]+.$')"
                          " && (notification == '" +
                          AMX_CL_SCAN_COMPLETE_EVT + "')";

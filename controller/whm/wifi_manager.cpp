@@ -71,13 +71,13 @@ bool WifiManager::bss_info_config_change()
 
 void WifiManager::subscribe_to_bss_info_config_change()
 {
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_OBJECT_CHANGED_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         LOG(INFO) << "Detect change in wireless settings: propagate to agents";
-        (static_cast<WifiManager *>(context))->bss_info_config_change();
+        bss_info_config_change();
     };
-    event_handler->context = this;
 
     std::string filter;
     filter = "(path matches '" + wbapi_utils::search_path_radio() +

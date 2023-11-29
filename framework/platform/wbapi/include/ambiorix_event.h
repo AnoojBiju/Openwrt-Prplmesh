@@ -27,21 +27,14 @@ constexpr char AMX_CL_MGMT_ACT_FRAME_EVT[]   = "MgmtActionFrameReceived";
 namespace beerocks {
 namespace wbapi {
 
-using AmbiorixEventCallbak = std::function<void(AmbiorixVariant &event_data, void *context)>;
+using AmbiorixEventCallbak = std::function<void(AmbiorixVariant &event_data)>;
 
 /**
  * @struct sAmbiorixEventHandler
  */
 struct sAmbiorixEventHandler {
-    sAmbiorixEventHandler() {}
-    sAmbiorixEventHandler(const sAmbiorixEventHandler &handler)
-        : event_type(handler.event_type), callback_fn(handler.callback_fn), context(handler.context)
-    {
-    }
-
     std::string event_type;
     AmbiorixEventCallbak callback_fn;
-    void *context = nullptr;
 };
 
 /**
