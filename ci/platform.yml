@@ -13,7 +13,6 @@ variables:
   NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
   TURRIS_OMNIA_RDKB_FULLIMAGE: "rdkb-generic-broadband-image_turris-omnia.rootfs.tar.gz"
   HAZE_FULLIMAGE: "openwrt-ipq807x-generic-prpl_haze-squashfs-sysupgrade.bin"
-  URX_OSP_FULLIMAGE: "openwrt-intel_x86-lgm-PRPL_OSP_TB341-osp_tb341_fullimage.img"
   OSP_PACKAGE_ID: 13754300
 
 workflow:
@@ -27,7 +26,6 @@ stages:
   - certification-R1-turris-omnia
   - certification-R1-glinet
   - certification-R1-axepoint
-  - certification-R4-OSP
   - certification-R4-haze
   - certification-R4-turris-omnia
   - certification-R4-axepoint
@@ -81,6 +79,8 @@ build-for-osp:
   stage: build
   variables:
     POLLING_RATE: "120"
+    TESTS_TO_RUN_R4_ESSENSIUM: ""
+    DEVICE_UNDER_TEST_R4_ESSENSIUM: ""
   script:
     - echo "Triggering OSP runner to start external build"
     - |
@@ -94,7 +94,7 @@ build-for-osp:
       -F variables[MR_SOURCE_SHA]="$CI_MERGE_REQUEST_SOURCE_BRANCH_SHA" \
       -F variables[TESTS_TO_RUN_R4_ESSENSIUM]="$TESTS_TO_RUN_R4_ESSENSIUM" \
       -F variables[DEVICE_UNDER_TEST_R4_ESSENSIUM]="$DEVICE_UNDER_TEST_R4_ESSENSIUM" \
-      https://gitlab.com/api/v4/projects/52461766/trigger/pipeline)
+      ${CI_API_V4_URL}/projects/52461766/trigger/pipeline)
     - if [ $? -ne 0 ] ; then echo "Triggering external runner failed" && exit 1; fi
     - downstream_pipeline_url=$(echo "$trigger_details" | jq -e -r -c ".web_url")
     - echo "External builder running at ${downstream_pipeline_url}"
@@ -104,7 +104,7 @@ build-for-osp:
       OSP_PACKAGE_FILE_ID=0
       check_package_file () {
           OSP_PACKAGE_FILE_ID=0
-          local package_files=$(curl --fail --show-error --retry 3 -s --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/packages/${OSP_PACKAGE_ID}/package_files?per_page=100")
+          local package_files=$(curl --fail --show-error --retry 3 -s --header "JOB-TOKEN: ${CI_JOB_TOKEN}" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/${OSP_PACKAGE_ID}/package_files?per_page=100")
           OSP_PACKAGE_FILE_ID=$(echo "$package_files" | jq -e -c ".[] | select ( .file_name == \"${1}\") | .id" | sed -n \$p)
       }
       # Wait for successfull build start
@@ -335,7 +335,6 @@ run-certification-tests-R4-platform-essensium:
     - job: build-for-intel-mips
     - job: build-for-turris-omnia
     - job: build-for-haze
-    - job: build-for-osp
 
 run-certification-tests-R1-platform-isr:
   extends: .run-certification-tests-R1
@@ -388,7 +387,6 @@ upload-release-artifacts:
     - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE" "WHM"
     - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE" "WHM"
     - upload_command "haze" "$HAZE_FULLIMAGE" "WHM"
-    - upload_command "urx_osp" "$URX_OSP_FULLIMAGE" "WHM"
     - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE" "LEGACY"
     - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE" "LEGACY"
     - upload_command "axepoint" "$AXEPOINT_FULLIMAGE" "LEGACY"
@@ -405,7 +403,6 @@ upload-release-artifacts:
     - job: build-for-intel-mips
     - job: build-for-rdkb-turris-omnia
     - job: build-for-haze
-    - job: build-for-osp
 
 release:
   stage: release
@@ -422,8 +419,6 @@ release:
         --assets-link "{\"name\":\"turris-omnia fullimage (legacy)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\",\"link_type\":\"image\"}" \
         --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk (legacy)\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp-legacy/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\",\"link_type\":\"package\"}" \
         --assets-link "{\"name\":\"nec-wx3000hp fullimage (legacy)\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"urx_osp prplmesh ipk (whm)\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/urx_osp/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_urx_osp.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"urx_osp fullimage (whm)\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/urx_osp/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$URX_OSP_FULLIMAGE\",\"link_type\":\"image\"}" \
         --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk (whm)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\",\"link_type\":\"package\"}" \
         --assets-link "{\"name\":\"glinet-b1300 fullimage (whm)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\",\"link_type\":\"image\"}" \
         --assets-link "{\"name\":\"turris-omnia prplmesh ipk (whm)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\",\"link_type\":\"package\"}" \
