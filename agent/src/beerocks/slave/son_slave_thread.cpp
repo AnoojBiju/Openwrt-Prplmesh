@@ -1984,6 +1984,20 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         }
         if (db->device_conf.certification_mode) {
             LOG(DEBUG) << "Request agent to tear down on certification mode";
+            for (auto radio : db->get_radios_list()) {
+		auto pvid_set_request = message_com::create_vs_message<
+		    beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(m_cmdu_tx);
+		if (!pvid_set_request) {
+		    LOG(ERROR) << "Failed building message!";
+		    return false;
+		}
+	
+		pvid_set_request->primary_vlan_id() = 0;
+
+		// Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
+		auto ap_manager_fd = m_btl_ctx.get_ap_manager_fd(radio->front.iface_name);
+		m_btl_ctx.send_cmdu(ap_manager_fd, m_cmdu_tx);
+            }
             for (const auto &radio_manager_element : m_radio_managers.get()) {
                 // Tear down all VAPS in the radio by sending an update request with an empty
                 // configuration.
