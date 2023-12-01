@@ -123,6 +123,9 @@ public:
 
     static std::vector<std::string> linux_get_iface_list_from_bridge(const std::string &bridge);
 
+    static int linux_get_iface_state_from_bridge(const std::string &bridge,
+                                                 const std::string &ifname);
+
     /**
      * @brief Gets the bridge name hosting the provided interface.
      *

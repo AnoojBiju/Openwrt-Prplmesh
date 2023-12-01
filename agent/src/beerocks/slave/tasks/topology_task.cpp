@@ -28,6 +28,8 @@
 
 #include <easylogging++.h>
 
+#include <linux/if_bridge.h>
+
 using namespace beerocks;
 using namespace net;
 using namespace son;
@@ -352,7 +354,10 @@ void TopologyTask::send_topology_discovery()
         if (!network_utils::linux_iface_is_up_and_running(iface_name)) {
             continue;
         }
-
+        if (network_utils::linux_get_iface_state_from_bridge(db->bridge.iface_name, iface_name) !=
+            BR_STATE_FORWARDING) {
+            continue;
+        }
         std::string iface_mac_str;
         if (!network_utils::linux_iface_get_mac(iface_name, iface_mac_str)) {
             LOG(ERROR) << "Failed getting MAC address for interface: " << iface_name;
