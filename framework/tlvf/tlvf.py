@@ -2155,7 +2155,7 @@ class TlvF:
         code = [
             'cmake_minimum_required(VERSION 2.8)',
             '',
-            'set (CMAKE_CXX_STANDARD 11)',
+            'set (CMAKE_CXX_STANDARD 14)',
             'set(CXXFLAGS "${CMAKE_C_FLAGS} -Werror")',
             'set(PROJET_NAME tlvf)',
             'project(${PROJET_NAME})',
@@ -2194,7 +2194,7 @@ class TlvF:
             'set_target_properties(${PROJET_NAME} PROPERTIES LINKER_LANGUAGE CXX)',
             'set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")',
             'set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")',
-            'set(CMAKE_CXX_STANDARD 11)',
+            'set(CMAKE_CXX_STANDARD 14)',
             'add_custom_command(TARGET tlvf POST_BUILD',
             '  COMMAND ${CMAKE_COMMAND} -E make_directory ${TLVF_PATH_LIB}',
             '  COMMAND ${CMAKE_COMMAND} -E copy ${TLVF_PATH_BUILD}/lib${PROJET_NAME}.so ${TLVF_PATH_LIB}/)'
