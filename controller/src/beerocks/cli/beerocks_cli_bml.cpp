@@ -1667,9 +1667,12 @@ int cli_bml::update_wifi_credentials()
 int cli_bml::get_wifi_credentials(int vap_id)
 {
     char ssid[BML_NODE_SSID_LEN];
-    int sec;
+    int sec = -1;
     ssid[0] = 0;
     int ret = bml_get_wifi_credentials(ctx, vap_id, ssid, nullptr, &sec);
+    if (ret != BML_RET_OK) {
+        return -1;
+    }
     std::string sec_str;
 
     switch (sec) {
