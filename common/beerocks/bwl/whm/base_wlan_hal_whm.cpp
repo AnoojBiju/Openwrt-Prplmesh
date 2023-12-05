@@ -171,7 +171,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         }
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                      [&](const std::pair<std::string, sStationInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         std::string sta_mac;
@@ -237,7 +237,7 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
         LOG(DEBUG) << "Station instance " << sta_path << " deleted";
         auto &stations = hal->m_stations;
         auto sta_it    = std::find_if(stations.begin(), stations.end(),
-                                      [&](const std::pair<std::string, sStationInfo> &element) {
+                                   [&](const std::pair<std::string, sStationInfo> &element) {
                                        return element.second.path == sta_path;
                                    });
         if (sta_it != stations.end()) {
