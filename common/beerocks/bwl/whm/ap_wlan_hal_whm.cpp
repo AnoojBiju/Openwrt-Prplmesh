@@ -1289,7 +1289,7 @@ bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *dscp)
     auto search_path = wbapi_utils::search_path_ap_by_iface(get_iface_name());
 
     std::vector<std::string> paths;
-    if (!m_ambiorix_cl->resolve_path_multi(search_path, paths)) {
+    if (!m_ambiorix_cl.resolve_path_multi(search_path, paths)) {
         LOG(ERROR) << "Could not resolve " << search_path;
         return false;
     }
@@ -1298,7 +1298,7 @@ bool ap_wlan_hal_whm::configure_service_priority(const uint8_t *dscp)
         AmbiorixVariant new_map(AMXC_VAR_ID_HTABLE);
         new_map.add_child("QoSMapSet", qos_map);
 
-        if (!m_ambiorix_cl->update_object(path + "IEEE80211u.", new_map)) {
+        if (!m_ambiorix_cl.update_object(path + "IEEE80211u.", new_map)) {
             LOG(ERROR) << "Could not set QoSMapSet for " << path;
             return false;
         }
@@ -1333,7 +1333,7 @@ bool ap_wlan_hal_whm::set_spatial_reuse_config(
         new_obj.add_child("SRGPartialBSSIDBitmap",
                           get_bss_color_bitmap(spatial_reuse_params.srg_partial_bssid_bitmap));
     }
-    if (!m_ambiorix_cl->update_object(path_to_80211ax, new_obj)) {
+    if (!m_ambiorix_cl.update_object(path_to_80211ax, new_obj)) {
         LOG(ERROR) << "Could not set spatial reuse parameters for " << path_to_80211ax;
         return false;
     }
@@ -1349,26 +1349,26 @@ bool ap_wlan_hal_whm::get_spatial_reuse_config(
     std::string string_partial_bssid_bitmap;
 
     LOG(WARNING) << "get_spatial_reuse_config. path_to_80211ax" << path_to_80211ax;
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.bss_color, path_to_80211ax, "BssColor");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.partial_bss_color, path_to_80211ax,
-                               "BssColorPartial");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.hesiga_spatial_reuse_value15_allowed,
-                               path_to_80211ax, "HESIGASpatialReuseValue15Allowed");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_information_valid, path_to_80211ax,
-                               "SRGInformationValid");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.non_srg_offset_valid, path_to_80211ax,
-                               "NonSRGOffsetValid");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.psr_disallowed, path_to_80211ax,
-                               "PSRDisallowed");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.non_srg_obsspd_max_offset, path_to_80211ax,
-                               "NonSRGOBSSPDMaxOffset");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_obsspd_min_offset, path_to_80211ax,
-                               "SRGOBSSPDMinOffset");
-    m_ambiorix_cl->get_param<>(spatial_reuse_params.srg_obsspd_max_offset, path_to_80211ax,
-                               "SRGOBSSPDMaxOffset");
-    m_ambiorix_cl->get_param<>(string_bss_color_bitmap, path_to_80211ax, "SRGBSSColorBitmap");
-    m_ambiorix_cl->get_param<>(string_partial_bssid_bitmap, path_to_80211ax,
-                               "SRGPartialBSSIDBitmap");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.bss_color, path_to_80211ax, "BssColor");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.partial_bss_color, path_to_80211ax,
+                              "BssColorPartial");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.hesiga_spatial_reuse_value15_allowed,
+                              path_to_80211ax, "HESIGASpatialReuseValue15Allowed");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.srg_information_valid, path_to_80211ax,
+                              "SRGInformationValid");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.non_srg_offset_valid, path_to_80211ax,
+                              "NonSRGOffsetValid");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.psr_disallowed, path_to_80211ax,
+                              "PSRDisallowed");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.non_srg_obsspd_max_offset, path_to_80211ax,
+                              "NonSRGOBSSPDMaxOffset");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.srg_obsspd_min_offset, path_to_80211ax,
+                              "SRGOBSSPDMinOffset");
+    m_ambiorix_cl.get_param<>(spatial_reuse_params.srg_obsspd_max_offset, path_to_80211ax,
+                              "SRGOBSSPDMaxOffset");
+    m_ambiorix_cl.get_param<>(string_bss_color_bitmap, path_to_80211ax, "SRGBSSColorBitmap");
+    m_ambiorix_cl.get_param<>(string_partial_bssid_bitmap, path_to_80211ax,
+                              "SRGPartialBSSIDBitmap");
     spatial_reuse_params.srg_bss_color_bitmap = get_uint64_from_bss_string(string_bss_color_bitmap);
     spatial_reuse_params.srg_partial_bssid_bitmap =
         get_uint64_from_bss_string(string_partial_bssid_bitmap);

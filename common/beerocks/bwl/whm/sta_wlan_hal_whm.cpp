@@ -507,9 +507,9 @@ std::string sta_wlan_hal_whm::get_wireless_backhaul_mac()
 {
     std::string mac("");
     std::string ssid_ref, ssid_path;
-    if (m_ambiorix_cl->get_param(ssid_ref, m_ep_path, "SSIDReference") &&
-        m_ambiorix_cl->resolve_path(ssid_ref + ".", ssid_path)) {
-        m_ambiorix_cl->get_param(mac, ssid_path, "MACAddress");
+    if (m_ambiorix_cl.get_param(ssid_ref, m_ep_path, "SSIDReference") &&
+        m_ambiorix_cl.resolve_path(ssid_ref + ".", ssid_path)) {
+        m_ambiorix_cl.get_param(mac, ssid_path, "MACAddress");
     }
     return mac;
 }
