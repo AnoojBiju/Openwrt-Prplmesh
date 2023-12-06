@@ -313,14 +313,6 @@ enum class ApManager::eApManagerState {
 
 auto ApManager::sApManagerState::operator=(eApManagerState state) -> eApManagerState
 {
-    cur = state;
-    max = std::min(eApManagerState::OPERATIONAL, std::max(max, cur));
-
-    // The UDS server does not expect messages yet
-    if (cur == eApManagerState::INIT) {
-        return cur;
-    }
-
     auto to_string = [](eApManagerState e) {
         const char *arr[] = {
 #define eApManagerState_to_string(x) #x " (",
@@ -331,12 +323,25 @@ auto ApManager::sApManagerState::operator=(eApManagerState state) -> eApManagerS
 
         return arr[i] + std::to_string(i) + ')';
     };
+    LOG(DEBUG) << "Badhri Before cur = " << to_string(cur) << " max = " << to_string(max);
+    cur = state;
+    max = std::min(eApManagerState::OPERATIONAL, std::max(max, cur));
+    LOG(DEBUG) << "Badhri After cur = " << to_string(cur) << " max = " << to_string(max);
+
+    // The UDS server does not expect messages yet
+    if (cur == eApManagerState::INIT || cur == eApManagerState::TERMINATED) {
+        LOG(ERROR) << "Badhri Current State INIT, hence returning " << to_string(cur);
+        return cur;
+    }
 
     auto request = beerocks::message_com::create_vs_message<
         beerocks_message::cACTION_APMANAGER_STATE_NOTIFICATION>(parent->cmdu_tx);
     if (!request) {
         LOG(ERROR) << "Failed building message!";
         return cur;
+    }
+    if (parent == nullptr) {
+        LOG(ERROR) << "Badhri parent pointer is null";
     }
 
     request->set_curstate(to_string(cur));
@@ -460,6 +465,8 @@ bool ApManager::stop()
 {
     bool ok = true;
 
+    m_state = eApManagerState::TERMINATED;
+
     if (m_slave_client) {
         m_slave_client.reset();
     }
@@ -483,8 +490,6 @@ bool ApManager::stop()
         ap_wlan_hal->detach();
         ap_wlan_hal.reset();
     }
-
-    m_state = eApManagerState::TERMINATED;
 
     LOG(DEBUG) << "stopped";
 

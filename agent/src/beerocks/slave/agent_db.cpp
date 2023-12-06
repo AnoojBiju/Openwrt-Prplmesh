@@ -196,6 +196,7 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
 void AgentDB::dm_update_fronthaul_object(const std::string &path, const std::string &cur,
                                          const std::string &max)
 {
+    LOG(DEBUG) << "Badhri Im here @ " << __func__;
     m_ambiorix_datamodel->set(path, "CurrentState", cur);
     m_ambiorix_datamodel->set(path, "BestState", max);
 }

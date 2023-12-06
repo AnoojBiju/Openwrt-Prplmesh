@@ -2385,6 +2385,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             LOG(ERROR) << "addClass cACTION_APMANAGER_STATE_NOTIFICATION failed";
             return false;
         }
+        LOG(TRACE) << "Badhri Received ACTION_APMANAGER_STATE_NOTIFICATION";
 
         AgentDB::get()->dm_update_fronthaul_object(
             radio_manager.dm_instance, notification->curstate_str(), notification->maxstate_str());
