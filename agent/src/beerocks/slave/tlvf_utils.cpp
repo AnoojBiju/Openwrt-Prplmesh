@@ -79,13 +79,16 @@ std::vector<uint8_t> get_operating_class_non_oper_channels(
             auto &channel_info = channel_info_element.second;
             for (const auto &bw_info : channel_info.supported_bw_list) {
                 auto channel = channel_info_element.first;
+                if (oper_class.band != bw_info.bandwidth) {
+                    continue;
+                }
                 if (son::wireless_utils::is_operating_class_using_central_channel(
                         operating_class)) {
                     channel = son::wireless_utils::get_center_channel(
                         channel, son::wireless_utils::which_freq_op_cls(operating_class),
                         bw_info.bandwidth);
                 }
-                if (op_class_channel == channel && oper_class.band == bw_info.bandwidth) {
+                if (op_class_channel == channel) {
                     found = true;
                     break;
                 }
