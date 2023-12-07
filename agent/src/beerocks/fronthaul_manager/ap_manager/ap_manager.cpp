@@ -317,7 +317,7 @@ auto ApManager::sApManagerState::operator=(eApManagerState state) -> eApManagerS
     max = std::min(eApManagerState::OPERATIONAL, std::max(max, cur));
 
     // The UDS server does not expect messages yet
-    if (cur == eApManagerState::INIT) {
+    if (cur == eApManagerState::INIT || cur == eApManagerState::TERMINATED) {
         return cur;
     }
 
@@ -459,6 +459,8 @@ bool ApManager::stop()
 {
     bool ok = true;
 
+    m_state = eApManagerState::TERMINATED;
+
     if (m_slave_client) {
         m_slave_client.reset();
     }
@@ -482,8 +484,6 @@ bool ApManager::stop()
         ap_wlan_hal->detach();
         ap_wlan_hal.reset();
     }
-
-    m_state = eApManagerState::TERMINATED;
 
     LOG(DEBUG) << "stopped";
 
