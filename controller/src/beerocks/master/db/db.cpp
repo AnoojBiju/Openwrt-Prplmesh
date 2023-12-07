@@ -6870,6 +6870,11 @@ bool db::add_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac
         return false;
     }
 
+    std::shared_ptr<Agent> agent = m_agents.get(device_mac);
+    if (agent) {
+        agent->interfaces.add(interface_mac, name, (ieee1905_1::eMediaType)media_type);
+    }
+
     return dm_add_interface_element(device_mac, interface_mac, media_type, status, name);
 }
 
@@ -6910,7 +6915,12 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
         }
 
         // Prepare path to the Interface object, like Device.WiFi.DataElements.Network.Device.{i}.Interface
-        auto interface_path = device->dm_path + ".Interface";
+        auto agent = m_agents.get(device_mac);
+        if (!agent) {
+            LOG(ERROR) << "No agent found for al_mac " << device_mac;
+            return false;
+        }
+        auto interface_path = agent->dm_path + ".Interface";
 
         auto interface_instance = m_ambiorix_datamodel->add_instance(interface_path);
         if (interface_instance.empty()) {
@@ -6920,6 +6930,12 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
         }
 
         iface->m_dm_path = interface_instance;
+        auto interface   = agent->interfaces.get(interface_mac);
+        if (interface) {
+            interface->dm_path = interface_instance;
+        }
+        // Prepare path to the Interface object MACAddress, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MACAddress
+        m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress", interface_mac);
     }
 
     // Prepare path to the Interface object Status, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Status
@@ -6967,6 +6983,12 @@ bool db::remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_
 
     dm_remove_interface_element(device_mac, interface_mac);
     device->remove_interface(interface_mac);
+
+    auto agent = m_agents.get(device_mac);
+    if (agent) {
+        agent->interfaces.erase(interface_mac);
+    }
+
     return true;
 }
 
@@ -7109,6 +7131,14 @@ bool db::add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
         return false;
     }
 
+    auto agent = m_agents.get(device_mac);
+    if (agent) {
+        auto interface = agent->interfaces.get(interface_mac);
+        if (interface) {
+            interface->neighbors.add(neighbor_mac, is_IEEE1905);
+        }
+    }
+
     return dm_add_interface_neighbor(iface, neighbor);
 }
 
@@ -7145,6 +7175,16 @@ bool db::dm_add_interface_neighbor(
         }
 
         neighbor->dm_path = neighbor_instance;
+        auto agent        = m_agents.get(tlvf::mac_from_string(interface->m_node.mac));
+        if (agent) {
+            auto agent_interface = agent->interfaces.get(interface->m_mac);
+            if (agent_interface) {
+                auto neighbor_device = agent_interface->neighbors.get(neighbor->mac);
+                if (neighbor_device) {
+                    neighbor_device->dm_path = neighbor_instance;
+                }
+            }
+        }
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID

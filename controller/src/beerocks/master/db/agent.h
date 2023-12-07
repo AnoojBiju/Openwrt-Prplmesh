@@ -10,12 +10,16 @@
 #define AGENT_H
 
 #include <array>
+#include <memory>
+#include <string>
+
 #include <bcl/beerocks_defines.h>
 #include <bcl/beerocks_mac_map.h>
 #include <bcl/beerocks_message_structs.h>
-#include <memory>
-#include <string>
+#include <bcl/network/network_utils.h>
+
 #include <tlvf/common/sMacAddr.h>
+#include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/tlvftypes.h>
 #include <tlvf/wfa_map/tlvChannelScanCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
@@ -339,6 +343,26 @@ public:
 
     /** Radios reported on this agent. */
     beerocks::mac_map<sRadio> radios;
+
+    struct sNeighbor {
+        sMacAddr mac = beerocks::net::network_utils::ZERO_MAC;
+        std::string dm_path;
+        bool is_1905 = false;
+        explicit sNeighbor(const sMacAddr &mac_, bool is_1905_) : mac(mac_), is_1905(is_1905_) {}
+    };
+    struct sInterface {
+        sMacAddr mac = beerocks::net::network_utils::ZERO_MAC;
+        std::string alias;
+        std::string dm_path;
+        ieee1905_1::eMediaType link_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
+        beerocks::mac_map<sNeighbor> neighbors;
+        explicit sInterface(const sMacAddr &mac_, const std::string &alias_,
+                            ieee1905_1::eMediaType link_type_)
+            : mac(mac_), alias(alias_), link_type(link_type_)
+        {
+        }
+    };
+    beerocks::mac_map<sInterface> interfaces;
 
     friend class ::son::db;
 
