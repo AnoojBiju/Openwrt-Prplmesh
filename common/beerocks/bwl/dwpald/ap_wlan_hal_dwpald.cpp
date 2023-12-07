@@ -3831,17 +3831,98 @@ bool ap_wlan_hal_dwpal::set_no_deauth_unknown_sta(const std::string &ifname, boo
     return false;
 }
 
-bool ap_wlan_hal_dwpal::configure_service_priority(const uint8_t *data)
+bool ap_wlan_hal_dwpal::configure_service_priority(const uint8_t *dscp)
 {
+    int i = 0, j = 0, k = 0;
+
+    struct pcp_range {
+        uint8_t pcp;
+        int8_t start;
+        int8_t end;
+    } range[eConstant::PCP_RANGE_LEN] = {};
+
+    struct dscp_pcp_map {
+        uint8_t dscp;
+        uint8_t pcp;
+    } exception[eConstant::DSCP_MAP_LIST_LEN] = {};
+
+    std::string qos_map;
     std::stringstream ss;
-    for (auto i = 0; i < 21; i++) {
-        if (i != 0) {
-            ss << ",";
-        }
-        ss << i << "," << int(data[i]);
+
+    for (i = 0; i < eConstant::PCP_RANGE_LEN; i++) {
+        range[i].start = -1;
+        range[i].end   = -1;
+        range[i].pcp   = i;
     }
-    // sadly, std::move has no effect prio to C++17
-    LOG(DEBUG) << "Setting QOS_MAP_SET " << std::move(ss).str();
+
+    for (i = 0; i < eConstant::DSCP_MAP_LIST_LEN; i++) {
+        exception[i].dscp = -1;
+        exception[i].pcp  = -1;
+    }
+
+    for (i = 0; i < eConstant::DSCP_MAP_LIST_LEN; i++) {
+        if ((i != (eConstant::DSCP_MAP_LIST_LEN - 1)) && dscp[i] == dscp[i + 1]) {
+            for (j = i + 1; j < eConstant::DSCP_MAP_LIST_LEN; j++) {
+                if ((j == (eConstant::DSCP_MAP_LIST_LEN - 1)) ||
+                    ((j != (eConstant::DSCP_MAP_LIST_LEN - 1)) && dscp[j] != dscp[j + 1])) {
+                    if ((j - i) >= (range[dscp[j]].end - range[dscp[j]].start)) {
+                        range[dscp[j]].start = i;
+                        range[dscp[j]].end   = j;
+                        i                    = j;
+                        break;
+                    }
+                } else {
+                    continue;
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < eConstant::PCP_RANGE_LEN; i++) {
+        LOG(DEBUG) << "PCP range[" << +i << "] : start = " << +range[i].start
+                   << ", end = " << +range[i].end << std::endl;
+    }
+
+    for (i = 0, j = 0; i < eConstant::DSCP_MAP_LIST_LEN; i++) {
+        for (k = 0; k < eConstant::PCP_RANGE_LEN; k++) {
+            if ((i >= range[k].start) && (i <= range[k].end)) {
+                break;
+            }
+        }
+        if (k == eConstant::PCP_RANGE_LEN) {
+            exception[j].pcp    = dscp[i];
+            exception[j++].dscp = i;
+        }
+    }
+    // only first 21 exceptions can be handled in hostapd
+    for (i = 0; i < eConstant::DSCP_MAX_EXCEPTION_HOSTAPD_SUPPORT; i++) {
+        if (exception[i].dscp == 255) {
+            break;
+        }
+        ss << +exception[i].dscp << "," << +exception[i].pcp << ",";
+    }
+
+    for (i = 0; i < eConstant::PCP_RANGE_LEN; i++) {
+        if (i == (eConstant::PCP_RANGE_LEN - 1)) {
+            ss << +range[i].start << "," << +range[i].end;
+        } else {
+            ss << +range[i].start << "," << +range[i].end << ",";
+        }
+    }
+
+    for (const auto &iter : m_radio_info.available_vaps) {
+        //Skip VAPs which are not fronthaul
+        if (!iter.second.fronthaul) {
+            continue;
+        }
+        qos_map = "SET_QOS_MAP_SET " + iter.second.bss + " " + ss.str();
+        LOG(DEBUG) << "Setting QOS_MAP_SET " << qos_map;
+        if (!dwpal_send_cmd(qos_map)) {
+            LOG(ERROR) << "failed to set " << qos_map;
+            return false;
+        }
+    }
+
     return true;
 }
 

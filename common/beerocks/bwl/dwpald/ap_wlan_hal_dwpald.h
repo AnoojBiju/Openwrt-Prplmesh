@@ -137,6 +137,12 @@ public:
 
     virtual bool configure_service_priority(const uint8_t *data) override;
 
+    enum eConstant : int {
+        PCP_RANGE_LEN                      = 8,
+        DSCP_MAP_LIST_LEN                  = 64,
+        DSCP_MAX_EXCEPTION_HOSTAPD_SUPPORT = 21,
+    };
+
     // Protected methods:
 protected:
     virtual bool dwpald_attach(char *ifname) override;
