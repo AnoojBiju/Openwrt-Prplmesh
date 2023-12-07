@@ -1985,6 +1985,25 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
         if (db->device_conf.certification_mode) {
             LOG(DEBUG) << "Request agent to tear down on certification mode";
             for (const auto &radio_manager_element : m_radio_managers.get()) {
+		auto &radio_manager = radio_manager_element.second;
+                auto radio_iface =
+                    m_radio_managers.get_radio_iface_from_fd(radio_manager.ap_manager_fd);
+                auto radio = db->radio(radio_iface);
+                if (!radio) {
+                    return false;
+                }
+		// Reset VLAN Config before tear down
+                auto pvid_set_request = message_com::create_vs_message<
+                    beerocks_message::cACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST>(cmdu_tx);
+		if (!pvid_set_request) {
+                    LOG(ERROR) << "Failed building message!";
+                    return false;
+                }
+
+                pvid_set_request->primary_vlan_id() = 0;
+		// Send ACTION_APMANAGER_HOSTAP_SET_PRIMARY_VLAN_ID_REQUEST.
+                send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
+
                 // Tear down all VAPS in the radio by sending an update request with an empty
                 // configuration.
                 auto request_out = message_com::create_vs_message<
@@ -1992,13 +2011,6 @@ bool slave_thread::handle_cmdu_backhaul_manager_message(
                 if (!request_out) {
                     LOG(ERROR) << "Failed building message "
                                   "cACTION_APMANAGER_WIFI_CREDENTIALS_UPDATE_REQUEST!";
-                    return false;
-                }
-                auto &radio_manager = radio_manager_element.second;
-                auto radio_iface =
-                    m_radio_managers.get_radio_iface_from_fd(radio_manager.ap_manager_fd);
-                auto radio = db->radio(radio_iface);
-                if (!radio) {
                     return false;
                 }
                 request_out->set_bridge_ifname(db->bridge.iface_name);
