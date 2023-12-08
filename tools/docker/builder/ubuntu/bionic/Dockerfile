@@ -86,6 +86,7 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 
 RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && \
+    sed -i '1s/python/python3/g' /usr/bin/repo && \
     chmod +x /usr/bin/repo
 
 WORKDIR ambiorix
