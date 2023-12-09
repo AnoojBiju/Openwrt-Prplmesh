@@ -162,6 +162,18 @@ public:
               AmbiorixVariant &result);
 
     /**
+     * @brief invokes asynchronously a data model function.
+     *
+     * @param[in] object_path: object path to the object that contains the function.
+     * @param[in] method: name of the function being called.
+     * @param[in] args: the function arguments in a amxc variant htable type.
+     * @param[in] eventHandler: event handler structure.
+     * @return True on success and false otherwise.
+    */
+    bool async_call(const std::string &object_path, const char *method, AmbiorixVariant &args,
+                    std::shared_ptr<sAmbiorixEventHandler> &eventHandler);
+
+    /**
      * @brief get the amxb file descriptor.
      * Use this function to add the file descriptor to your event loop.
      *
@@ -242,6 +254,7 @@ public:
 private:
     AmbiorixConnectionSmartPtr m_connection;
     std::vector<sAmbiorixSubscriptionInfo> m_subscriptions;
+    std::vector<std::shared_ptr<sAmbiorixEventHandler>> m_event_handlers;
 };
 
 } // namespace wbapi

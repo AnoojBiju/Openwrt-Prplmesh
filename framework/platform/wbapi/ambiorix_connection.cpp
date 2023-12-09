@@ -170,6 +170,37 @@ bool AmbiorixConnection::call(const std::string &object_path, const char *method
     return (ret == AMXB_STATUS_OK);
 }
 
+static void async_call_done_callback(const amxb_bus_ctx_t *bus_ctx, amxb_request_t *req, int status,
+                                     void *priv)
+{
+    if (status != 0) {
+        return;
+    }
+    sAmbiorixEventHandler *handler = static_cast<sAmbiorixEventHandler *>(priv);
+    if (!handler || !req || !req->result) {
+        return;
+    }
+    AmbiorixVariant event_obj(req->result, false);
+    if (event_obj.empty()) {
+        return;
+    }
+    if (handler->callback_fn) {
+        handler->callback_fn(event_obj, handler->context);
+    }
+}
+
+bool AmbiorixConnection::async_call(const std::string &object_path, const char *method,
+                                    AmbiorixVariant &args,
+                                    std::shared_ptr<sAmbiorixEventHandler> &eventHandler)
+{
+    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    amxb_request_t *req =
+        amxb_async_call(m_bus_ctx, object_path.c_str(), method, get_amxc_var_ptr(args),
+                        async_call_done_callback, eventHandler.get());
+    LOG_IF(req == nullptr, ERROR) << "calling [" << object_path << "." << method << "] failed";
+    return (req != nullptr);
+}
+
 int AmbiorixConnection::read()
 {
     m_mutex.lock();

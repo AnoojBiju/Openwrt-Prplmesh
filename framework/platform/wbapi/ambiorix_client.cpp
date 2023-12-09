@@ -88,6 +88,25 @@ bool AmbiorixClient::call(const std::string &object_path, const char *method, Am
     return (m_connection && m_connection->call(object_path, method, args, result));
 }
 
+bool AmbiorixClient::async_call(const std::string &object_path, const char *method,
+                                AmbiorixVariant &args,
+                                std::shared_ptr<sAmbiorixEventHandler> &eventHandler)
+{
+    if (!m_connection) {
+        return false;
+    }
+
+    m_event_handlers.emplace_back(eventHandler);
+    if(!m_connection->async_call(object_path, method, args, eventHandler)) {
+        LOG(ERROR) << "send async request to object failed, path:" << object_path;
+        m_event_handlers.pop_back();
+        return false;
+    }
+
+    LOG(INFO) << "async request send successfully to object, path:" << object_path;
+    return true;
+}
+
 int AmbiorixClient::get_fd() { return (m_connection ? m_connection->get_fd() : -1); }
 
 int AmbiorixClient::get_signal_fd() { return (m_connection ? m_connection->get_signal_fd() : -1); }
