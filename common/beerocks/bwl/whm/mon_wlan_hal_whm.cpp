@@ -153,6 +153,60 @@ bool mon_wlan_hal_whm::sta_channel_load_11k_request(const std::string &vap_iface
 bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
                                               const SBeaconRequest11k &req, int &dialog_token)
 {
+    // Prepare RRM reply handler
+    auto event_handler = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+
+        // Allocate response object
+        auto resp_buff = ALLOC_SMART_BUFFER(sizeof(SBeaconResponse11k));
+        auto resp      = reinterpret_cast<SBeaconResponse11k *>(resp_buff.get());
+        LOG_IF(!resp, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(resp_buff.get(), 0, sizeof(SBeaconResponse11k));
+
+        // The BSSID that was measured
+        std::string bssid;
+        if (!event_data.read_child(bssid, "BSSID")) {
+            LOG(DEBUG) << " Received RRM reply without 'BSSID' param!";
+            return;
+        }
+        LOG(DEBUG) << " Received RRM BSSID: " << bssid;
+        resp->bssid.oct[0] = tlvf::mac_from_string(bssid).oct[0];
+        resp->bssid.oct[1] = tlvf::mac_from_string(bssid).oct[1];
+        resp->bssid.oct[2] = tlvf::mac_from_string(bssid).oct[2];
+        resp->bssid.oct[3] = tlvf::mac_from_string(bssid).oct[3];
+        resp->bssid.oct[4] = tlvf::mac_from_string(bssid).oct[4];
+        resp->bssid.oct[5] = tlvf::mac_from_string(bssid).oct[5];
+
+        // Channel that the BSSID was observed on
+        std::string channel;
+        if (event_data.read_child(bssid, "Channel")) {
+            resp->channel = beerocks::string_utils::stoi(channel);
+        }
+
+        // Received channel power indicator
+        std::string rcpi;
+        if (event_data.read_child(rcpi, "RCPI")) {
+            resp->rcpi = beerocks::string_utils::stoi(rcpi);
+        }
+
+        // Received Signal Noise Indicator
+        std::string rsni;
+        if (event_data.read_child(rsni, "Channel")) {
+            resp->rsni = beerocks::string_utils::stoi(rsni);
+        }
+
+        // Add the message to the queue
+        mon_wlan_hal_whm *hal = (static_cast<mon_wlan_hal_whm *>(context));
+        hal->event_queue_push(Event::RRM_Beacon_Response, resp_buff);
+    };
+    event_handler->context = this;
+
+    // Send RRM request
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
     args.add_child("mac", tlvf::mac_to_string(req.sta_mac.oct));
@@ -161,7 +215,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
-    bool ret = m_ambiorix_cl->call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
+    bool ret = m_ambiorix_cl->async_call(wifi_ap_path, "sendRemoteMeasumentRequest", args, event_handler);
 
     if (!ret) {
         LOG(ERROR) << "sta_beacon_11k_request() failed!";
