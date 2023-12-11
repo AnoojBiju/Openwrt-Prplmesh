@@ -57,7 +57,7 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
 
     m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
 
-    LOG(DEBUG) << "sending ACK message back to controller";
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
     m_btl_ctx.send_cmdu_to_controller({}, m_cmdu_tx);
 
     auto service_prioritization_rules =
