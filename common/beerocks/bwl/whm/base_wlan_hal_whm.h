@@ -66,6 +66,7 @@ public:
     virtual bool process_ext_events(int fd = 0) override;
     virtual bool process_nl_events() override { return true; };
     virtual std::string get_radio_mac() override;
+
     /**
      * @brief Gets channel utilization.
      *

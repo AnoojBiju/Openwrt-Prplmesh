@@ -86,6 +86,10 @@ public:
 
     virtual std::string get_ssid()  = 0;
     virtual std::string get_bssid() = 0;
+    /*!
+     * Returns the Backhaul Mac address.
+     */
+    virtual std::string get_wireless_backhaul_mac() = 0;
 };
 
 // STA HAL factory types
