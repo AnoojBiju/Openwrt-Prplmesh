@@ -2819,7 +2819,8 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        LOG(DEBUG) << "sending ACK message back to controller";
+        LOG(DEBUG) << "sending ACK message back to controller with mid: " << std::hex
+                   << beerocks_header->id();
         send_cmdu_to_controller(fronthaul_iface, cmdu_tx);
         break;
     }
@@ -4872,7 +4873,7 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
         return false;
     }
 
-    LOG(DEBUG) << "sending ACK message back to controller";
+    LOG(DEBUG) << "sending ACK message back to controller with mid: " << std::hex << mid;
     return send_cmdu_to_controller(radio->front.iface_name, cmdu_tx);
 }
 
@@ -4898,7 +4899,7 @@ bool slave_thread::handle_1905_higher_layer_data_message(int fd, ieee1905_1::Cmd
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return false;
     }
-    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << int(mid);
+    LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
 
     return send_cmdu_to_controller({}, cmdu_tx);
 }
@@ -5003,7 +5004,7 @@ bool slave_thread::handle_client_steering_request(int fd, ieee1905_1::CmduMessag
             return false;
         }
 
-        LOG(DEBUG) << "sending ACK message back to controller";
+        LOG(DEBUG) << "sending ACK message back to controller with mid: " << std::hex << mid;
         send_cmdu_to_controller({}, cmdu_tx);
 
         // build and send steering completed message
