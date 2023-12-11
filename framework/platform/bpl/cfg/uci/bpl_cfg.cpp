@@ -224,6 +224,8 @@ int cfg_get_rdkb_extensions()
     return retVal;
 }
 
+bool bpl_cfg_get_on_boot_only_scan() { return false; }
+
 bool cfg_get_band_steering(bool &band_steering)
 {
     int retVal = -1;

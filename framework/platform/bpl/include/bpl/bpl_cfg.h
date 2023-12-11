@@ -810,6 +810,12 @@ int cfg_get_all_prplmesh_wifi_interfaces(BPL_WLAN_IFACE *interfaces, int *num_of
 bool cfg_get_zwdfs_flag(int &flag);
 
 /**
+ * @brief Returns whether the on_boot_only_scan is enabled.
+ * @return true on support, otherwise false.
+ */
+bool bpl_cfg_get_on_boot_only_scan();
+
+/**
  * @brief Returns best channel ranking threshold.
  *
  * @param [out] threshold Ranking value used to determine best channel candidate.
