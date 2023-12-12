@@ -35,7 +35,11 @@ namespace whm {
 
 static ap_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
 {
-    if (opcode == "CTRL-EVENT-EAP-FAILURE") {
+    if (opcode == "DFS-CAC-START") {
+        return ap_wlan_hal::Event::DFS_CAC_Started;
+    } else if (opcode == "DFS-CAC-COMPLETED") {
+        return ap_wlan_hal::Event::DFS_CAC_Completed;
+    } else if (opcode == "CTRL-EVENT-EAP-FAILURE") {
         return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
     } else if (opcode == "CTRL-EVENT-EAP-FAILURE2") {
         return ap_wlan_hal::Event::WPA_Event_EAP_Failure2;
@@ -50,6 +54,26 @@ static ap_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
     }
 
     return ap_wlan_hal::Event::Invalid;
+}
+
+static uint8_t wpaCtrl_bw_to_beerocks_bw(const uint8_t width)
+{
+    std::map<uint8_t, beerocks::eWiFiBandwidth> bandwidths{
+        {0 /*CHAN_WIDTH_20_NOHT*/, beerocks::BANDWIDTH_20},
+        {1 /*CHAN_WIDTH_20     */, beerocks::BANDWIDTH_20},
+        {2 /*CHAN_WIDTH_40     */, beerocks::BANDWIDTH_40},
+        {3 /*CHAN_WIDTH_80     */, beerocks::BANDWIDTH_80},
+        {4 /*CHAN_WIDTH_80P80  */, beerocks::BANDWIDTH_80_80},
+        {5 /*CHAN_WIDTH_160    */, beerocks::BANDWIDTH_160},
+    };
+
+    auto it = bandwidths.find(width);
+    if (bandwidths.end() == it) {
+        LOG(ERROR) << "Invalid bandwidth value: " << width;
+        return beerocks::BANDWIDTH_UNKNOWN;
+    }
+
+    return it->second;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1216,6 +1240,92 @@ bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVari
 
     switch (event) {
 
+    case Event::DFS_CAC_Started: {
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+
+        // Channel
+        msg->params.channel = beerocks::string_utils::stoi(parsed_obj["chan"]);
+
+        // Secondary Channel
+        std::string tmp_string = parsed_obj["sec_chan"];
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
+
+        // Bandwidth
+        tmp_string = parsed_obj["width"];
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        msg->params.bandwidth = beerocks::eWiFiBandwidth(
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(tmp_string)));
+
+        // CAC Duration
+        tmp_string = parsed_obj["cac_time"];
+        beerocks::string_utils::rtrim(tmp_string, "s");
+        msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_CAC_Started, msg_buff);
+        break;
+    }
+    case Event::DFS_CAC_Completed: {
+        if (!get_radio_info().is_5ghz) {
+            LOG(WARNING) << "interface: " << interface << " not 5GHz radio!";
+            return true;
+        }
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+
+        // CAC Status
+        std::string success = parsed_obj["cac_status"];
+        if (success.empty()) {
+            // Some wpaCtrl_events still received with "success" parameter and we should support it as well
+            success = parsed_obj["success"];
+            if (success.empty()) {
+                LOG(ERROR) << "Failed reading cac finished success parameter!";
+                return false;
+            }
+        }
+        msg->params.success = beerocks::string_utils::stoi(success);
+
+        // Frequency
+        msg->params.frequency = beerocks::string_utils::stoi(parsed_obj["freq"]);
+
+        // Center frequency 1
+        msg->params.center_frequency1 = beerocks::string_utils::stoi(parsed_obj["cf1"]);
+
+        // Center frequency 2
+        msg->params.center_frequency2 = beerocks::string_utils::stoi(parsed_obj["cf2"]);
+
+        // Channel
+        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+        // Timeout
+        std::string timeout = parsed_obj["timeout"];
+        if (!timeout.empty()) {
+            msg->params.timeout = beerocks::string_utils::stoi(timeout);
+        }
+
+        // Bandwidth
+        msg->params.bandwidth =
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(parsed_obj["chan_width"]));
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_CAC_Completed, msg_buff);
+        break;
+    }
     case Event::WPA_Event_EAP_Failure:
     case Event::WPA_Event_EAP_Failure2:
     case Event::WPA_Event_EAP_Timeout_Failure:
