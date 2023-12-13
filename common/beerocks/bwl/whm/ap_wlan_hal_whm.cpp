@@ -39,6 +39,8 @@ static ap_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::DFS_CAC_Started;
     } else if (opcode == "DFS-CAC-COMPLETED") {
         return ap_wlan_hal::Event::DFS_CAC_Completed;
+    } else if (opcode == "DFS-NOP-FINISHED") {
+        return ap_wlan_hal::Event::DFS_NOP_Finished;
     } else if (opcode == "CTRL-EVENT-EAP-FAILURE") {
         return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
     } else if (opcode == "CTRL-EVENT-EAP-FAILURE2") {
@@ -68,7 +70,7 @@ static uint8_t wpaCtrl_bw_to_beerocks_bw(const uint8_t width)
     };
 
     auto it = bandwidths.find(width);
-    if (bandwidths.end() == it) {
+    if (it == bandwidths.end()) {
         LOG(ERROR) << "Invalid bandwidth value: " << width;
         return beerocks::BANDWIDTH_UNKNOWN;
     }
@@ -1324,6 +1326,34 @@ bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVari
 
         // Add the message to the queue
         event_queue_push(Event::DFS_CAC_Completed, msg_buff);
+        break;
+    }
+    case Event::DFS_NOP_Finished: {
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0,
+               sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+
+        // Frequency
+        msg->params.frequency = beerocks::string_utils::stoi(parsed_obj["freq"]);
+
+        // Channel
+        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+        // Bandwidth
+        msg->params.bandwidth =
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(parsed_obj["chan_width"]));
+
+        // Center frequency
+        msg->params.vht_center_frequency = beerocks::string_utils::stoi(parsed_obj["cf1"]);
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_NOP_Finished, msg_buff);
         break;
     }
     case Event::WPA_Event_EAP_Failure:

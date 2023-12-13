@@ -64,7 +64,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
     std::string wpaCtrl_filter =
         "(path matches '" + m_radio_path + "$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
 
-    m_ambiorix_cl->subscribe_to_object_event(m_radio_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, wpaCtrl_Event_handler, wpaCtrl_filter);
 
     // subscribe to the WiFi.Radio.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
@@ -160,7 +160,7 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
     std::string wpaCtrl_filter = "(path matches '" + wifi_ap_path +
                                  "[0-9]+.$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
 
-    m_ambiorix_cl->subscribe_to_object_event(wifi_ap_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+    m_ambiorix_cl.subscribe_to_object_event(wifi_ap_path, wpaCtrl_Event_handler, wpaCtrl_filter);
 
     // subscribe to the WiFi.Accesspoint.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
