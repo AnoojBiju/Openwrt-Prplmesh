@@ -83,7 +83,7 @@ FROM rdk-b-builder as rdk-b-prplmesh-builder
 
 RUN printf '\033[1;35m%s Cloning RDK-B\n\033[0m' "$(date --iso-8601=seconds --universal)" \
     && yes | repo init -u https://code.rdkcentral.com/r/rdkcmf/manifests \
-    -m rdkb-turris-extsrc.xml -b rdkb-2022q4-dunfell \
+    -m rdkb-turris-extsrc.xml -b rdkb-2023q4-dunfell \
     && repo sync
 
 # Fix a bug in "current" turris setup with meta-rdk-ext
@@ -95,5 +95,5 @@ RUN cp meta-turris/recipes-connectivity/openssl/openssl_%.bbappend \
 ADD get-git-hash.sh /bin/
 
 RUN get-git-hash.sh meta-prplmesh && \
-    get-git-hash.sh meta-amx && \
-    get-git-hash.sh meta-componentlst
+    get-git-hash.sh meta-amx
+
