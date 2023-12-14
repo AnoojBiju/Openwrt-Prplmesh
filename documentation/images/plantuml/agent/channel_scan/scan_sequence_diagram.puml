@@ -1,0 +1,89 @@
+@startuml
+
+participant channel_scan_task
+participant son_slave
+participant monitor
+participant bwl_whm
+participant pwhm
+
+== Launching scan ==
+
+channel_scan_task -> son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST
+
+son_slave -> monitor : ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST
+
+monitor -> bwl_whm : channel_scan_trigger()
+
+bwl_whm -> pwhm : WiFi.Radio.x.startScan()
+
+bwl_whm -> bwl_whm : Event::Channel_Scan_Triggered (synthetic event)
+
+bwl_whm --> monitor : Event::Channel_Scan_Triggered
+
+monitor --> son_slave : ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION
+
+son_slave --> channel_scan_task : ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION
+
+
+
+
+== Retrieving Results : Polling ==
+
+channel_scan_task -> son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST
+note right
+  only sent if dwell time == 0; dwell time is
+  a parameter in a vendor extension, not present
+  in standard EasyMesh 1905 Scan Request
+end note
+
+son_slave -> monitor : ACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_REQUEST
+
+monitor -> bwl_whm : channel_scan_dump_cached_results()
+
+bwl_whm --> monitor : Event::Channel_Scan_Dump_Result
+
+monitor --> son_slave : ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : true)
+
+son_slave --> channel_scan_task : ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : true)
+
+
+
+== Retrieving Results : Event-driven ==
+
+group Transition Channel Scan FSM to WAIT_FOR_RESULTS_DUMP
+	bwl_whm <- pwhm : WiFi.Radio.x.ScanComplete notification
+	monitor <- bwl_whm : Event:Channel_Scan_New_Results_Ready
+	son_slave <- monitor : ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : false)
+	channel_scan_task <- son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : false)
+end
+
+group Retrieve Result from PWHM and push them to the agent [getScanResults() is called once; data is pushed in chunks via Scan_Dump_Result events]
+	bwl_whm -> pwhm : WiFi.Radio.x.getScanResults(&results)
+	activate pwhm
+	pwhm --> bwl_whm : WiFi.Radio.x.getScanResults(&results)
+	deactivate pwhm
+
+	activate bwl_whm
+	bwl_whm -> bwl_whm : Event:Channel_Scan_Dump_Result (synthetic event)
+
+	monitor <- bwl_whm : Event:Channel_Scan_Dump_Result
+	deactivate bwl_whm
+	
+	note left
+	  notice that two distinct events, //New_Results_Ready// and //Dump_Result//, are mapped to 
+	  the same beerocks message, the difference being in the **is_dump** flag;
+	  this flag also signals the presence (//Dump_Result//) or absence(//New_Results_Ready//) of payload
+	end note
+
+	son_slave <- monitor : ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : true)
+	channel_scan_task <- son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : true)
+end
+
+group Transition Channel Scan FSM to SCAN_DONE
+	bwl_whm -> bwl_whm : Event::Channel_Scan_Finished (synthetic event)
+	monitor <- bwl_whm : Event::Channel_Scan_Finished
+	son_slave <- monitor : ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION
+	channel_scan_task <- son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION
+end
+
+@enduml

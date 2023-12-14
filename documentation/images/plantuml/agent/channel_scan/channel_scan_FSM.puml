@@ -1,0 +1,37 @@
+@startuml
+
+state Channel_Scan_Task {
+	state "Scan PENDING_TRIGGER" as preTrigger
+	state "Scan WAIT_FOR_SCAN_TRIGGERED" as waitTrigger
+	state "Scan WAIT_FOR_RESULTS_READY" as waitReady
+	state "Scan WAIT_FOR_RESULTS_DUMP" as waitDump
+	state "Scan SCAN_DONE" as scanDone
+	state "Scan SCAN_FAILED" as scanFail
+
+	preTrigger : Sending ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST \n or \n ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST
+
+
+	[*] --> preTrigger : handle_channel_scan_request()
+
+	preTrigger --> waitTrigger : ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE(success : true)
+
+	preTrigger -> waitReady : ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE(success : true)
+
+	preTrigger -> scanFail : Timeout / ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE(success : false)
+
+	waitTrigger --> waitReady : ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGERED_NOTIFICATION (whm::Event::Channel_Scan_Triggered)
+
+	waitReady --> scanFail : Timeout
+
+	waitReady --> waitDump : ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : false) \n (Event::Channel_Scan_New_Results_Ready)
+
+	waitDump --> waitDump : ACTION_BACKHAUL_CHANNEL_SCAN_RESULTS_NOTIFICATION(is_dump : true) \n Event::Channel_Scan_Dump_Result
+
+	waitDump --> scanFail : Timeout
+
+	waitDump --> scanDone : ACTION_BACKHAUL_CHANNEL_SCAN_FINISHED_NOTIFICATION \n Event::Channel_Scan_Finished
+
+	scanDone --> [*] : send_channel_scan_report_to_controller(). handles fragmentation
+}
+
+@enduml
