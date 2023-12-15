@@ -944,6 +944,7 @@ bool mon_wlan_hal_dwpal::update_stations_stats(const std::string &vap_iface_name
             LOG(ERROR) << "Failed reading BytesSent parameter!";
             return false;
         }
+	LOG(DEBUG) << "BYTES SENT : " << tmp_int;
         calc_curr_traffic(tmp_int, sta_stats.tx_bytes_cnt, sta_stats.tx_bytes);
 
         // RX Bytes

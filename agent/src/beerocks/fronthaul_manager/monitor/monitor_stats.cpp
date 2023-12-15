@@ -529,6 +529,7 @@ bool monitor_stats::add_ap_assoc_sta_traffic_stat(ieee1905_1::CmduMessageTx &cmd
     ap_assoc_sta_traffic_stat_tlv->tx_packets_error() = stat.tx_errors_cnt;
     ap_assoc_sta_traffic_stat_tlv->rx_packets_error() = stat.rx_errors_cnt;
     ap_assoc_sta_traffic_stat_tlv->retransmission_count() = stat.retrans_count;
+    LOG(DEBUG) << "STATS added in TLV : " << stat.tx_bytes_cnt;
 
     return true;
 }

@@ -740,21 +740,30 @@ void Monitor::on_channel_utilization_measurement_period_elapsed()
      * m_send_first_ap_metrics_response_after_threshold_enable in monitor_radio_node
      */
     if (radio_node->get_first_threshold_enabled()) {
+	LOG(DEBUG) << "INSIDE THE SET FIRST THRESHOLD";
         threshold_crossed = true;
         radio_node->set_first_threshold_enabled(false);
     }
+    LOG(DEBUG) << "CHANNEL UTILIZATION : " << channel_utilization;
 
     // Check if a threshold has been set
-    if (0 != info.ap_channel_utilization_reporting_threshold) {
+    if (info.ap_channel_utilization_reporting_threshold) {
         if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
             if (info.ap_metrics_channel_utilization_reporting_value <=
                 info.ap_channel_utilization_reporting_threshold) {
+		LOG(DEBUG) << "THRESHOLD SET IN FIRST";
                 threshold_crossed = true;
             }
         } else if (info.ap_metrics_channel_utilization_reporting_value >
                    info.ap_channel_utilization_reporting_threshold) {
+	    LOG(DEBUG) << "THRESHOLD SET IN SECOND";
             threshold_crossed = true;
         }
+    }
+    if (abs(channel_utilization - info.ap_metrics_channel_utilization_reporting_value) > 
+			info.ap_channel_utilization_reporting_threshold) {
+	threshold_crossed = true;
+	LOG(DEBUG) << "***************TRESHOLD SET TO TRUE**********";
     }
     LOG(DEBUG) << "Channel utilization: previous_value="
                << std::to_string(info.ap_metrics_channel_utilization_reporting_value)

@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlvStaMacAddressType.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsQuery.h>
 #include <tlvf/wfa_map/tlvUnassociatedStaLinkMetricsResponse.h>
+#include <math.h>
 
 #include "../gate/1905_beacon_query_to_vs.h"
 
@@ -745,7 +746,7 @@ uint32_t LinkMetricsCollectionTask::recalculate_byte_units(uint32_t bytes)
 {
     const auto &byte_counter_units = AgentDB::get()->device_conf.byte_counter_units;
     if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
-        bytes = bytes / 1024;
+	bytes = round(float(bytes)/1024);
     } else if (byte_counter_units ==
                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
         bytes = bytes / 1024 / 1024;
