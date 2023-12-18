@@ -1779,13 +1779,8 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         cmd += " bandwidth=" + std::to_string(beerocks::utils::convert_bandwidth_to_int(
                                    static_cast<beerocks::eWiFiBandwidth>(bw)));
 
-        if (freq_type == beerocks::FREQ_6G) {
-            cmd += " he";
-        } else if (bw == beerocks::BANDWIDTH_20 || bw == beerocks::BANDWIDTH_40) {
-            cmd += " ht"; //n
-        } else if ((bw == beerocks::BANDWIDTH_80) || (bw == beerocks::BANDWIDTH_160)) {
-            cmd += " vht"; // ac
-        }
+        // Let the lower layer(s) decide which hw mode(s) to use
+        cmd += " ht vht he";
 
         /*
 	 * TODO: Below channel BW override is a temporary solution to overcome sniffer
@@ -1796,7 +1791,7 @@ bool ap_wlan_hal_dwpal::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
         if (certification_mode) {
             LOG(INFO) << "In Certification mode, overriding bw to 20MHz";
             cmd = "CHAN_SWITCH " + std::to_string(csa_beacon_count) + " " + freq_str +
-                  " center_freq1=" + freq_str + " bandwidth=20 vht";
+                  " center_freq1=" + freq_str + " bandwidth=20 ht vht he";
         }
     }
 
