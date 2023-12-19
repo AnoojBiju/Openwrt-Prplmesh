@@ -928,7 +928,6 @@ set_mbo_assoc_disallow_vap(const std::shared_ptr<beerocks::wbapi::AmbiorixClient
 
     std::string reason = enable ? "Unspecified" : "Off";
 
-    args.add_child("MBOEnable", enable);
     args.add_child("MBOAssocDisallowReason", reason);
 
     bool ret = ambiorix_cl->update_object(vap_path, args);
