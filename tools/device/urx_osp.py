@@ -22,7 +22,7 @@ class URXOSP(GenericPrplOS):
     and 'ipaddr' should already be set in the bootloader.
     """
 
-    initialization_time = 280
+    initialization_time = 180
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
@@ -31,6 +31,10 @@ class URXOSP(GenericPrplOS):
 
     bootloader_reboot_command = "run bootcmd"
     """The command to reboot the device in u-boot"""
+
+    reboot_after_upgrade = True
+    """Selects if a device needs rebooting after flashing.
+    Workaround for an issue where several components fail on first boot"""
 
     def upgrade_from_u_boot(self, shell: pexpect.fdpexpect.fdspawn):
         """Upgrade from u-boot and remove the overlay.

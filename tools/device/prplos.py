@@ -97,6 +97,15 @@ class GenericPrplOS(GenericDevice):
             # activate the console:
             shell.sendline("")
             shell.expect(self.serial_prompt)
+            # Reboot again; workaround for configuration partition issue
+            if self.reboot_after_upgrade:
+                time.sleep(180)
+                print("Rebooting again as a workaround.")
+                self.reboot(self.check_serial_type())
+                shell.expect("Please press Enter to activate this console", timeout=180)
+                # activate the console:
+                shell.sendline("")
+                shell.expect(self.serial_prompt)
         # Wait at least for the CAC timer:
         time.sleep(self.initialization_time)
 

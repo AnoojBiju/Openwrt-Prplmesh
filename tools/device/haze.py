@@ -25,6 +25,10 @@ class Haze(GenericPrplOS):
     bootloader_prompt = r"IPQ807x# "
     """The u-boot prompt on the target."""
 
+    reboot_after_upgrade = True
+    """Selects if a device needs rebooting after flashing.
+    Workaround for an issue where several components fail on first boot"""
+
     def upgrade_from_u_boot(self, shell: pexpect.fdpexpect.fdspawn):
         """Upgrade from u-boot and remove the overlay.
 
