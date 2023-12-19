@@ -9,33 +9,22 @@ set -e
 # Start with a new log file:
 rm -f /var/log/messages && syslog-ng-ctl reload
 
-data_overlay_not_initialized()
-{
-  grep -q overlayfs:/tmp/root /proc/mounts || test -f /tmp/.switch_jffs2 || pgrep 'mount_root done'
-}
+sh /etc/init.d/tr181-upnp stop || true
+rm -f /etc/rc.d/S*tr181-upnp
 
-if data_overlay_not_initialized; then
-  logger -t prplmesh -p daemon.info "Waiting for data overlay initialization..."
-  while data_overlay_not_initialized; do
-    sleep 2
-  done
-  logger -t prplmesh -p daemon.info "Data overlay is initialized."
-fi
-sleep 20
-
-# Save the IP settings persistently (PPM-2351):
-sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-sh /etc/init.d/ip-manager restart && sleep 15
+# Stop obuspa client
+sh /etc/init.d/obuspa stop || true
+rm -f /etc/rc.d/S*obuspa
 
 ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
-if ubus call DHCPv4 _list ; then
+if ubus call DHCPv4 _list >/dev/null ; then
   ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv4 service not active!"
 fi
-if ubus call DHCPv6 _list ; then
+if ubus call DHCPv6 _list >/dev/null ; then
   ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv6 service not active!"
@@ -59,14 +48,7 @@ ubus call "IP.Interface" _set '{ "rel_path": ".[Name == \"br-lan\"].IPv4Address.
 uci set prplmesh.config.backhaul_wire_iface='lan3'
 uci commit
 
-# enable Wi-Fi radios
-ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
-ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
-
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
-
-# Restart the ssh server
-sh /etc/init.d/ssh-server restart
 
 # Required for config_load:
 . /lib/functions/system.sh
@@ -75,8 +57,8 @@ sh /etc/init.d/ssh-server restart
 
 # add private vaps to lan to workaround Netmodel missing wlan mib
 # this must be reverted once Netmodel version is integrated
-brctl addif br-lan wlan0 > /dev/null 2>&1 || true
-brctl addif br-lan wlan1 > /dev/null 2>&1 || true
+# brctl addif br-lan wlan0 > /dev/null 2>&1 || true
+# brctl addif br-lan wlan1 > /dev/null 2>&1 || true
 
 # configure private vaps
 ubus call "WiFi.SSID.1" _set '{ "parameters": { "SSID": "prplmesh" } }'
@@ -87,6 +69,16 @@ ubus call "WiFi.AccessPoint.1.Security" _set '{ "parameters": { "ModeEnabled": "
 ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "ModeEnabled": "WPA2-Personal" } }'
 ubus call "WiFi.AccessPoint.1.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
+
+# Temporary workaround for mbo issue
+ubus-cli WiFi.AccessPoint.*.MBOEnable=0
+
+# ubus-cli "WiFi.AccessPoint.1.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.2.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.3.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.4.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.5.MBOEnable=1"
+# ubus-cli "WiFi.AccessPoint.6.MBOEnable=1"
 
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to
@@ -105,14 +97,9 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"
 
 sleep 10
 
-# Try to work around PCF-681: if we don't have a connectivity, restart
-# tr181-bridging
-# Check the status of the LAN bridge
-ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && sh /etc/init.d/tr181-bridging restart && sleep 15)
-
-# If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
-ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
+# enable Wi-Fi radios
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Enable": "true" } }'
+ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Enable": "true" } }'
 
 # Remove the default lan/wan SSH servers if they exist
 # ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
@@ -126,7 +113,7 @@ ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Stop the default ssh server on the lan-bridge
-sh /etc/init.d/ssh-server stop
+sh /etc/init.d/ssh-server stop || true
 sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
