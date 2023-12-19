@@ -80,6 +80,7 @@ void TrafficSeparation::clear_configuration()
 
 void TrafficSeparation::apply_policy(const std::string &radio_iface)
 {
+    LOG(DEBUG) << "4.13.11 : Inside apply_policy";
     // Since the following call is locking the database, thread safety is promised on this function.
     auto db = AgentDB::get();
 

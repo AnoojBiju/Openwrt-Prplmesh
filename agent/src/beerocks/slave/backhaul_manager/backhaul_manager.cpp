@@ -309,6 +309,7 @@ bool BackhaulManager::thread_init()
 void BackhaulManager::on_thread_stop()
 {
     if (m_agent_fd != beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "4.13.11 : m_agent_fd disconnect";
         m_cmdu_server->disconnect(m_agent_fd);
     }
 
@@ -1467,7 +1468,8 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_BACKHAUL_REGISTER_REQUEST: {
 
-        m_agent_fd      = fd;
+        m_agent_fd = fd;
+        LOG(DEBUG) << "4.13.11 : m_agent_fd assigned";
         auto agent_name = std::move(std::string("agent"));
         LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
         m_cmdu_server->set_client_name(fd, agent_name);
@@ -1952,8 +1954,12 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             auto request = message_com::create_vs_message<
                 beerocks_message::cACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST>(cmdu_tx);
 
+            LOG(DEBUG) << "4.13.11 : before sending ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
+
             // Send the message to one of the son_slaves.
-            send_cmdu(m_agent_fd, cmdu_tx);
+            if (!send_cmdu(m_agent_fd, cmdu_tx)) {
+                LOG(ERROR) << "4.13.11 : failed to send ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST";
+            };
         }
 
         if (FSM_IS_IN_STATE(WAIT_WPS)) {

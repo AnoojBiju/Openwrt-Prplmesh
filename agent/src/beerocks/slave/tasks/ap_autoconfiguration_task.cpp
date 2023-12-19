@@ -211,11 +211,13 @@ void ApAutoConfigurationTask::handle_event(uint8_t event_enum_value, const void 
         if (!m_traffic_separation_configurator) {
             m_traffic_separation_configurator =
                 std::make_unique<TrafficSeparation>(m_btl_ctx.m_broker_client);
+            LOG(DEBUG) << "4.13.11 : m_traffic_separation_configurator ptr created";
         }
 
         // Reset the traffic separation configuration as they will be reconfigured on
         // autoconfiguration.
         m_traffic_separation_configurator->clear_configuration();
+        LOG(DEBUG) << "4.13.11 : m_traffic_separation_configurator ptr cleared";
 
         // Reset the discovery statuses.
         for (auto &discovery_status : m_discovery_status) {
@@ -337,6 +339,7 @@ bool ApAutoConfigurationTask::handle_vendor_specific(
         break;
     }
     case beerocks_message::ACTION_BACKHAUL_APPLY_VLAN_POLICY_REQUEST: {
+        LOG(DEBUG) << "4.13.11 : Inside case";
         handle_vs_apply_vlan_policy_request(cmdu_rx, sd, beerocks_header);
         break;
     }
@@ -1653,7 +1656,7 @@ void ApAutoConfigurationTask::handle_vs_ap_enabled_notification(
 
     const auto &vap_info = notification_in->vap_info();
     auto bssid           = std::find_if(radio->front.bssids.begin(), radio->front.bssids.end(),
-                              [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
+                                        [&vap_info](const beerocks::AgentDB::sRadio::sFront::sBssid &bssid) {
                                   return bssid.mac == vap_info.mac;
                               });
     if (bssid == radio->front.bssids.end()) {
@@ -1752,6 +1755,7 @@ void ApAutoConfigurationTask::handle_vs_vaps_list_update_notification(
 void ApAutoConfigurationTask::handle_vs_apply_vlan_policy_request(
     ieee1905_1::CmduMessageRx &cmdu_rx, int fd, std::shared_ptr<beerocks_header> beerocks_header)
 {
+    LOG(DEBUG) << "4.13.11 : Inside autoconfig task";
     m_traffic_separation_configurator->apply_policy();
 }
 
