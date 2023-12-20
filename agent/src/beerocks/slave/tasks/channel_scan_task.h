@@ -9,6 +9,7 @@
 #ifndef _CHANNEL_SCAN_TASK_H_
 #define _CHANNEL_SCAN_TASK_H_
 
+#include "../agent_db.h"
 #include "task.h"
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
@@ -133,6 +134,10 @@ private:
     struct sControllerRequestInfo : sRequestInfo {
         sMacAddr src_mac;
         sControllerRequestInfo() : sRequestInfo(eScanRequestType::ControllerRequested) {}
+    };
+    struct sAgentRequestInfo : sRequestInfo {
+        sMacAddr src_mac;
+        sAgentRequestInfo() : sRequestInfo(eScanRequestType::AgentRequested) {}
     };
     struct sScanRequest {
         std::shared_ptr<sRequestInfo> request_info;
@@ -260,7 +265,8 @@ private:
     * @return True on success, otherwise false.
     */
     bool handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
-
+    bool handle_on_boot_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+                                     const sMacAddr &radio_mac, const bool &send_results = false);
     /* 1905.1 message responses: */
 
     /**

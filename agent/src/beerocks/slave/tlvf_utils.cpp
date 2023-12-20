@@ -9,7 +9,6 @@
 #include "tlvf_utils.h"
 
 #include "agent_db.h"
-
 #include <bcl/beerocks_utils.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <easylogging++.h>

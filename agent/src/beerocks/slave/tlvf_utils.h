@@ -30,7 +30,6 @@ public:
     static bool create_operating_channel_report(ieee1905_1::CmduMessageTx &cmdu_tx,
                                                 const sMacAddr &radio_mac);
 };
-
 } // namespace beerocks
 
 #endif // __TLVF_UTILS_H__

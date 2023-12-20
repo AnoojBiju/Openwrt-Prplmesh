@@ -332,6 +332,17 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
     LOG(DEBUG) << "Set profile_x_disallow_override_unsupported_configuration to " << profile;
     beerocks::net::TrafficSeparation::m_profile_x_disallow_override_unsupported_configuration =
         profile;
+    auto on_boot_scan        = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan);
+    auto on_boot_scan_config = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan_on);
+    //auto db                  = beerocks::AgentDB::get();
+    // 0 - Off
+    // 1 - On
+    LOG(DEBUG) << "Badhri on_boot_scan: " << on_boot_scan;
+    LOG(DEBUG) << "Badhri on_boot_scan_config: " << on_boot_scan_config;
+    //db->device_conf.on_boot_scan = on_boot_scan ? true : false;
+    // 0 - 5 GHz
+    // 1 - 2.4 GHz
+    //db->device_conf.on_boot_scan_on = on_boot_scan_config;
 
     std::set<std::string> slave_ap_ifaces;
     for (auto &elm : interfaces_map) {

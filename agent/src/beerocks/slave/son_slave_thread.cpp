@@ -4646,6 +4646,22 @@ bool slave_thread::agent_fsm()
                 }
             }
         }
+        auto on_boot_scan_request =
+            message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN>(
+                cmdu_tx);
+        if (on_boot_scan_request == nullptr) {
+            LOG(ERROR) << "Failed building message!";
+            return false;
+        }
+        const auto &radio = db->get_radios_list();
+        if (db->device_conf.certification_mode) {
+            const auto &radio_to_scan         = 0;
+            on_boot_scan_request->radio_mac() = radio[radio_to_scan]->front.iface_mac;
+            // Send the message
+            LOG(DEBUG) << "send ACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN on radio: "
+                       << on_boot_scan_request->radio_mac();
+            m_backhaul_manager_client->send_cmdu(cmdu_tx);
+        }
         m_radio_managers.do_on_each_radio_manager(
             [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
                 auto db                                = AgentDB::get();

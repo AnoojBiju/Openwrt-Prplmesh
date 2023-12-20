@@ -7,8 +7,8 @@
  */
 
 #include "channel_scan_task.h"
-#include "../agent_db.h"
 #include "../backhaul_manager/backhaul_manager.h"
+#include "../tlvf_utils.h"
 #include <bcl/beerocks_utils.h>
 #include <beerocks/tlvf/beerocks_message.h>
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
@@ -39,6 +39,7 @@ constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millise
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
 constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
 constexpr std::chrono::seconds SCAN_REQUEST_TIMEOUT_SEC    = std::chrono::seconds(300); // 5 Min
+bool on_boot_scan_triggered                                = false;
 /**
  * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
  * Channel Scan Report Message building process is needed.
@@ -133,10 +134,12 @@ void ChannelScanTask::work()
             break;
         }
         case eState::SCAN_DONE: {
+            LOG(DEBUG) << "Badhri Im inside SCAN_DONE FSM";
             if (!is_scan_request_finished(current_scan_request)) {
                 LOG(INFO) << "Wait for other scans to complete";
                 trigger_next_radio_scan(current_scan_request);
             } else {
+                LOG(DEBUG) << "Badhri Im inside else";
                 auto db    = AgentDB::get();
                 auto radio = db->get_radio_by_mac(current_radio_scan->radio_mac);
                 if (!radio) {
@@ -144,12 +147,14 @@ void ChannelScanTask::work()
                                << current_radio_scan->radio_mac;
                     return;
                 }
+
                 // Once the scan is done we want to update the AgentDB with the cached results.
                 // If no neighbours are found on some channel, the cached result for that channel
                 // will simply not exist. But a cached result also doesn't exist if that channel
                 // was not scanned at all. In that case, we want to keep the result that is already
                 // in the DB. Therefore, we need to iterate over all the requested channels,
                 // and update the DB accordingly.
+                LOG(DEBUG) << "Badhri Updating DB";
                 for (const auto &op_cls : current_radio_scan->operating_classes) {
                     for (const auto &channel_elem : op_cls.channel_list) {
                         const uint8_t channel_num = channel_elem.channel_number;
@@ -168,6 +173,8 @@ void ChannelScanTask::work()
                     }
                 }
                 current_scan_request->ready_to_send_report = true;
+                LOG(DEBUG) << "Badhri Setting ready_to_send_report: "
+                           << current_scan_request->ready_to_send_report;
             }
             break;
         }
@@ -192,15 +199,19 @@ void ChannelScanTask::work()
             break;
         }
 
-        // Handle finished requests.
+        LOG(DEBUG) << "Badhri Handle finished requests.";
         if (current_scan_request->ready_to_send_report) {
             // Report was sent back, clear any remaining scan info.
             m_current_scan_info.radio_scan                = nullptr;
             m_current_scan_info.scan_request              = nullptr;
             m_current_scan_info.is_scan_currently_running = false;
-            if (!send_channel_scan_report(current_scan_request)) {
-                LOG(ERROR) << "Failed to send channel scan report!";
-                return;
+            on_boot_scan_triggered                        = false;
+            if (current_scan_request->request_info->request_type !=
+                sRequestInfo::eScanRequestType::AgentRequested) {
+                if (!send_channel_scan_report(current_scan_request)) {
+                    LOG(ERROR) << "Failed to send channel scan report!";
+                    return;
+                }
             }
         }
     } else {
@@ -230,12 +241,45 @@ void ChannelScanTask::handle_event(uint8_t event_enum_value, const void *event_o
     }
 }
 
+const auto &on_boot_scan = [](ieee1905_1::CmduMessageRx &cmdu_rx) -> sMacAddr {
+    auto channel_scan_request_tlv = cmdu_rx.getClass<wfa_map::tlvProfile2ChannelScanRequest>();
+    if (!channel_scan_request_tlv) {
+        LOG(ERROR) << "getClass wfa_map::tlvProfile2ChannelScanRequest failed";
+        return beerocks::net::network_utils::ZERO_MAC;
+    }
+
+    const auto &perform_fresh_scan = channel_scan_request_tlv->perform_fresh_scan();
+    const auto &radio_list_length  = channel_scan_request_tlv->radio_list_length();
+
+    for (int radio_i = 0; radio_i < radio_list_length; ++radio_i) {
+        const auto &radio_list_tuple = channel_scan_request_tlv->radio_list(radio_i);
+        if (!std::get<0>(radio_list_tuple)) {
+            LOG(ERROR) << "Failed to get radio_list[" << radio_i << "]. Continuing...";
+            continue;
+        }
+
+        auto &radio_list_entry    = std::get<1>(radio_list_tuple);
+        const auto class_list_len = radio_list_entry.operating_classes_list_length();
+
+        if (class_list_len == 0 && !perform_fresh_scan) {
+            LOG(DEBUG) << "Badhri Identified Controller asking for On-boot Scan Results of "
+                       << radio_list_entry.radio_uid();
+            return radio_list_entry.radio_uid();
+        }
+    }
+    return beerocks::net::network_utils::ZERO_MAC;
+};
+
 bool ChannelScanTask::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                                   const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                                   std::shared_ptr<beerocks_header> beerocks_header)
 {
     switch (cmdu_rx.getMessageType()) {
     case ieee1905_1::eMessageType::CHANNEL_SCAN_REQUEST_MESSAGE: {
+        const sMacAddr &on_boot_scan_radio = on_boot_scan(cmdu_rx);
+        if (on_boot_scan_radio != beerocks::net::network_utils::ZERO_MAC) {
+            return handle_on_boot_scan_request(cmdu_rx, src_mac, on_boot_scan_radio, true);
+        }
         return handle_channel_scan_request(cmdu_rx, src_mac);
     }
     case ieee1905_1::eMessageType::VENDOR_SPECIFIC_MESSAGE: {
@@ -293,6 +337,21 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
      * PPM-352.
      */
     switch (beerocks_header->action_op()) {
+    case beerocks_message::ACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN: {
+        auto trigger_request =
+            beerocks_header->addClass<beerocks_message::cACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN>();
+        if (trigger_request == nullptr) {
+            LOG(ERROR) << "addClass cACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN failed";
+            return false;
+        }
+        const auto &radio_mac = trigger_request->radio_mac();
+        LOG(TRACE) << "Badhri Received ACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN on mac " << radio_mac;
+        if (!handle_on_boot_scan_request(cmdu_rx, src_mac, radio_mac)) {
+            LOG(ERROR) << "Badhri handle_on_boot_scan_request() failed";
+            return false;
+        }
+        break;
+    }
     case beerocks_message::ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
         LOG(TRACE) << "ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE from mac " << src_mac;
         auto response =
@@ -493,6 +552,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
 bool ChannelScanTask::is_scan_request_finished(const std::shared_ptr<sScanRequest> request)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     auto radio_scans = request->radio_scans;
     auto radio_scan_not_finished =
         [](std::pair<std::string, std::shared_ptr<sRadioScan>> radio_scan_iter) -> bool {
@@ -745,6 +805,10 @@ bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest
 bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
                                                   const sMacAddr &src_mac)
 {
+    if (on_boot_scan_triggered) {
+        LOG(DEBUG) << "Looks like on boot scan in progress, please try after sometime";
+        return false;
+    }
     // Convert channel vector to string
     auto print_channel_vector = [](const std::vector<sChannel> &channel_vector) -> std::string {
         std::stringstream ss;
@@ -956,6 +1020,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
         new_radio_scan->current_state = eState::PENDING_TRIGGER;
 
         if (!perform_fresh_scan) {
+            LOG(DEBUG) << "Badhri Calling create_stored_operating_classes()";
             new_radio_scan->operating_classes = create_stored_operating_classes();
         } else {
             // Iterate over operating classes
@@ -972,7 +1037,7 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
             }
         }
 
-        // Add radio scan info to radio scans map in the request
+        LOG(DEBUG) << "Badhri Add radio scan info to radio scans map in the request";
         new_request->radio_scans.emplace(radio_iface, new_radio_scan);
     }
 
@@ -1042,11 +1107,250 @@ bool ChannelScanTask::handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmd
     return true;
 }
 
+static std::vector<uint8_t> get_operating_class_oper_channels(
+    const std::unordered_map<uint8_t, AgentDB::sRadio::sChannelInfo> &channels_list,
+    uint8_t operating_class)
+{
+    std::vector<uint8_t> oper_channels;
+    auto oper_class_it = son::wireless_utils::operating_classes_list.find(operating_class);
+    if (oper_class_it == son::wireless_utils::operating_classes_list.end()) {
+        LOG(ERROR) << "Operating class does not exist: " << operating_class;
+        return {};
+    }
+
+    const auto &oper_class = oper_class_it->second;
+
+    for (const auto &op_class_channel : oper_class.channels) {
+        bool found = false;
+        for (const auto &channel_info_element : channels_list) {
+            auto &channel_info = channel_info_element.second;
+            for (const auto &bw_info : channel_info.supported_bw_list) {
+                auto channel = channel_info_element.first;
+                if (oper_class.band != bw_info.bandwidth) {
+                    continue;
+                }
+                if (son::wireless_utils::is_operating_class_using_central_channel(
+                        operating_class)) {
+                    channel = son::wireless_utils::get_center_channel(
+                        channel, son::wireless_utils::which_freq_op_cls(operating_class),
+                        bw_info.bandwidth);
+                }
+                if (op_class_channel == channel) {
+                    found = true;
+                    oper_channels.push_back(op_class_channel);
+                    break;
+                }
+            }
+            if (found) {
+                break;
+            }
+        }
+    }
+    return oper_channels;
+}
+
+bool ChannelScanTask::handle_on_boot_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx,
+                                                  const sMacAddr &src_mac,
+                                                  const sMacAddr &radio_mac,
+                                                  const bool &send_results)
+{
+    // Convert channel vector to string
+    auto print_channel_vector = [](const std::vector<sChannel> &channel_vector) -> std::string {
+        std::stringstream ss;
+        ss << "[ ";
+        for (const auto &channel_element : channel_vector) {
+            ss << int(channel_element.channel_number) << " ";
+        }
+        ss << "]";
+        return ss.str();
+    };
+
+    // Creates a sChannel vector from the given incoming channel list.
+    auto create_channel_vector = [this](const std::vector<uint8_t> &channel_list,
+                                        const uint8_t operating_class,
+                                        const beerocks::eWiFiBandwidth bw,
+                                        AgentDB::sRadio *db_radio) -> std::vector<sChannel> {
+        std::vector<sChannel> channel_vector;
+        if (channel_list.empty()) {
+            LOG(TRACE) << "Empty channel list sent for Operating class #" << int(operating_class);
+            // If incoming channel list is empty, add all channels under that operating class to the list.
+            auto operating_class_channels =
+                son::wireless_utils::operating_class_to_channel_set(operating_class);
+            LOG(DEBUG) << "Manually adding channel list of size: "
+                       << operating_class_channels.size();
+            for (const auto channel_number : operating_class_channels) {
+                std::unordered_set<uint8_t> operating_class_20MHz_channels;
+                LOG(DEBUG) << "Getting 20MHz channels for central channel: " << channel_number;
+                son::wireless_utils::get_subset_20MHz_channels(channel_number, operating_class, bw,
+                                                               operating_class_20MHz_channels);
+                for (const auto operating_class_20MHz_channel : operating_class_20MHz_channels) {
+                    LOG(DEBUG) << "Checking if 20MHz channel " << operating_class_20MHz_channel
+                               << " is supported";
+                    if (db_radio->channels_list.find(channel_number) ==
+                        db_radio->channels_list.end()) {
+                        LOG(DEBUG) << "20MHz channel " << operating_class_20MHz_channel
+                                   << " is not supported";
+                        // Channel is not supported
+                        channel_vector.emplace_back(
+                            operating_class_20MHz_channel,
+                            eScanStatus::
+                                SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
+                    } else {
+                        LOG(DEBUG)
+                            << "20MHz channel " << operating_class_20MHz_channel << " is supported";
+                        // Assume scan will be successful, add to previous scans
+                        m_previous_scans[operating_class].emplace(operating_class_20MHz_channel);
+                        channel_vector.emplace_back(operating_class_20MHz_channel);
+                    }
+                }
+            }
+            return channel_vector;
+        }
+        for (const auto channel_number : channel_list) {
+            if (!son::wireless_utils::is_channel_in_operating_class(operating_class,
+                                                                    channel_number) ||
+                db_radio->channels_list.find(channel_number) == db_radio->channels_list.end()) {
+                LOG(DEBUG) << "Channel #" << channel_number << " in operating class #"
+                           << operating_class << " is not supported on this radio";
+                channel_vector.emplace_back(
+                    channel_number,
+                    eScanStatus::
+                        SCAN_NOT_SUPPORTED_ON_THIS_OPERATING_CLASS_AND_CHANNEL_ON_THIS_RADIO);
+            } else {
+                // Assume scan will be successful, add to previous scans
+                m_previous_scans[operating_class].emplace(channel_number);
+                channel_vector.emplace_back(channel_number);
+            }
+        }
+        return channel_vector;
+    };
+
+    // Create a sOperatingClass vector from the previous scans.
+    auto create_stored_operating_classes =
+        [this, &print_channel_vector]() -> std::vector<sOperatingClass> {
+        std::vector<sOperatingClass> operating_vector;
+        for (const auto &previous_scan : m_previous_scans) {
+            const auto operating_class = previous_scan.first;
+            const auto bandwidth =
+                son::wireless_utils::operating_class_to_bandwidth(operating_class);
+            std::vector<sChannel> channel_vector;
+            for (const auto prev_scan_channel : previous_scan.second) {
+                channel_vector.emplace_back(prev_scan_channel);
+            }
+            LOG(TRACE) << "Operating class: #" << int(operating_class) << std::endl
+                       << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                       << "\tChannel list: " << print_channel_vector(channel_vector) << ".";
+
+            operating_vector.emplace_back(operating_class, bandwidth, channel_vector);
+        }
+        return operating_vector;
+    };
+
+    // Create a sOperatingClass element from the given operating class entry that was received in the request.
+    auto create_fresh_operating_class = [this, &create_channel_vector, &print_channel_vector](
+                                            uint8_t operating_class,
+                                            AgentDB::sRadio *db_radio) -> sOperatingClass {
+        LOG(DEBUG) << "Badhri Inside create_fresh_operating_class lambda";
+        const auto class_number = operating_class;
+        const auto bandwidth    = son::wireless_utils::operating_class_to_bandwidth(class_number);
+        std::vector<uint8_t> channels_list =
+            get_operating_class_oper_channels(db_radio->channels_list, class_number);
+        std::vector<sChannel> channel_vector =
+            create_channel_vector(channels_list, class_number, bandwidth, db_radio);
+        LOG(TRACE) << "Operating class: #" << int(class_number) << std::endl
+                   << "\tChannel list length:" << int(channel_vector.size()) << std::endl
+                   << "\tChannel list: " << print_channel_vector(channel_vector) << ".";
+
+        return sOperatingClass(class_number, bandwidth, channel_vector);
+    };
+
+    sAgentRequestInfo request_info;
+    request_info.src_mac = radio_mac;
+    if (send_results) {
+        // Build and send ACK message CMDU to the originator.
+        const auto mid      = cmdu_rx.getMessageId();
+        auto cmdu_tx_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE);
+        if (!cmdu_tx_header) {
+            LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
+            return false;
+        }
+
+        LOG(DEBUG) << "Sending ACK message to the originator, mid=" << std::hex << mid;
+        auto db = AgentDB::get();
+        if (!m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac)) {
+            LOG(ERROR) << "Failed to send ACK_MESSAGE back to controller";
+            return false;
+        }
+    }
+    auto new_request = std::shared_ptr<sScanRequest>(new sScanRequest(), [](sScanRequest *ptr) {
+        LOG(TRACE) << "Deleting scan request: " << std::hex << ptr << ".";
+        delete ptr;
+    });
+
+    new_request->request_info         = std::make_shared<sAgentRequestInfo>(request_info);
+    new_request->scan_start_timestamp = std::chrono::system_clock::now();
+    new_request->ready_to_send_report = false;
+
+    auto db          = AgentDB::get();
+    const auto radio = db->get_radio_by_mac(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "Failed to get radio entry for MAC: " << radio_mac;
+        return false;
+    }
+    const auto radio_iface = radio->front.iface_name;
+    std::vector<uint8_t> operating_classes =
+        son::wireless_utils::get_operating_classes_of_freq_type(
+            radio->wifi_channel.get_freq_type());
+    LOG(DEBUG) << "Operating Class List: ";
+    for (const auto &element : operating_classes)
+        LOG(DEBUG) << element << " ";
+    // Create new radio scan
+    auto new_radio_scan        = std::shared_ptr<sRadioScan>(new sRadioScan(), [](sRadioScan *ptr) {
+        LOG(TRACE) << "Deleting radio scan: " << std::hex << ptr << ".";
+        delete ptr;
+    });
+    new_radio_scan->radio_mac  = radio_mac;
+    new_radio_scan->dwell_time = PREFERRED_DWELLTIME_MS;
+    new_radio_scan->current_state = eState::PENDING_TRIGGER;
+
+    auto operating_classes_size = operating_classes.size();
+    LOG(DEBUG) << "Badhri operating_classes_size = " << operating_classes_size;
+    if (send_results) {
+        LOG(DEBUG) << "Badhri Calling create_stored_operating_classes()";
+        new_radio_scan->operating_classes = create_stored_operating_classes();
+    } else {
+        // Iterate over operating classes
+        for (int class_idx = 0; class_idx < (int)operating_classes_size; class_idx++) {
+            LOG(DEBUG) << "Entering for loop iteration: " << class_idx;
+            const auto &class_entry = operating_classes[class_idx];
+            LOG(DEBUG) << "Badhri Adding Operating class " << class_entry;
+            new_radio_scan->operating_classes.push_back(
+                create_fresh_operating_class(class_entry, radio));
+        }
+    }
+    LOG(DEBUG) << "Badhri Add radio scan info to radio scans map in the request";
+    new_request->radio_scans.emplace(radio_iface, new_radio_scan);
+    if (send_results) {
+        LOG(DEBUG) << "Badhri Sending On Boot Scan results to the controller";
+        new_request->ready_to_send_report = true;
+        return send_channel_scan_report_to_controller(new_request);
+    }
+    on_boot_scan_triggered = true;
+    m_pending_requests.emplace_back(new_request);
+    return true;
+}
+
 bool ChannelScanTask::send_channel_scan_report(const std::shared_ptr<sScanRequest> request)
 {
+    LOG(DEBUG) << "Badhri Im inside " << __func__;
     const auto request_info = request->request_info;
+    if (request_info == nullptr) {
+        LOG(ERROR) << "Badhri request_info is null";
+        return false;
+    }
     switch (request_info->request_type) {
     case sRequestInfo::eScanRequestType::ControllerRequested: {
+        LOG_IF(!request, ERROR) << "Badhri request pointer is null";
         return send_channel_scan_report_to_controller(request);
     }
     default: {
