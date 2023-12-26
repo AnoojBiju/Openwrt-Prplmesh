@@ -994,15 +994,13 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                                        (mid_index == ap_metric_queries_map->first));
                            }),
             ap_metric_queries_map->second.end());
-        if (ap_metric_queries_map->second.empty()) {
-            m_ap_metric_query.erase(ap_metric_queries_map);
-        }
     }
     if (!ap_metric_queries_map->second.empty()) {
         LOG(DEBUG) << "Still expecting " << ap_metric_queries_map->second.size()
                    << " ap metric responses.";
         return;
     }
+    m_ap_metric_query.erase(ap_metric_queries_map);
 
     // We received all responses - prepare and send response message to the controller
     auto cmdu_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE);
