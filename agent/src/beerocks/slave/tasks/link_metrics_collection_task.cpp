@@ -858,8 +858,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
     LOG(INFO) << "Found AP_Metrics_Query map for MID : " << std::hex << mid_index;
 
-    for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
-        std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
+    for (const auto &ap_metrics_tlv : ap_metrics_tlv_list) {
+        wfa_map::tlvApExtendedMetrics *ap_extended_metrics_tlv = 0;
 
         if (!ap_metrics_tlv) {
             LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
@@ -868,9 +868,9 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
-        for (auto tmp : ap_extended_metrics_tlv_list) {
+        for (const auto &tmp : ap_extended_metrics_tlv_list) {
             if (tmp->bssid() == bssid_tlv) {
-                ap_extended_metrics_tlv = tmp;
+                ap_extended_metrics_tlv = &*tmp;
                 break;
             }
         }
@@ -923,7 +923,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
         std::vector<sStaTrafficStats> traffic_stats_response;
 
-        for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+        for (const auto &sta_traffic :
+             cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
             if (!sta_traffic) {
                 LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
                 continue;
@@ -941,7 +942,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         std::vector<sStaLinkMetrics> link_metrics_response;
-        for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
+        for (const auto &sta_link_metric :
+             cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
             if (!sta_link_metric) {
                 LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
                 continue;
@@ -958,7 +960,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         std::vector<sStaQosCtrlParams> qos_ctrl_response;
-        for (auto &sta_qos_ctrl_params :
+        for (const auto &sta_qos_ctrl_params :
              cmdu_rx.getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>()) {
             if (!sta_qos_ctrl_params) {
                 LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>";
