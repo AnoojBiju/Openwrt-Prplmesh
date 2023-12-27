@@ -847,8 +847,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         LOG(WARNING) << "got empty ap extended metrics response for mid=" << std::hex << mid;
     }
 
-    uint16_t mid_index =
-        (mid != 0) ? mid : UINT16_MAX; // UINT16_MAX used for internal AP_METRICS requests
+    uint16_t mid_index = mid ?: UINT16_MAX; // UINT16_MAX used for internal AP_METRICS requests
     auto ap_metric_queries_map = m_ap_metric_query.find(mid_index);
     if (ap_metric_queries_map == m_ap_metric_query.end()) {
         LOG(ERROR) << "No AP_Metrics_Query map found for MID : " << std::hex << mid_index
@@ -885,10 +884,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                        << " from mid=" << std::hex << mid_index;
             return;
         }
-        // Zero-initialize the struct to make sure values are meaningful
-        sApExtendedMetrics extended_metrics{};
-        extended_metrics.bssid =
-            ap_metrics_tlv->bssid(); // Same as ap_extended_metrics_tlv->bssid() if it exists
+
+        sApExtendedMetrics extended_metrics{.bssid = ap_metrics_tlv->bssid()};
 
         if (ap_extended_metrics_tlv) {
             extended_metrics.broadcast_bytes_sent = ap_extended_metrics_tlv->broadcast_bytes_sent();
@@ -933,11 +930,16 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             auto assoc_client = radio->associated_clients.find(sta_traffic->sta_mac());
             if (assoc_client != radio->associated_clients.end() &&
                 assoc_client->second.bssid == metric.bssid) {
-                traffic_stats_response.push_back(
-                    {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_received(),
-                     sta_traffic->packets_sent(), sta_traffic->packets_received(),
-                     sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
-                     sta_traffic->retransmission_count()});
+                traffic_stats_response.push_back({
+                    sta_traffic->sta_mac(),
+                    sta_traffic->byte_sent(),
+                    sta_traffic->byte_received(),
+                    sta_traffic->packets_sent(),
+                    sta_traffic->packets_received(),
+                    sta_traffic->tx_packets_error(),
+                    sta_traffic->rx_packets_error(),
+                    sta_traffic->retransmission_count(),
+                });
             }
         }
 
@@ -984,8 +986,13 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         // Fill a response vector
-        m_ap_metric_response.push_back({metric, extended_metrics, traffic_stats_response,
-                                        link_metrics_response, qos_ctrl_response});
+        m_ap_metric_response.push_back({
+            metric,
+            extended_metrics,
+            traffic_stats_response,
+            link_metrics_response,
+            qos_ctrl_response,
+        });
 
         // Remove an entry from the processed query
         ap_metric_queries_map->second.erase(
