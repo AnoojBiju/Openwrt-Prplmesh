@@ -107,19 +107,19 @@ echo conf_file_exit_code=$?
 # configure private vaps
 ubus call "WiFi.SSID.1" _set '{ "parameters": { "SSID": "prplmesh" } }'
 echo conf_file_exit_code=$?
-ubus call "WiFi.SSID.2" _set '{ "parameters": { "SSID": "prplmesh" } }'
+ubus call "WiFi.SSID.3" _set '{ "parameters": { "SSID": "prplmesh" } }'
 echo conf_file_exit_code=$?
 ubus call "WiFi.AccessPoint.1.Security" _set '{ "parameters": { "KeyPassPhrase": "prplmesh_pass" } }'
 echo conf_file_exit_code=$?
-ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "KeyPassPhrase": "prplmesh_pass" } }'
+ubus call "WiFi.AccessPoint.3.Security" _set '{ "parameters": { "KeyPassPhrase": "prplmesh_pass" } }'
 echo conf_file_exit_code=$?
 ubus call "WiFi.AccessPoint.1.Security" _set '{ "parameters": { "ModeEnabled": "WPA2-Personal" } }'
 echo conf_file_exit_code=$?
-ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "ModeEnabled": "WPA2-Personal" } }'
+ubus call "WiFi.AccessPoint.3.Security" _set '{ "parameters": { "ModeEnabled": "WPA2-Personal" } }'
 echo conf_file_exit_code=$?
 ubus call "WiFi.AccessPoint.1.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 echo conf_file_exit_code=$?
-ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
+ubus call "WiFi.AccessPoint.3.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 echo conf_file_exit_code=$?
 
 ubus-cli "WiFi.AccessPoint.1.MBOEnable=1"
