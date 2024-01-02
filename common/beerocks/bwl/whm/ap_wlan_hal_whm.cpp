@@ -51,6 +51,7 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
 
     m_fds_ext_events = {amx_fd, amxp_fd};
     subscribe_to_radio_events();
+    subscribe_to_radio_channel_change_events();
     subscribe_to_ap_events();
     subscribe_to_sta_events();
     subscribe_to_ap_bss_tm_events();
@@ -949,6 +950,27 @@ bool ap_wlan_hal_whm::process_radio_event(const std::string &interface, const st
         event_queue_push(Event::APS_update_list);
         return true;
     }
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_radio_channel_change_event(const AmbiorixVariant *value)
+{
+
+    auto parameters = value->find_child("Updates");
+    if (!parameters || parameters->empty()) {
+        LOG(DEBUG) << "Received event without Updates parameter";
+        return false;
+    }
+    std::string chan_change_reason;
+    if (!parameters->read_child(chan_change_reason, "ChannelChangeReason")) {
+        LOG(DEBUG) << "Received event without ChannelChangeReason parameter" << chan_change_reason;
+        return false;
+    }
+    if (chan_change_reason != "MANUAL" && chan_change_reason != "AUTO") {
+        LOG(DEBUG) << "chan_change_reason other than MANUAL or AUTO:" << chan_change_reason;
+        return false;
+    }
+    event_queue_push(Event::CSA_Finished);
     return true;
 }
 

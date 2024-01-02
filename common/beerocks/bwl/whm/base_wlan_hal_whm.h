@@ -103,6 +103,8 @@ protected:
     void subscribe_to_radio_events();
     virtual bool process_radio_event(const std::string &interface, const std::string &key,
                                      const beerocks::wbapi::AmbiorixVariant *value);
+    void subscribe_to_radio_channel_change_events();
+    virtual bool process_radio_channel_change_event(const beerocks::wbapi::AmbiorixVariant *value);
 
     void subscribe_to_ap_events();
     virtual bool process_ap_event(const std::string &interface, const std::string &key,
