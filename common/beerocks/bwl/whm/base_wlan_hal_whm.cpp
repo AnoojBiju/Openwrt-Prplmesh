@@ -82,6 +82,17 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
                          " && (contains('parameters.Status'))";
 
     m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
+
+    std::string wifi_radio_channel_path = m_radio_path + "ChannelMgt.TargetChanspec.";
+    std::string filter_radio_channel    = "(path matches '" + wifi_radio_channel_path +
+                                       "$')"
+                                       " && (notification == '" +
+                                       AMX_CL_OBJECT_CHANGED_EVT +
+                                       "')"
+                                       " && (contains('parameters.Channel'))";
+
+    m_ambiorix_cl.subscribe_to_object_event(wifi_radio_channel_path, event_handler,
+                                            filter_radio_channel);
 }
 
 void base_wlan_hal_whm::subscribe_to_ap_events()
