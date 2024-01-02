@@ -746,13 +746,8 @@ void Monitor::on_channel_utilization_measurement_period_elapsed()
 
     // Check if a threshold has been set
     if (0 != info.ap_channel_utilization_reporting_threshold) {
-        if (channel_utilization > info.ap_channel_utilization_reporting_threshold) {
-            if (info.ap_metrics_channel_utilization_reporting_value <=
-                info.ap_channel_utilization_reporting_threshold) {
-                threshold_crossed = true;
-            }
-        } else if (info.ap_metrics_channel_utilization_reporting_value >
-                   info.ap_channel_utilization_reporting_threshold) {
+        if (abs(channel_utilization - info.ap_metrics_channel_utilization_reporting_value) >
+            info.ap_channel_utilization_reporting_threshold) {
             threshold_crossed = true;
         }
     }
