@@ -77,7 +77,7 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
 
     event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ap_path;
-        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+        if (event_data.read_child(ap_path, "path") == false || ap_path.empty()) {
             return;
         }
         auto vap_it =
@@ -107,7 +107,7 @@ void ap_wlan_hal_whm::subscribe_to_ap_mgmt_frame_events()
 
     event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ap_path;
-        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+        if (event_data.read_child(ap_path, "path") == false || ap_path.empty()) {
             return;
         }
         auto vap_it =
@@ -1118,6 +1118,10 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
 bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
                                            const beerocks::wbapi::AmbiorixVariant *event_data)
 {
+    if (event_data == nullptr) {
+        LOG(WARNING) << "event_data null";
+        return false;
+    }
     std::string name_notification;
     event_data->read_child(name_notification, "notification");
     if (name_notification == AMX_CL_BSS_TM_RESPONSE_EVT) {
