@@ -622,8 +622,15 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         return false;
     }
     radio_channel_scan_capabilities->radio_uid() = radio->front.iface_mac;
-    // We support "on demand" scans so set the on_boot_only flag to 0
-    radio_channel_scan_capabilities->capabilities().on_boot_only = 0;
+    // We support "on demand" scans.
+    // On boot scan is supported only on certification mode.
+    auto db = AgentDB::get();
+    if (db->device_conf.certification_mode && db->device_conf.on_boot_scan > 0) {
+        radio_channel_scan_capabilities->capabilities().on_boot_only = 1;
+    } else {
+        radio_channel_scan_capabilities->capabilities().on_boot_only = 0;
+    }
+
     // Time slicing impairment (Radio may go off channel for a series of short intervals)
     radio_channel_scan_capabilities->capabilities().scan_impact = wfa_map::
         cRadiosWithScanCapabilities::eScanImpact::SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM;

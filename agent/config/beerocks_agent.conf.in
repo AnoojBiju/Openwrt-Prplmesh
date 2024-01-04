@@ -38,6 +38,12 @@ monitor_polling_rate_msec=@BEEROCKS_MONITOR_POLLING_RATE_MSEC@
 # 
 profile_x_disallow_override_unsupported_configuration=1
 
+# on_boot_scan = 0 -> On Boot Scan disabled
+# on_boot_scan = 1 -> On Boot Scan enabled on 5GHz
+# on_boot_scan = 2 -> On Boot Scan enabled on 2.4GHz
+
+on_boot_scan=1
+
 [backhaul]
 backhaul_preferred_bssid=
 

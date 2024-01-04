@@ -13,6 +13,7 @@
 #include "../tasks/channel_scan_task.h"
 #include "../tasks/channel_selection_task.h"
 #include "../tasks/coordinated_cac_task.h"
+#include "../tasks/on_boot_scan_task.h"
 #include "../tasks/switch_channel_task.h"
 #include "../tasks/topology_task.h"
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
@@ -124,10 +125,15 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
         return;
     }
 
-    // Agent tasks
     m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
+    if (db->device_conf.on_boot_scan > 0) {
+        LOG(DEBUG) << "Badhri Adding OnBootScanTask";
+        m_task_pool.add_task(std::make_shared<OnBootScanTask>(*this, cmdu_tx));
+    } else {
+        LOG(DEBUG) << "Badhri Adding ChannelScanTask";
+        m_task_pool.add_task(std::make_shared<ChannelScanTask>(*this, cmdu_tx));
+    }
     m_task_pool.add_task(
         std::make_shared<switch_channel::SwitchChannelTask>(m_task_pool, *this, cmdu_tx));
     m_task_pool.add_task(
