@@ -878,7 +878,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
 
     event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string notif_name;
-        if (!event_data.read_child(notif_name, "notification")) {
+        if (!event_data.read_child(notif_name, "notification") || notif_name.empty()) {
             LOG(DEBUG) << " Received Notification  without 'notification' param!";
             return;
         }

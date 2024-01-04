@@ -177,6 +177,8 @@ public:
      */
     template <typename T> operator T() const { return get<T>(); }
 
+    explicit operator bool() const { return (m_var_ctx != nullptr); }
+
     /**
      * @brief Template Factory method: copy a provided value into a newly
      * created AmbiorixVariant object.
