@@ -1264,6 +1264,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     const sMacAddr &neighbor_mac_filter,
     std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map)
 {
+    LOG(DEBUG) << "**** INSIDE GET NEIGHBOR LINKS ***** ";
     // TODO: Topology Database is required to implement this method.
 
     // TODO: this is not accurate as we have made the assumption that there is a single interface.
@@ -1292,6 +1293,8 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
                     sLinkNeighbor neighbor;
                     neighbor.al_mac    = neighbor_entry.first;
                     neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    LOG(DEBUG) << "**** AL MAC : " << neighbor.al_mac;
+                    LOG(DEBUG) << "**** neighbor : " << neighbor_mac_filter;
                     if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
                         (neighbor_mac_filter == neighbor.al_mac)) {
                         neighbor_links_map[wired_interface].push_back(neighbor);
@@ -1313,6 +1316,14 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // Add LAN interfaces
     for (const auto &lan_iface_info : db->ethernet.lan) {
         if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
+            // Error message inside the lambda function.
+            return false;
+        }
+    }
+
+    for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
+        LOG(DEBUG) << "***** INSIDE THE BACKHAUL LINKS ******";
+        if (!add_eth_neighbor(bh_wifi_info.iface_name, bh_wifi_info.iface_mac)) {
             // Error message inside the lambda function.
             return false;
         }
