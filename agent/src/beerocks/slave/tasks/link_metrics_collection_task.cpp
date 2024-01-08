@@ -1264,6 +1264,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     const sMacAddr &neighbor_mac_filter,
     std::map<sLinkInterface, std::vector<sLinkNeighbor>> &neighbor_links_map)
 {
+    LOG(DEBUG) << "**** INSIDE GET NEIGHBOR LINKS ***** ";
     // TODO: Topology Database is required to implement this method.
 
     // TODO: this is not accurate as we have made the assumption that there is a single interface.
@@ -1271,11 +1272,20 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // address of the transmitting device together with the interface that such message is
     // received through.
     auto db = AgentDB::get();
+    for (const auto &i : db->neighbor_devices) {
+	    LOG(DEBUG) << "***** THE VALUE INSIDE FIRST " << i.first ;
+	    for (const auto &j : i.second) {
+		    LOG(DEBUG) << "*** INSIDE SECOND FIRST    " << j.first;
+		    LOG(DEBUG) << "*** transmitting_iface_mac " << j.second.transmitting_iface_mac;
+		    LOG(DEBUG) << "*** receiving_iface_name   " << j.second.receiving_iface_name;
+	    }
+    }
 
     auto add_eth_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
         sLinkInterface wired_interface;
         wired_interface.iface_name = iface_name;
         wired_interface.iface_mac  = iface_mac;
+	LOG(DEBUG) << "****  111111  ******";
 
         if (!MediaType::get_media_type(wired_interface.iface_name,
                                        ieee1905_1::eMediaTypeGroup::IEEE_802_3,
@@ -1286,14 +1296,57 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         }
 
         for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+	    LOG(DEBUG) << "***** 2222 ********";
             auto &neighbors = neighbors_on_local_iface.second;
             for (const auto &neighbor_entry : neighbors) {
+		LOG(DEBUG) << "******* 3333 ******";
                 if (neighbor_entry.second.receiving_iface_name == iface_name) {
+		    LOG(DEBUG) << "***** 4444 *****";
                     sLinkNeighbor neighbor;
                     neighbor.al_mac    = neighbor_entry.first;
                     neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    LOG(DEBUG) << "**** AL MAC : " << neighbor.al_mac;
+                    LOG(DEBUG) << "**** neighbor : " << neighbor_mac_filter;
                     if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
                         (neighbor_mac_filter == neighbor.al_mac)) {
+			LOG(DEBUG) << "****** 5555 ******";
+                        neighbor_links_map[wired_interface].push_back(neighbor);
+                    }
+                }
+            }
+        }
+        return true;
+    };
+
+    auto add_wifi_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
+        sLinkInterface wired_interface;
+        wired_interface.iface_name = iface_name;
+        wired_interface.iface_mac  = iface_mac;
+	LOG(DEBUG) << "******  66666 ******";
+
+        if (!MediaType::get_media_type(wired_interface.iface_name,
+                                       ieee1905_1::eMediaTypeGroup::IEEE_802_11,
+                                       wired_interface.media_type)) {
+            LOG(ERROR) << "Unable to compute media type for interface "
+                       << wired_interface.iface_name;
+            return false;
+        }
+
+        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+            auto &neighbors = neighbors_on_local_iface.second;
+	    LOG(DEBUG) << "****** 77777 ******";
+            for (const auto &neighbor_entry : neighbors) {
+		LOG(DEBUG) << "******* 88888  ******";
+                if (neighbor_entry.second.receiving_iface_name == iface_name) {
+		    LOG(DEBUG) << "***** 99999 ******";
+                    sLinkNeighbor neighbor;
+                    neighbor.al_mac    = neighbor_entry.first;
+                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    LOG(DEBUG) << "**** AL MAC : " << neighbor.al_mac;
+                    LOG(DEBUG) << "**** neighbor : " << neighbor_mac_filter;
+                    if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                        (neighbor_mac_filter == neighbor.al_mac)) {
+			LOG(DEBUG) << "****** 000000  ******";
                         neighbor_links_map[wired_interface].push_back(neighbor);
                     }
                 }
@@ -1313,6 +1366,17 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // Add LAN interfaces
     for (const auto &lan_iface_info : db->ethernet.lan) {
         if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
+            // Error message inside the lambda function.
+            return false;
+        }
+    }
+
+    for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
+        LOG(DEBUG) << "***** INSIDE THE BACKHAUL LINKS ******";
+        auto radio = db->radio(bh_wifi_info.iface_name);
+	LOG(DEBUG) << "*******bh_wifi_info.iface " << radio->back.iface_name;
+        LOG(DEBUG) << "****** bh_wifi_info.iface_mac" << radio->back.iface_mac;
+        if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
             // Error message inside the lambda function.
             return false;
         }
