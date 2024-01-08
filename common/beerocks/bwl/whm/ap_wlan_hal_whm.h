@@ -159,6 +159,8 @@ private:
      */
     bool process_ap_bss_event(const std::string &interface,
                               const beerocks::wbapi::AmbiorixVariant *value);
+
+    std::unordered_set<std::string> m_unassociated_stations;
 };
 
 } // namespace whm
