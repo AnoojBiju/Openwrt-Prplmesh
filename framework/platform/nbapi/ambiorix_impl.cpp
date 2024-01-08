@@ -14,8 +14,8 @@
 #include <amxd/amxd_object_event.h>
 #include <amxd/amxd_transaction.h>
 
-#include "tlvf/tlvftypes.h"
 #include <bcl/network/network_utils.h>
+#include <tlvf/tlvftypes.h>
 
 namespace beerocks {
 namespace nbapi {
