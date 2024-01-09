@@ -26,6 +26,13 @@ class URXOSP(GenericPrplOS):
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
+    reboot_time = 240
+    """The time (in seconds) the device needs to initialize after reboot"""
+
+    needs_reboot_new_mac = True
+    """Defines if the device needs to reboot after inital flash to apply
+    the interface MAC addresses in the datamodel (workaround)"""
+
     bootloader_prompt = r"Lightning # "
     """The u-boot prompt on the target."""
 
@@ -62,6 +69,10 @@ class URXOSP(GenericPrplOS):
         shell.sendline("")
         shell.expect(self.bootloader_prompt)
 
+        time.sleep(10)
+        shell.sendline(
+            "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
+        shell.expect("blocks erased: OK", timeout=15)
         time.sleep(5)
         shell.sendline(
             "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
