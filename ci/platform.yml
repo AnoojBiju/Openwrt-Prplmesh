@@ -86,7 +86,7 @@ build-for-osp:
     - |
       trigger_details=$(curl -X POST --retry 3 -s -f -F \
       token=${OSP_PIPELINE_TRIGGER_TOKEN_2} \
-      -F ref="prplmesh/stable-v4.2.1" \
+      -F ref="prplmesh/dev-v4.2.2-2" \
       -F variables[PRPLMESH_REVISION]="$CI_COMMIT_SHA" \
       -F variables[PARENT_PIPELINE_ID]="$CI_PIPELINE_ID" \
       -F variables[PARENT_PROJECT_ID]="$CI_PROJECT_ID" \
@@ -127,6 +127,8 @@ build-for-osp:
   timeout: 3h
   tags:
     - osp-build-fetch
+  rules:
+    - when: always
 
 build-for-cgr:
   stage: build
