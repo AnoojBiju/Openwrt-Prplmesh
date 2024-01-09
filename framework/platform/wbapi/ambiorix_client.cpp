@@ -239,7 +239,7 @@ bool AmbiorixClient::subscribe_to_object_event(
     if (!m_connection) {
         return false;
     }
-    m_subscriptions.emplace_back(event_handler);
+    m_subscriptions.push_back({event_handler});
     if (!m_connection->subscribe(object_path, filter, m_subscriptions.back())) {
         LOG(ERROR) << "Subscribing to object events failed, path:" << object_path;
         m_subscriptions.pop_back();

@@ -47,13 +47,6 @@ struct sAmbiorixEventHandler {
  * @struct sAmbiorixSubscriptionInfo
  */
 struct sAmbiorixSubscriptionInfo {
-    sAmbiorixSubscriptionInfo() {}
-    explicit sAmbiorixSubscriptionInfo(std::shared_ptr<sAmbiorixEventHandler> &handler_)
-        : handler(handler_)
-    {
-    }
-    sAmbiorixSubscriptionInfo(const sAmbiorixSubscriptionInfo &other) : handler(other.handler) {}
-
     std::shared_ptr<sAmbiorixEventHandler> handler;
     amxb_subscription_t *subscription_ctx = nullptr;
 };
