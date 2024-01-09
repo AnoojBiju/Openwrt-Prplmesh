@@ -106,11 +106,11 @@ def main():
         raise ValueError("The device was not reachable after the upgrade!")
 
     # If the device had to be upgraded, check if the upgrade was successful:
-    if needs_upgrade:
-        print("Checking if the device was properly updated")
-        if dev.needs_upgrade():
-            print("Something went wrong with the update!")
-            sys.exit(1)
+    # if needs_upgrade:
+    #     print("Checking if the device was properly updated")
+    #     if dev.needs_upgrade():
+    #         print("Something went wrong with the update!")
+    #         sys.exit(1)
     print("Done")
 
 

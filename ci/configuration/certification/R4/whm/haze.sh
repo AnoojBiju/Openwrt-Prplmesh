@@ -20,8 +20,11 @@ if data_overlay_not_initialized; then
     sleep 2
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
+  sleep 20
 fi
-sleep 20
+
+sh /etc/init.d/tr181-upnp stop || true
+rm -f /etc/rc.d/*tr181-upnp
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
@@ -97,6 +100,13 @@ ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled
 # See also PPM-1928.
 ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"2.4GHz\"].", "parameters": { "Channel": "1" } }'
 ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"].", "parameters": { "Channel": "48" } }'
+
+
+# Del 6GHz
+ubus call WiFi.SSID _del '{ "rel_path": ".[Name == \"wlan2.1\"]." }' || true
+ubus call WiFi.AccessPoint _del '{ "rel_path": ".[Name == \"wlan2.1\"]." }' || true
+ubus call WiFi.Radio _del '{ "rel_path": ".[Name == \"wlan2\"]." }' || true
+
 
 # Restrict channel bandwidth or the certification test could miss beacons
 # (see PPM-258)
