@@ -95,11 +95,13 @@ def main():
     if args.configuration:
         print("A configuration file was provided, it will be applied.")
         configure_device(dev, Path(args.configuration))
-
-    if args.configuration:
-        # If the device was configured, give it some time to initialize:
         print("Waiting for the device to initialize.")
         time.sleep(dev.configuration_initialization_time)
+
+    if needs_upgrade and dev.needs_reboot_new_mac:
+        print("Rebooting device to apply correct MACs on the interfaces (workaround)")
+        dev.reboot_prplos()
+        time.sleep(dev.reboot_time)
 
     print("Checking if the device is reachable.")
     if not dev.reach(attempts=10):
