@@ -22,7 +22,7 @@ class URXOSP(GenericPrplOS):
     and 'ipaddr' should already be set in the bootloader.
     """
 
-    initialization_time = 280
+    initialization_time = 250
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
