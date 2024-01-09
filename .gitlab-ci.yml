@@ -16,8 +16,8 @@ workflow:
 
 stages:
   - containers
-  - build
   - platform
+  - build
   - test
   - certification-dummy
   - upload
@@ -53,13 +53,6 @@ image-build-scripts:
 
 platform:
   stage: platform
-  needs:
-    - build-in-docker
-    - build-in-docker-legacy
-    - image-build-boardfarm-ci
-  rules:
-    - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
-    - !reference [.rules-for-expensive-job, rules]
   variables:
     STABILITY_TESTS: $STABILITY_TESTS
     ALTRAN_TESTS: $ALTRAN_TESTS
@@ -77,6 +70,8 @@ platform:
   trigger:
     include: "ci/platform.yml"
     strategy: depend
+  rules:
+    - when: always
 
 dco:
   stage: build
@@ -108,6 +103,8 @@ cppcheck:
     when: always
   tags:
     - docker
+  rules:
+    - when: manual
   needs: ["image-build-cppcheck"]
 
 cppcheck-diff:
@@ -123,6 +120,8 @@ cppcheck-diff:
     when: always
   tags:
     - docker
+  rules:
+    - when: manual
   needs: ["image-build-cppcheck"]
 
 flake8:
@@ -215,6 +214,8 @@ clang-format:
     paths:
       - build/install
       - build/controller
+  rules:
+    - when: manual
 
 pytest:
   extends: .build-in-docker
@@ -299,6 +300,8 @@ boardfarm-tests:
   tags:
     - boardfarm-compose
   timeout: 30m
+  rules:
+    - when: manual
 
 boardfarm-stability-tests:
   extends: boardfarm-tests

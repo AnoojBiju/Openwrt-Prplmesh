@@ -48,6 +48,8 @@
     - shell
     - docker-build
   needs: []
+  rules:
+    - when: manual
 
 .build-for-openwrt-legacy:
   extends: .build-for-openwrt
@@ -58,8 +60,7 @@
     paths:
       - "build/*"
   rules:
-    - when: always
-      allow_failure: false
+    - when: manual
 
 .build-for-rdkb:
   stage: build
@@ -82,6 +83,8 @@
     - shell
     - docker-build
   needs: []
+  rules:
+    - when: manual
 
 .test-upgrade-image:
   stage: test

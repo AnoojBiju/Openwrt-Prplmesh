@@ -173,8 +173,8 @@ main() {
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos UPDK 9.1.40 + pWHM 5.15.2"
-        OPENWRT_TOOLCHAIN_VERSION='8f7a86fd86005d91cc0558a22db514bb40b9b1e9'
-        OPENWRT_VERSION='8f7a86fd86005d91cc0558a22db514bb40b9b1e9'
+        OPENWRT_TOOLCHAIN_VERSION='af6aeec746ea0a84b767ada5198ec2ad6a83dd39'
+        OPENWRT_VERSION='af6aeec746ea0a84b767ada5198ec2ad6a83dd39'
     else
         dbg "Building on prplOS-next"
     fi
