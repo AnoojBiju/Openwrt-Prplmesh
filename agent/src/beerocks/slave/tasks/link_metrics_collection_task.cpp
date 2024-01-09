@@ -847,8 +847,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         LOG(WARNING) << "got empty ap extended metrics response for mid=" << std::hex << mid;
     }
 
-    uint16_t mid_index =
-        (mid != 0) ? mid : UINT16_MAX; // UINT16_MAX used for internal AP_METRICS requests
+    uint16_t mid_index = mid ?: UINT16_MAX; // UINT16_MAX used for internal AP_METRICS requests
     auto ap_metric_queries_map = m_ap_metric_query.find(mid_index);
     if (ap_metric_queries_map == m_ap_metric_query.end()) {
         LOG(ERROR) << "No AP_Metrics_Query map found for MID : " << std::hex << mid_index
@@ -858,8 +857,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
     LOG(INFO) << "Found AP_Metrics_Query map for MID : " << std::hex << mid_index;
 
-    for (auto ap_metrics_tlv : ap_metrics_tlv_list) {
-        std::shared_ptr<wfa_map::tlvApExtendedMetrics> ap_extended_metrics_tlv;
+    for (const auto &ap_metrics_tlv : ap_metrics_tlv_list) {
+        wfa_map::tlvApExtendedMetrics *ap_extended_metrics_tlv = 0;
 
         if (!ap_metrics_tlv) {
             LOG(WARNING) << "found null ap_metrics_tlv in response, skipping. mid=" << std::hex
@@ -868,9 +867,9 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         auto bssid_tlv = ap_metrics_tlv->bssid();
-        for (auto tmp : ap_extended_metrics_tlv_list) {
+        for (const auto &tmp : ap_extended_metrics_tlv_list) {
             if (tmp->bssid() == bssid_tlv) {
-                ap_extended_metrics_tlv = tmp;
+                ap_extended_metrics_tlv = &*tmp;
                 break;
             }
         }
@@ -885,10 +884,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                        << " from mid=" << std::hex << mid_index;
             return;
         }
-        // Zero-initialize the struct to make sure values are meaningful
-        sApExtendedMetrics extended_metrics{};
-        extended_metrics.bssid =
-            ap_metrics_tlv->bssid(); // Same as ap_extended_metrics_tlv->bssid() if it exists
+
+        sApExtendedMetrics extended_metrics{.bssid = ap_metrics_tlv->bssid()};
 
         if (ap_extended_metrics_tlv) {
             extended_metrics.broadcast_bytes_sent = ap_extended_metrics_tlv->broadcast_bytes_sent();
@@ -923,7 +920,8 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
 
         std::vector<sStaTrafficStats> traffic_stats_response;
 
-        for (auto &sta_traffic : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
+        for (const auto &sta_traffic :
+             cmdu_rx.getClassList<wfa_map::tlvAssociatedStaTrafficStats>()) {
             if (!sta_traffic) {
                 LOG(ERROR) << "Failed to get class list for tlvAssociatedStaTrafficStats";
                 continue;
@@ -932,16 +930,22 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
             auto assoc_client = radio->associated_clients.find(sta_traffic->sta_mac());
             if (assoc_client != radio->associated_clients.end() &&
                 assoc_client->second.bssid == metric.bssid) {
-                traffic_stats_response.push_back(
-                    {sta_traffic->sta_mac(), sta_traffic->byte_sent(), sta_traffic->byte_received(),
-                     sta_traffic->packets_sent(), sta_traffic->packets_received(),
-                     sta_traffic->tx_packets_error(), sta_traffic->rx_packets_error(),
-                     sta_traffic->retransmission_count()});
+                traffic_stats_response.push_back({
+                    sta_traffic->sta_mac(),
+                    sta_traffic->byte_sent(),
+                    sta_traffic->byte_received(),
+                    sta_traffic->packets_sent(),
+                    sta_traffic->packets_received(),
+                    sta_traffic->tx_packets_error(),
+                    sta_traffic->rx_packets_error(),
+                    sta_traffic->retransmission_count(),
+                });
             }
         }
 
         std::vector<sStaLinkMetrics> link_metrics_response;
-        for (auto &sta_link_metric : cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
+        for (const auto &sta_link_metric :
+             cmdu_rx.getClassList<wfa_map::tlvAssociatedStaLinkMetrics>()) {
             if (!sta_link_metric) {
                 LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedStaLinkMetrics>";
                 continue;
@@ -958,7 +962,7 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         std::vector<sStaQosCtrlParams> qos_ctrl_response;
-        for (auto &sta_qos_ctrl_params :
+        for (const auto &sta_qos_ctrl_params :
              cmdu_rx.getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>()) {
             if (!sta_qos_ctrl_params) {
                 LOG(ERROR) << "Failed getClassList<wfa_map::tlvAssociatedWiFi6StaStatusReport>";
@@ -982,8 +986,13 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
         }
 
         // Fill a response vector
-        m_ap_metric_response.push_back({metric, extended_metrics, traffic_stats_response,
-                                        link_metrics_response, qos_ctrl_response});
+        m_ap_metric_response.push_back({
+            metric,
+            extended_metrics,
+            traffic_stats_response,
+            link_metrics_response,
+            qos_ctrl_response,
+        });
 
         // Remove an entry from the processed query
         ap_metric_queries_map->second.erase(
@@ -994,15 +1003,13 @@ void LinkMetricsCollectionTask::handle_ap_metrics_response(ieee1905_1::CmduMessa
                                        (mid_index == ap_metric_queries_map->first));
                            }),
             ap_metric_queries_map->second.end());
-        if (ap_metric_queries_map->second.empty()) {
-            m_ap_metric_query.erase(ap_metric_queries_map);
-        }
     }
     if (!ap_metric_queries_map->second.empty()) {
         LOG(DEBUG) << "Still expecting " << ap_metric_queries_map->second.size()
                    << " ap metric responses.";
         return;
     }
+    m_ap_metric_query.erase(ap_metric_queries_map);
 
     // We received all responses - prepare and send response message to the controller
     auto cmdu_header = m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_METRICS_RESPONSE_MESSAGE);
