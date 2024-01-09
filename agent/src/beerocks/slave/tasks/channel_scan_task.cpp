@@ -1391,7 +1391,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
     return true;
 }
 
-std::shared_ptr<ChannelScanTask::StoredResultsVector>
+std::shared_ptr<StoredResultsVector>
 ChannelScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest> request)
 {
     auto final_results = std::make_shared<StoredResultsVector>();

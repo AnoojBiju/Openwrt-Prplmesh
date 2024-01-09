@@ -85,7 +85,7 @@ constexpr size_t TLV_HEADER            = 3; // Bytes;
 constexpr size_t MAX_TLV_FRAGMENT_SIZE = 1500;
 
 OnBootScanTask::OnBootScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx)
-    : Task(eTaskType::CHANNEL_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
+    : Task(eTaskType::ON_BOOT_SCAN), m_btl_ctx(btl_ctx), m_cmdu_tx(cmdu_tx)
 {
 }
 
@@ -1355,7 +1355,7 @@ bool OnBootScanTask::send_channel_scan_report_to_controller(
     return true;
 }
 
-std::shared_ptr<OnBootScanTask::StoredResultsVector>
+std::shared_ptr<StoredResultsVector>
 OnBootScanTask::get_scan_results_for_request(const std::shared_ptr<sScanRequest> request)
 {
     auto final_results = std::make_shared<StoredResultsVector>();
