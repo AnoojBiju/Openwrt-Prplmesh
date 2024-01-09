@@ -24,7 +24,7 @@ class SerialDevice(pexpect.fdpexpect.fdspawn):
     udev rule to make sure it's the case).
     """
 
-    send_delay = 3
+    send_delay = 4
     """The delay (in milliseconds) to wait before sending another character.
     This is used for cases where the serial console cannot handle a regular pexpect
     "sendline" because the characters are sent too fast.

@@ -22,6 +22,10 @@ class Haze(GenericPrplOS):
     and 'ipaddr' should already be set in the bootloader.
     """
 
+    needs_reboot_new_mac = True
+    """Defines if the device needs to reboot after inital flash to apply
+    the interface MAC addresses in the datamodel (workaround)"""
+
     bootloader_prompt = r"IPQ807x# "
     """The u-boot prompt on the target."""
 

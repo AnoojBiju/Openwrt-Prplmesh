@@ -45,8 +45,15 @@ class GenericDevice():
     """The time (in seconds) the device needs to initialize when it boots
     for the first time after flashing a new image."""
 
+    reboot_time = 240
+    """The time (in seconds) the device needs to initialize after reboot"""
+
     configuration_initialization_time = 30
     """The time (in seconds) the device needs to initialize after configuring it"""
+
+    needs_reboot_new_mac = False
+    """Defines if the device needs to reboot after inital flash to apply
+    the interface MAC addresses in the datamodel (workaround)"""
 
     bootloader_prompt = "=> "
     """The prompt of the bootloader."""

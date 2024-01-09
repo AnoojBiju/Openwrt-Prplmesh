@@ -28,6 +28,9 @@ class GenericPrplOS(GenericDevice):
     only offers the sysupgrade option.
     """
 
+    def reboot_prplos(self):
+        self.reboot(self.check_serial_type())
+
     def read_artifacts_dir_version(self) -> List[str]:
         """Reads the local prplwrt-version.
 
