@@ -256,6 +256,46 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                                             filter);
 }
 
+void base_wlan_hal_whm::subscribe_to_rssi_eventing_events()
+{
+
+    m_rssi_event_handler              = std::make_shared<sAmbiorixEventHandler>();
+    m_rssi_event_handler->event_type  = AMX_CL_RSSI_UPDATE_EVT;
+    m_rssi_event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string eventDatastr;
+        event_data.get(eventDatastr);
+        if (!event_data) {
+            return;
+        }
+        std::string notif_name;
+        if (!event_data.read_child(notif_name, "notification")) {
+            LOG(DEBUG) << " Received Notification  without 'notification' param!";
+            return;
+        }
+        if (notif_name != AMX_CL_RSSI_UPDATE_EVT) {
+            LOG(DEBUG) << " Received wrong Notification : " << notif_name
+                       << " instead of: " << AMX_CL_RSSI_UPDATE_EVT;
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+
+        auto updates = event_data.find_child("Update"); //htable
+        if (!updates) {
+            LOG(ERROR) << " received ScanComplete event without Updates param!";
+            return;
+        }
+
+        hal->process_rssi_eventing_event(hal->get_iface_name(), updates.get());
+    };
+    m_rssi_event_handler->context = this;
+    //std::string filter = "(notification == '" + std::string(AMX_CL_RSSI_UPDATE_EVT) + "')";
+    std::string filter = "";
+    if (!m_ambiorix_cl->subscribe_to_object_event(m_radio_path + "NaStaMonitor.RssiEventing.",
+                                                  m_rssi_event_handler, filter)) {
+        LOG(ERROR) << "failed to subscribe to RSSSI eventing";
+    };
+}
+
 bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const std::string &key,
                                             const AmbiorixVariant *value)
 {
@@ -272,6 +312,12 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
                                           const std::string &key, const AmbiorixVariant *value)
 {
     return true;
+}
+
+void base_wlan_hal_whm::process_rssi_eventing_event(const std::string &interface,
+                                                    beerocks::wbapi::AmbiorixVariant *updates)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
 }
 
 bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }

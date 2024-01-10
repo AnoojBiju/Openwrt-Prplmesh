@@ -22,6 +22,7 @@ constexpr char AMX_CL_PERIODIC_INFORM_EVT[]  = "dm:periodic-inform";
 constexpr char AMX_CL_WPS_PAIRING_DONE[]     = "pairingDone";
 constexpr char AMX_CL_SCAN_COMPLETE_EVT[]    = "ScanComplete";
 constexpr char AMX_CL_BSS_TM_RESPONSE_EVT[]  = "BSS-TM-RESP";
+constexpr char AMX_CL_RSSI_UPDATE_EVT[]      = "RssiUpdate";
 
 namespace beerocks {
 namespace wbapi {

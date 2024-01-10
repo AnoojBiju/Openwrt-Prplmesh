@@ -159,6 +159,14 @@ private:
      */
     bool process_ap_bss_event(const std::string &interface,
                               const beerocks::wbapi::AmbiorixVariant *value);
+
+    /**
+    * @brief Process event "RssiUpdate"
+    */
+    void process_rssi_eventing_event(const std::string &interface,
+                                     beerocks::wbapi::AmbiorixVariant *value) override;
+
+    std::unordered_set<std::string> m_unassociated_stations;
 };
 
 } // namespace whm
