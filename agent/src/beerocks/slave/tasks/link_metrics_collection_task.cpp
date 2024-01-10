@@ -1309,6 +1309,36 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         return true;
     };
 
+    auto add_wifi_neighbor = [&](const std::string &iface_name, const sMacAddr &iface_mac) {
+        sLinkInterface wireless_interface;
+        wireless_interface.iface_name = iface_name;
+        wireless_interface.iface_mac  = iface_mac;
+
+        if (!MediaType::get_media_type(wireless_interface.iface_name,
+                                       ieee1905_1::eMediaTypeGroup::IEEE_802_11,
+                                       wireless_interface.media_type)) {
+            LOG(ERROR) << "Unable to compute media type for interface "
+                       << wireless_interface.iface_name;
+            return false;
+        }
+
+        for (const auto &neighbors_on_local_iface : db->neighbor_devices) {
+            auto &neighbors = neighbors_on_local_iface.second;
+            for (const auto &neighbor_entry : neighbors) {
+                if (neighbor_entry.second.receiving_iface_name == iface_name) {
+                    sLinkNeighbor neighbor;
+                    neighbor.al_mac    = neighbor_entry.first;
+                    neighbor.iface_mac = neighbor_entry.second.transmitting_iface_mac;
+                    if ((neighbor_mac_filter == net::network_utils::ZERO_MAC) ||
+                        (neighbor_mac_filter == neighbor.al_mac)) {
+                        neighbor_links_map[wireless_interface].push_back(neighbor);
+                    }
+                }
+            }
+        }
+        return true;
+    };
+
     // Add WAN interface
     if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
         if (!add_eth_neighbor(db->ethernet.wan.iface_name, db->ethernet.wan.mac)) {
@@ -1320,6 +1350,14 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     // Add LAN interfaces
     for (const auto &lan_iface_info : db->ethernet.lan) {
         if (!add_eth_neighbor(lan_iface_info.iface_name, lan_iface_info.mac)) {
+            // Error message inside the lambda function.
+            return false;
+        }
+    }
+
+    for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
+        auto radio = db->radio(bh_wifi_info.iface_name);
+        if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
             // Error message inside the lambda function.
             return false;
         }
