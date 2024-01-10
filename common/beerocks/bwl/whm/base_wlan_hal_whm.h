@@ -131,11 +131,23 @@ protected:
      */
     virtual bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data);
 
+    /**
+     * @brief subscribe to WiFi.Radio.XXXXX.NaStaMonitor.RssiEventing RssiUpdate dm notification
+     */
+    virtual void subscribe_to_rssi_eventing_events();
+
+    /**
+     * @brief Process the event "RssiUpdate" when received from the dm
+     */
+    virtual void process_rssi_eventing_event(const std::string &interface,
+                                             beerocks::wbapi::AmbiorixVariant *value);
+
     // Private data-members:
 private:
     bool fsm_setup();
 
 protected:
+    std::shared_ptr<beerocks::wbapi::sAmbiorixEventHandler> m_rssi_event_handler;
     std::string m_radio_mac_address;
 };
 
