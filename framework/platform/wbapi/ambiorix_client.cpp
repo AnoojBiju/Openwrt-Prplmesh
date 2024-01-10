@@ -247,6 +247,23 @@ bool AmbiorixClient::subscribe_to_object_event(
     return true;
 }
 
+bool AmbiorixClient::unsubscribe_from_object_event(
+    std::shared_ptr<beerocks::wbapi::sAmbiorixEventHandler> &event_handler)
+{
+    auto it = std::find_if(m_subscriptions.begin(), m_subscriptions.end(),
+                           [&event_handler](const sAmbiorixSubscriptionInfo &subscription) {
+                               return event_handler == subscription.handler;
+                           }
+
+    );
+    if (it != m_subscriptions.end()) {
+        m_connection->unsubscribe(*it);
+        m_subscriptions.erase(it);
+        return true;
+    }
+    return false;
+}
+
 AmbiorixClient::~AmbiorixClient()
 {
     while (!m_subscriptions.empty()) {
