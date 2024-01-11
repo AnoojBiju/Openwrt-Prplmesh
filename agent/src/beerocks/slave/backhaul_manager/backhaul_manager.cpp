@@ -2991,6 +2991,32 @@ void BackhaulManager::handle_dev_reset_default(
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;
 
+    LOG(DEBUG) << "** THE VALUE IS *** m_eFSMState  " << m_eFSMState;
+    LOG(DEBUG) << "** THE VLAUE IS *** E_STATEENAB  " << EState::ENABLED;
+    if (m_eFSMState != EState::ENABLED){
+	LOG(DEBUG) << "IF CONDITION ************ ";
+	for (const auto &radio_info : m_radios_info) {
+	    LOG(DEBUG) << "FOR LOOP ********";
+            auto notification = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(cmdu_tx);
+
+            if (!notification) {
+                LOG(ERROR) << "Failed building message!";
+            }
+
+            notification->set_iface(radio_info->hostap_iface);
+            notification->channel()        = radio_info->primary_channel;
+            notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
+            notification->center_channel() = radio_info->primary_channel;
+
+            LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
+                       << ", channel = " << int(notification->channel())
+                       << ", center_channel = " << int(notification->center_channel());
+
+            send_cmdu(m_agent_fd, cmdu_tx);
+        }
+    }
+
     auto program = params.at("program");
     if (program == supported_programs[0]) {
         // If certification program is map, set the certification_profile to Profile 1.
