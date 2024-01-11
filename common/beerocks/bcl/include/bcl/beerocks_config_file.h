@@ -92,6 +92,7 @@ public:
         std::string monitor_polling_rate_msec;
         std::string monitor_measurement_window_poll_count;
         std::string profile_x_disallow_override_unsupported_configuration;
+        std::string on_boot_scan;
         //[slaveX]
         std::string enable_repeater_mode[MAX_RADIOS_PER_AGENT];
         std::string hostap_iface_type[MAX_RADIOS_PER_AGENT];

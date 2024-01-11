@@ -379,8 +379,9 @@ static int run_beerocks_slave(beerocks::config_file::sConfigSlave &beerocks_slav
 #endif //ENABLE_NBAPI
 
     {
-        auto db = beerocks::AgentDB::get();
-
+        auto db           = beerocks::AgentDB::get();
+        auto on_boot_scan = beerocks::string_utils::stoi(beerocks_slave_conf.on_boot_scan);
+        db->device_conf.on_boot_scan = on_boot_scan;
         db->init_data_model(amb_dm_obj);
 
         if (!beerocks::bpl::bpl_cfg_get_backhaul_wire_iface(db->ethernet.wan.iface_name)) {
