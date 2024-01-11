@@ -45,19 +45,7 @@ void TopologyTask::work()
 {
     auto db = AgentDB::get();
 
-    // Don't send topology discovery if the Controller hasn't been discovered.
-    if (db->controller_info.bridge_mac == network_utils::ZERO_MAC) {
-        return;
-    }
-
     auto now = std::chrono::steady_clock::now();
-
-    // Send topology discovery every 60 seconds according to IEEE_Std_1905.1-2013 specification
-    if (now - m_periodic_discovery_timestamp >
-        std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC)) {
-        m_periodic_discovery_timestamp = now;
-        send_topology_discovery();
-    }
 
     if (m_pending_to_send_topology_notification) {
         send_topology_notification();
@@ -92,6 +80,18 @@ void TopologyTask::work()
     if (neighbors_list_changed) {
         LOG(INFO) << "Sending topology notification on removeing of 1905.1 neighbors";
         send_topology_notification();
+    }
+
+    // Don't send topology discovery if the Controller hasn't been discovered.
+    if (db->controller_info.bridge_mac == network_utils::ZERO_MAC) {
+        return;
+    }
+
+    // Send topology discovery every 60 seconds according to IEEE_Std_1905.1-2013 specification
+    if (now - m_periodic_discovery_timestamp >
+        std::chrono::seconds(TOPOLOGY_DISCOVERY_TX_CYCLE_SEC)) {
+        m_periodic_discovery_timestamp = now;
+        send_topology_discovery();
     }
 }
 
