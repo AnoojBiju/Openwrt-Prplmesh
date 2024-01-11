@@ -169,6 +169,7 @@ public:
         uint32_t max_prioritization_rules{1};
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
+        int on_boot_scan;
     } device_conf;
 
     struct sControllerInfo {
@@ -335,7 +336,11 @@ public:
         //              Vector of Neighboring APs as ChannelScanResults.
         std::unordered_map<uint8_t, std::pair<std::chrono::system_clock::time_point,
                                               std::vector<beerocks_message::sChannelScanResults>>>
-            channel_scan_results;
+            on_demand_channel_scan_results;
+
+        std::unordered_map<uint8_t, std::pair<std::chrono::system_clock::time_point,
+                                              std::vector<beerocks_message::sChannelScanResults>>>
+            on_boot_scan_results;
 
         // Associated clients grouped by Client MAC.
         std::unordered_map<sMacAddr, sClient> associated_clients;
