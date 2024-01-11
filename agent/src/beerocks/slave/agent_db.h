@@ -169,6 +169,7 @@ public:
         uint32_t max_prioritization_rules{1};
         wfa_map::tlvProfile2MultiApProfile::eMultiApProfile certification_profile =
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::PRPLMESH_PROFILE_UNKNOWN;
+        int on_boot_scan;
     } device_conf;
 
     struct sControllerInfo {
