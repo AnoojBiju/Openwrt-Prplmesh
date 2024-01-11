@@ -622,8 +622,16 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
         return false;
     }
     radio_channel_scan_capabilities->radio_uid() = radio->front.iface_mac;
-    // We support "on demand" scans so set the on_boot_only flag to 0
-    radio_channel_scan_capabilities->capabilities().on_boot_only = 0;
+    /*
+      We support either On-Boot Scan or On-Demand Scan at a time.
+      If On-Boot Scan is disabled, On-Demand Scan feature can be exercised.
+      Currently, On-Boot Scan is supported only on Certification mode as
+      it is required only for EasyMesh R5 certification.
+    */
+    auto db = AgentDB::get();
+    radio_channel_scan_capabilities->capabilities().on_boot_only =
+        (db->device_conf.certification_mode && db->device_conf.on_boot_scan > 0) ? 1 : 0;
+
     // Time slicing impairment (Radio may go off channel for a series of short intervals)
     radio_channel_scan_capabilities->capabilities().scan_impact = wfa_map::
         cRadiosWithScanCapabilities::eScanImpact::SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM;
