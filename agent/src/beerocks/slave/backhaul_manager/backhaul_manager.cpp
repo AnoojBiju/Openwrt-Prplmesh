@@ -117,6 +117,10 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
         db->dm_set_agent_mac(bridge_mac);
     }
 
+    // Need add TopologyTask to the dummy Agent workflow, for the
+    // handling TOPOLOGY_QUERY messages from the easyMesh Agents
+    m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
+
     if (db->device_conf.management_mode == BPL_MGMT_MODE_MULTIAP_CONTROLLER) {
 
         // TODO: DHCP management is handled in ApAutoConfigurationTask for MaxLinear platforms (PPM-1777)
@@ -125,7 +129,6 @@ BackhaulManager::BackhaulManager(const config_file::sConfigSlave &config,
     }
 
     // Agent tasks
-    m_task_pool.add_task(std::make_shared<TopologyTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ChannelSelectionTask>(*this, cmdu_tx));
     m_task_pool.add_task(
         std::make_shared<ChannelScanTask>(*this, cmdu_tx, db->device_conf.on_boot_scan > 0));
