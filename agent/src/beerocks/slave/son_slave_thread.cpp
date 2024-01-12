@@ -4650,6 +4650,47 @@ bool slave_thread::agent_fsm()
                 }
             }
         }
+
+        // On certification mode, if on boot scan is enabled, trigger On Boot Scan
+        if (db->device_conf.certification_mode && db->device_conf.on_boot_scan > 0) {
+            // If on_boot_scan=1 then the On Boot Scan needs to be done on 5GHz radio.
+            // If on_boot_scan=2 then the On Boot Scan needs to be done on 2.4GHz radio.
+            LOG(DEBUG) << "On Boot Scan is enabled";
+            auto on_boot_scan_request = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN>(cmdu_tx);
+            if (!on_boot_scan_request) {
+                LOG(ERROR) << "Failed building message!";
+                return false;
+            }
+            const auto &radio = db->get_radios_list();
+            beerocks::eFreqType freq_type_to_scan;
+            switch (db->device_conf.on_boot_scan) {
+            case 1:
+                freq_type_to_scan = beerocks::FREQ_5G;
+                break;
+            case 2:
+                freq_type_to_scan = beerocks::FREQ_24G;
+                break;
+            default:
+                freq_type_to_scan = beerocks::FREQ_UNKNOWN;
+                LOG(ERROR) << "Invalid radio config, not triggering On Boot Scan";
+                break;
+            }
+            if (freq_type_to_scan != beerocks::FREQ_UNKNOWN) {
+                for (const auto &radio_to_scan : radio) {
+                    if (radio_to_scan->wifi_channel.get_freq_type() == freq_type_to_scan &&
+                        radio_to_scan->front.iface_mac != network_utils::ZERO_MAC) {
+                        on_boot_scan_request->radio_mac() = radio_to_scan->front.iface_mac;
+                        break;
+                    }
+                }
+                // Send the message
+                LOG(DEBUG) << "Triggering On Boot Scan on radio: "
+                           << on_boot_scan_request->radio_mac();
+                m_backhaul_manager_client->send_cmdu(cmdu_tx);
+            }
+        }
+
         m_radio_managers.do_on_each_radio_manager(
             [&](sManagedRadio &radio_manager, const std::string &fronthaul_iface) -> bool {
                 auto db                                = AgentDB::get();
