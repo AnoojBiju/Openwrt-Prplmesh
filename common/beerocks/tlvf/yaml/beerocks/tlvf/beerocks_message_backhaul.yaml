@@ -156,6 +156,10 @@ cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
 ################################################
 # CHANNEL SCAN REQUESTS/RESPONSES
 ################################################
+cACTION_BACKHAUL_TRIGGER_ON_BOOT_SCAN:
+  _type: class
+  radio_mac: sMacAddr
+
 cACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST:
   _type: class
   cert_mode: uint8_t
