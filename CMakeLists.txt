@@ -210,6 +210,14 @@ if (BUILD_CONTROLLER)
     add_subdirectory(controller)
 endif()
 
+## ACL
+if (BUILD_CONTROLLER AND ENABLE_NBAPI)
+    set(ACL_DIR etc/acl/admin)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json.in ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json DESTINATION ${ACL_DIR})
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json DESTINATION "${CMAKE_MULTIAP_OUTPUT_DIRECTORY}/${ACL_DIR}}")
+endif()
+
 ## Version
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/version.in"
