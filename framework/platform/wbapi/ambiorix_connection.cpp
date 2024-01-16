@@ -26,7 +26,11 @@ AmbiorixConnection::AmbiorixConnection(const std::string &amxb_backend, const st
 {
 }
 
-AmbiorixConnection::~AmbiorixConnection() { amxb_free(&m_bus_ctx); }
+AmbiorixConnection::~AmbiorixConnection()
+{
+    amxc_var_delete(&m_config);
+    amxb_free(&m_bus_ctx);
+}
 
 const std::string &AmbiorixConnection::uri() const { return m_bus_uri; }
 
@@ -35,12 +39,17 @@ bool AmbiorixConnection::init()
     if (m_bus_ctx) {
         return true;
     }
+    amxc_var_new(&m_config);
+    amxc_var_set_type(m_config, AMXC_VAR_ID_HTABLE);
     int ret = 0;
     // Load the backend .so file
     ret = amxb_be_load(m_amxb_backend.c_str());
     if (ret != 0) {
         LOG(ERROR) << "Failed to load the " << m_amxb_backend.c_str() << " backend";
         return false;
+    }
+    if (amxb_set_config(m_config) != 0) {
+        LOG(ERROR) << "Failed to set amxb config";
     }
     // Connect to the bus
     ret = amxb_connect(&m_bus_ctx, m_bus_uri.c_str());
@@ -53,26 +62,24 @@ bool AmbiorixConnection::init()
     return true;
 }
 
-AmbiorixConnectionSmartPtr AmbiorixConnection::create(const std::string &amxb_backend,
-                                                      const std::string &bus_uri)
-{
-    auto cnx = std::make_shared<AmbiorixConnection>(amxb_backend, bus_uri);
-    if (!cnx->init()) {
-        return AmbiorixConnectionSmartPtr{};
-    }
-    return cnx;
-}
-
 AmbiorixVariantSmartPtr AmbiorixConnection::get_object(const std::string &object_path,
                                                        const int32_t depth, bool only_first)
 {
-    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::string path(object_path);
+    //proxied objs under root "Device." are not available through direct usp socket
+    //so access them directly by skipping the "Device." prefix
+    std::string prefix("Device.");
+    if ((m_bus_uri.rfind("usp:", 0) == 0) && (path.rfind(prefix, 0) == 0)) {
+        path.erase(0, prefix.length());
+    }
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     AmbiorixVariant result;
-    int ret      = amxb_get(m_bus_ctx, object_path.c_str(), depth, get_amxc_var_ptr(result),
-                       AMX_CL_DEF_TIMEOUT);
+    int ret =
+        amxb_get(m_bus_ctx, path.c_str(), depth, get_amxc_var_ptr(result), AMX_CL_DEF_TIMEOUT);
     auto entries = result.find_child(0);
     if (ret != AMXB_STATUS_OK || !entries) {
-        LOG(ERROR) << "Request path [" << object_path << "] failed";
+        LOG(ERROR) << "Request path [" << path << "] failed";
+        return AmbiorixVariantSmartPtr{};
     } else if ((depth == 0) && only_first) {
         auto first_entry = entries->first_child();
         if (first_entry) {
@@ -172,6 +179,7 @@ bool AmbiorixConnection::call(const std::string &object_path, const char *method
 
 int AmbiorixConnection::read()
 {
+    // We had issues when just reading amxb_read one time, This solution was intensively tested  and proved to be fiable and stable.
     m_mutex.lock();
     int ret = amxb_read(m_bus_ctx);
     m_mutex.unlock();
@@ -188,17 +196,25 @@ int AmbiorixConnection::read()
 
 int AmbiorixConnection::read_signal()
 {
-    int ret = amxp_signal_read();
-    if (ret == 0) {
-        while (amxp_signal_read() == 0) {
-        }
-    }
+    const std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    int ret;
+    do {
+        ret = amxp_signal_read();
+    } while (ret == 0);
     return ret;
 }
 
-int AmbiorixConnection::get_fd() { return m_fd; }
+int AmbiorixConnection::get_fd()
+{
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_fd;
+}
 
-int AmbiorixConnection::get_signal_fd() { return m_signal_fd; }
+int AmbiorixConnection::get_signal_fd()
+{
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    return m_signal_fd;
+}
 
 static void event_callback(const char *const sig_name, const amxc_var_t *const data,
                            void *const priv)
@@ -209,7 +225,7 @@ static void event_callback(const char *const sig_name, const amxc_var_t *const d
     }
     std::string event_type;
     AmbiorixVariant event_obj((amxc_var_t *)data, false);
-    if (event_obj.empty() || !event_obj.read_child<>(event_type, "notification")) {
+    if (event_obj.empty() || !event_obj.read_child(event_type, "notification")) {
         return;
     }
     if (handler->event_type == event_type) {

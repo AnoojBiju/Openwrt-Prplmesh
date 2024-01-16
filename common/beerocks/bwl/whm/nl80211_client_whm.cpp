@@ -20,7 +20,9 @@ using namespace wbapi;
 
 namespace bwl {
 
-nl80211_client_whm::nl80211_client_whm() : m_connection(AmbiorixConnectionManager::get_connection())
+nl80211_client_whm::nl80211_client_whm()
+    : m_connection(AmbiorixConnectionManager::get_instance()->get_connection(
+          AMBIORIX_USP_BACKEND_PATH, AMBIORIX_PWHM_USP_BACKEND_URI))
 {
 }
 
@@ -76,19 +78,19 @@ bool nl80211_client_whm::get_sta_info(const std::string &interface_name,
         LOG(ERROR) << "failed to get AssociatedDevice object " << assoc_device_path;
         return false;
     }
-    assoc_device_obj->read_child<>(sta_info.tx_bytes, "TxBytes");
-    assoc_device_obj->read_child<>(sta_info.rx_bytes, "RxBytes");
-    assoc_device_obj->read_child<>(sta_info.tx_packets, "TxPacketCount");
-    assoc_device_obj->read_child<>(sta_info.rx_packets, "RxPacketCount");
-    assoc_device_obj->read_child<>(sta_info.tx_retries, "Retransmissions");
-    assoc_device_obj->read_child<>(sta_info.tx_failed, "TxErrors");
-    assoc_device_obj->read_child<>(sta_info.signal_dbm, "SignalStrength");
-    assoc_device_obj->read_child<>(sta_info.signal_avg_dbm, "AvgSignalStrength");
+    assoc_device_obj->read_child(sta_info.tx_bytes, "TxBytes");
+    assoc_device_obj->read_child(sta_info.rx_bytes, "RxBytes");
+    assoc_device_obj->read_child(sta_info.tx_packets, "TxPacketCount");
+    assoc_device_obj->read_child(sta_info.rx_packets, "RxPacketCount");
+    assoc_device_obj->read_child(sta_info.tx_retries, "Retransmissions");
+    assoc_device_obj->read_child(sta_info.tx_failed, "TxErrors");
+    assoc_device_obj->read_child(sta_info.signal_dbm, "SignalStrength");
+    assoc_device_obj->read_child(sta_info.signal_avg_dbm, "AvgSignalStrength");
     uint32_t u32Val;
-    if (assoc_device_obj->read_child<>(u32Val, "LastDataDownlinkRate")) {
+    if (assoc_device_obj->read_child(u32Val, "LastDataDownlinkRate")) {
         sta_info.rx_bitrate_100kbps = u32Val / 100;
     }
-    if (assoc_device_obj->read_child<>(u32Val, "LastDataUplinkRate")) {
+    if (assoc_device_obj->read_child(u32Val, "LastDataUplinkRate")) {
         sta_info.tx_bitrate_100kbps = u32Val / 100;
     }
     uint32_t dl_bandwidth;
