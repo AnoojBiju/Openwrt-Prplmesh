@@ -101,6 +101,8 @@ private:
 
     virtual bool process_scan_complete_event(const std::string &result) override;
 
+    bool process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data) override;
+
     bool get_scan_results_from_pwhm();
 
     bool m_scan_active = false;

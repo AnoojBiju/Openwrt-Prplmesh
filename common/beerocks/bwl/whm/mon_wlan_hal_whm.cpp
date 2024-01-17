@@ -12,6 +12,7 @@
 #include <amxd/amxd_object.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
+#include <bwl/key_value_parser.h>
 
 #include <easylogging++.h>
 
@@ -34,6 +35,152 @@ namespace whm {
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
+static mon_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "BEACON-REQ-TX-STATUS") {
+        return mon_wlan_hal::Event::RRM_Beacon_Request_Status;
+    } else if (opcode == "BEACON-RESP-RX") {
+        return mon_wlan_hal::Event::RRM_Beacon_Response;
+    }
+
+    return mon_wlan_hal::Event::Invalid;
+}
+
+static bool parse_beacon_request_status(bwl::parsed_line_t &parsed_obj,
+                                        bwl::SBeaconRequestStatus11k *msg)
+{
+
+    if (parsed_obj.find("_mac") != parsed_obj.end()) {
+        tlvf::mac_from_string(msg->sta_mac.oct, parsed_obj.at("_mac"));
+    } else {
+        LOG(ERROR) << "missing station mac";
+        return false;
+    }
+
+    if (parsed_obj.find("_arg0") != parsed_obj.end()) {
+        // Dialog token
+        msg->dialog_token = beerocks::string_utils::stoi(parsed_obj.at("_arg0"));
+    } else {
+        LOG(ERROR) << "missing dialog token";
+        return false;
+    }
+
+    // we use parse_event_keyless_params for the variable count of keyless params in RRM
+    // ack is a key-val, so handle it separately here
+    if (parsed_obj.find("_arg1") != parsed_obj.end()) {
+        auto idx = parsed_obj.at("_arg1").find_first_of('=');
+        if (idx != std::string::npos) {
+            auto ack_substr = parsed_obj.at("_arg1").substr(idx + 1, std::string::npos);
+            msg->ack        = beerocks::string_utils::stoi(ack_substr);
+        }
+    }
+
+    LOG(DEBUG) << "Beacon Request Status RX:" << std::endl
+               << "  dialog token = " << msg->dialog_token << std::endl
+               << "  StaMAC = " << parsed_obj.at("_mac") << std::endl;
+
+    return true;
+}
+
+static bool parse_beacon_measurement_response(bwl::parsed_line_t &parsed_obj,
+                                              bwl::SBeaconResponse11k *msg)
+{
+    if (parsed_obj.find("_mac") != parsed_obj.end()) {
+        // STA Mac Address
+        tlvf::mac_from_string(msg->sta_mac.oct, parsed_obj.at("_mac"));
+    } else {
+        LOG(ERROR) << "missing station mac";
+        return false;
+    }
+
+    if (parsed_obj.find("_arg0") != parsed_obj.end()) {
+        // Dialog token
+        msg->dialog_token = beerocks::string_utils::stoi(parsed_obj.at("_arg0"));
+    } else {
+        LOG(ERROR) << "missing dialog token";
+        return false;
+    }
+
+    if (parsed_obj.find("_arg1") != parsed_obj.end()) {
+        // rep_mode
+        msg->rep_mode = beerocks::string_utils::stoi(parsed_obj.at("_arg1"));
+    }
+
+    // Parse the report
+    if (parsed_obj.find("_arg2") == parsed_obj.end()) {
+        LOG(WARNING) << "missing 11k report";
+        return false;
+    }
+    auto report = parsed_obj.at("_arg2");
+    if (report.length() < 52) {
+        LOG(WARNING) << "Invalid 11k report length!";
+        return false;
+    }
+
+    int idx = 0;
+
+    // op_class
+    msg->op_class = std::strtoul(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // channel
+    msg->channel = std::strtoul(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // start_time
+    msg->start_time = std::strtoull(report.substr(idx, 16).c_str(), 0, 16);
+    msg->start_time = be64toh(msg->start_time);
+    idx += 16;
+
+    // measurement_duration
+    msg->duration = std::strtoul(report.substr(idx, 4).c_str(), 0, 16);
+    msg->duration = be16toh(msg->duration);
+    idx += 4;
+
+    // phy_type
+    msg->phy_type = std::strtoul(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // rcpi
+    msg->rcpi = std::strtol(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // rsni
+    msg->rsni = std::strtol(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // bssid
+    msg->bssid.oct[0] = std::strtoul(report.substr(idx + 0, 2).c_str(), 0, 16);
+    msg->bssid.oct[1] = std::strtoul(report.substr(idx + 2, 2).c_str(), 0, 16);
+    msg->bssid.oct[2] = std::strtoul(report.substr(idx + 4, 2).c_str(), 0, 16);
+    msg->bssid.oct[3] = std::strtoul(report.substr(idx + 6, 2).c_str(), 0, 16);
+    msg->bssid.oct[4] = std::strtoul(report.substr(idx + 8, 2).c_str(), 0, 16);
+    msg->bssid.oct[5] = std::strtoul(report.substr(idx + 10, 2).c_str(), 0, 16);
+    idx += 12;
+
+    // ant_id
+    msg->ant_id = std::strtoul(report.substr(idx, 2).c_str(), 0, 16);
+    idx += 2;
+
+    // parent_tsf
+    msg->parent_tsf = std::strtoull(report.substr(idx, 8).c_str(), 0, 16);
+    idx += 8;
+
+    LOG(DEBUG) << "Beacon Response:" << std::endl
+               << "  dialog token = " << msg->dialog_token << std::endl
+               << "  op_class = " << int(msg->op_class) << std::endl
+               << "  channel = " << int(msg->channel) << std::endl
+               << "  start_time = " << int(msg->start_time) << std::endl
+               << "  duration = " << int(msg->duration) << std::endl
+               << "  phy_type = " << int(msg->phy_type) << std::endl
+               << "  rcpi = " << int(msg->rcpi) << std::endl
+               << "  rsni = " << int(msg->rsni) << std::endl
+               << "  bssid = " << tlvf::mac_to_string(&(msg->bssid.oct[0])) << std::endl
+               << "  ant_id = " << int(msg->ant_id) << std::endl
+               << "  parent_tfs = " << int(msg->parent_tsf);
+    return true;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
@@ -163,6 +310,8 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
     bool ret = m_ambiorix_cl.call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
+    LOG(DEBUG) << "11k request for " << tlvf::mac_to_string(req.sta_mac.oct) << " bssid "
+               << tlvf::mac_to_string(req.bssid.oct);
     if (!ret) {
         LOG(ERROR) << "sta_beacon_11k_request() failed!";
         return false;
@@ -433,6 +582,85 @@ bool mon_wlan_hal_whm::process_sta_event(const std::string &interface, const std
             msg->mac = tlvf::mac_from_string(sta_mac);
             event_queue_push(Event::STA_Disconnected, msg_buff);
         }
+    }
+    return true;
+}
+
+bool mon_wlan_hal_whm::process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data)
+{
+    std::string event_str;
+    if (!event_data.read_child<>(event_str, "eventData") || event_str.empty()) {
+        LOG(WARNING) << "Unable to retrieve wpaCtrl event data from pwhm notification";
+        return false;
+    }
+
+    bwl::parsed_line_t parsed_obj;
+
+    auto idx_start = event_str.find_first_of(">");
+    if (idx_start != std::string::npos) {
+        idx_start++;
+    } else {
+        LOG(WARNING) << "empty event! event_string: " << event_str;
+        return false;
+    }
+
+    // parse_event() func supports only a fixed number of keyless params
+    // use parse_event_keyless_params instead
+    parse_event_keyless_params(event_str, idx_start, parsed_obj, true);
+
+    // Filter out empty events
+    std::string opcode;
+    if (!(parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
+          !(opcode = parsed_obj.at(bwl::EVENT_KEYLESS_PARAM_OPCODE)).empty())) {
+        LOG(ERROR) << "no opcode";
+        return true;
+    }
+
+    auto event = wpaCtrl_to_bwl_event(opcode);
+
+    std::string interface;
+    if (!event_data.read_child<>(interface, "ifName") || interface.empty()) {
+        LOG(WARNING) << "Unable to retrieve ifName from pwhm notification";
+        return false;
+    }
+    LOG(DEBUG) << "interface " << interface << " wpaCtrl event: " << event_str;
+
+    switch (event) {
+    case Event::RRM_Beacon_Request_Status: {
+
+        // Allocate response object
+        auto resp_buff = ALLOC_SMART_BUFFER(sizeof(SBeaconRequestStatus11k));
+        auto resp      = reinterpret_cast<SBeaconRequestStatus11k *>(resp_buff.get());
+        LOG_IF(!resp, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(resp_buff.get(), 0, sizeof(SBeaconRequestStatus11k));
+
+        if (parse_beacon_request_status(parsed_obj, resp)) {
+            // Add the message to the queue
+            event_queue_push(event, resp_buff);
+        }
+
+    } break;
+    case Event::RRM_Beacon_Response: {
+
+        // Allocate response object
+        auto resp_buff = ALLOC_SMART_BUFFER(sizeof(SBeaconResponse11k));
+        auto resp      = reinterpret_cast<SBeaconResponse11k *>(resp_buff.get());
+        LOG_IF(!resp, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(resp_buff.get(), 0, sizeof(SBeaconResponse11k));
+
+        if (parse_beacon_measurement_response(parsed_obj, resp)) {
+            event_queue_push(event, resp_buff);
+        }
+
+    } break;
+    default: {
+        // other WPA CTRL messages handled in other hal_whm classes
+        break;
+    };
     }
     return true;
 }
