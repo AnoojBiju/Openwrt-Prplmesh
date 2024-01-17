@@ -17,6 +17,8 @@
 
 #include <beerocks/tlvf/beerocks_message.h>
 
+#include <cmath>
+
 using namespace beerocks;
 using namespace net;
 using namespace son;
@@ -743,7 +745,7 @@ void optimal_path_task::work()
                 if (!(current_hostap_is_5ghz && current_below_cutoff) && hostap == current_hostap) {
                     sticky_roaming_rssi = dl_rssi;
                     int hysteresis_bonus =
-                        abs(dl_rssi * (roaming_hysteresis_percent_bonus / 100.0));
+                        std::abs(dl_rssi * (roaming_hysteresis_percent_bonus / 100.0));
                     dl_rssi += hysteresis_bonus; //adds stability
                 }
 
@@ -1431,7 +1433,7 @@ void optimal_path_task::work()
                 all_hostaps_below_cutoff = false;
                 if (hostap == current_hostap) {
                     int hysteresis_bonus =
-                        abs(estimated_ul_rssi * (roaming_hysteresis_percent_bonus / 100.0));
+                        std::abs(estimated_ul_rssi * (roaming_hysteresis_percent_bonus / 100.0));
                     estimated_ul_rssi += hysteresis_bonus; //adds stability
                 }
 
