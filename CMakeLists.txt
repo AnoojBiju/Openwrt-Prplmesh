@@ -78,7 +78,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -pthread -Wno-comment 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s -O2 -Wformat -Wformat-security -Wl,-S -fPIC -fPIE")
 
 # Compiler specific flags
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 9.1)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-address-of-packed-member")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fstack-protector-strong")
 else()
