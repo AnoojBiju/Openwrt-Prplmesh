@@ -12,6 +12,7 @@
 #include <bcl/beerocks_utils.h>
 #include <bcl/network/network_utils.h>
 #include <bcl/son/son_wireless_utils.h>
+#include <bwl/key_value_parser.h>
 #include <bwl/nl80211_client_factory.h>
 
 #include <limits.h>
@@ -59,7 +60,7 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
         if (!event_data || !event_data.read_child(data, "eventData")) {
             return;
         }
-        process_wpaCtrl_events(event_data);
+        process_wpa_ctrl_event(event_data);
     };
     std::string wpaCtrl_filter =
         "(path matches '" + m_radio_path + "$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
@@ -151,11 +152,23 @@ void base_wlan_hal_whm::subscribe_to_ap_events()
     wpaCtrl_Event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
     wpaCtrl_Event_handler->callback_fn = [this](AmbiorixVariant &event_data,
                                                 void *context) -> void {
+        std::string ap_path;
+        if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
+            return;
+        }
+
+        auto vap_it = std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == m_vapsExtInfo.end()) {
+            return;
+        }
         std::string data;
         if (!event_data || !event_data.read_child(data, "eventData")) {
             return;
         }
-        process_wpaCtrl_events(event_data);
+        process_wpa_ctrl_event(event_data);
     };
     std::string wpaCtrl_filter = "(path matches '" + wifi_ap_path +
                                  "[0-9]+.$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
@@ -403,7 +416,7 @@ void base_wlan_hal_whm::process_rssi_eventing_event(const std::string &interface
 
 bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
 
-bool base_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+bool base_wlan_hal_whm::process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data)
 {
     return true;
 }

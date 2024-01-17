@@ -129,7 +129,7 @@ protected:
     /**
      * @brief Process event "wpaCtrlEvents"
      */
-    virtual bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data);
+    virtual bool process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data);
 
     /**
      * @brief subscribe to WiFi.Radio.XXXXX.NaStaMonitor.RssiEventing RssiUpdate dm notification

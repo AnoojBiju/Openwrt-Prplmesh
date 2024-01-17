@@ -177,7 +177,7 @@ private:
     /**
      * @brief Process event "wpaCtrlEvents"
      */
-    bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data) override;
+    bool process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data) override;
 };
 
 } // namespace whm

@@ -62,7 +62,7 @@ protected:
     virtual size_t event_buffer_start_process_idx(const std::string &event_str);
 
     virtual void parse_event_keyless_params(const std::string &event_str, size_t idx_start,
-                                            parsed_line_t &parsed_line);
+                                            parsed_line_t &parsed_line, bool full_parse);
 };
 
 } // namespace bwl
