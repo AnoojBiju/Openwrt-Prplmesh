@@ -2977,6 +2977,26 @@ void BackhaulManager::handle_dev_reset_default(
 
     // Store socket descriptor to send reply to UCC client when command processing is completed.
     m_dev_reset_default_fd = fd;
+    for (const auto &radio_info : m_radios_info) {
+        auto notification =
+            message_com::create_vs_message<beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(
+                cmdu_tx);
+
+        if (!notification) {
+            LOG(ERROR) << "Failed building message!";
+        }
+
+        notification->set_iface(radio_info->hostap_iface);
+        notification->channel()        = radio_info->primary_channel;
+        notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
+        notification->center_channel() = radio_info->primary_channel;
+
+        LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
+                   << ", channel = " << int(notification->channel())
+                   << ", center_channel = " << int(notification->center_channel());
+
+        send_cmdu(m_agent_fd, cmdu_tx);
+    }
 
     // Get the HAL for the connected wireless interface and, if any, disconnect the interface
     auto active_hal = get_wireless_hal();
