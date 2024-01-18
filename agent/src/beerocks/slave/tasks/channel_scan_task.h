@@ -23,8 +23,8 @@ class BackhaulManager;
 
 class ChannelScanTask : public Task {
 public:
-    ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx);
-    ~ChannelScanTask() {}
+    ChannelScanTask(BackhaulManager &btl_ctx, ieee1905_1::CmduMessageTx &cmdu_tx,
+                    const bool on_boot_scan_enabled);
 
     void work() override;
 
@@ -122,17 +122,8 @@ private:
         std::map<uint8_t, std::vector<beerocks_message::sChannelScanResults>> cached_results;
     };
     struct sRequestInfo {
-        enum eScanRequestType {
-            ControllerRequested,
-            AgentRequested,
-        };
-        wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan perform_fresh_scan;
-        eScanRequestType request_type;
-        explicit sRequestInfo(eScanRequestType _request_type) : request_type(_request_type) {}
-    };
-    struct sControllerRequestInfo : sRequestInfo {
         sMacAddr src_mac;
-        sControllerRequestInfo() : sRequestInfo(eScanRequestType::ControllerRequested) {}
+        wfa_map::tlvProfile2ChannelScanRequest::ePerformFreshScan perform_fresh_scan;
     };
     struct sScanRequest {
         std::shared_ptr<sRequestInfo> request_info;
@@ -180,6 +171,7 @@ private:
 
     BackhaulManager &m_btl_ctx;
     ieee1905_1::CmduMessageTx &m_cmdu_tx;
+    const bool m_on_boot_scan_enabled;
 
     /* Request handling helper functions */
 
@@ -260,17 +252,10 @@ private:
     * @return True on success, otherwise false.
     */
     bool handle_channel_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac);
+    bool handle_on_boot_scan_request(ieee1905_1::CmduMessageRx &cmdu_rx, const sMacAddr &src_mac,
+                                     const sMacAddr &radio_mac, const bool &send_results = false);
 
     /* 1905.1 message responses: */
-
-    /**
-    * @brief Sends channel scan report back to the requester.
-    * 
-    * @param[in] request request object
-    *
-    * @return True on success, otherwise false.
-    */
-    bool send_channel_scan_report(const std::shared_ptr<sScanRequest> request);
 
     /**
      * @brief Send 1905 CHANNEL_SCAN_REPORT message back to the sender.
