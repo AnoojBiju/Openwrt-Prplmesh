@@ -167,8 +167,8 @@ main() {
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
         dbg "Haze platform, build on prplos master (wps fix)"
-        OPENWRT_TOOLCHAIN_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
-        OPENWRT_VERSION='205d5b2366b92a2353d237d2138023a465a080d6'
+        OPENWRT_TOOLCHAIN_VERSION='8a6af808d6759bc044ad091de27e0142d7265236'
+        OPENWRT_VERSION='8a6af808d6759bc044ad091de27e0142d7265236'
         # Temporary workaround for Haze build failure
         sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
