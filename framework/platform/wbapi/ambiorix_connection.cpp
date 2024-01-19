@@ -230,7 +230,7 @@ static void event_callback(const char *const sig_name, const amxc_var_t *const d
     }
     if (handler->event_type == event_type) {
         if (handler->callback_fn) {
-            handler->callback_fn(event_obj, handler->context);
+            handler->callback_fn(event_obj);
         }
     }
 }

@@ -55,11 +55,11 @@ sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
 
 void sta_wlan_hal_whm::subscribe_to_ep_events()
 {
-    std::string wifi_ep_path   = wbapi_utils::search_path_ep();
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
-        sta_wlan_hal_whm *hal = (static_cast<sta_wlan_hal_whm *>(context));
+    std::string wifi_ep_path  = wbapi_utils::search_path_ep();
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_OBJECT_CHANGED_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ep_path;
         if (!event_data.read_child(ep_path, "path") || ep_path.empty()) {
             return;
@@ -74,8 +74,8 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
             return;
         }
         // if endpoint path already resolved, then event path must match it
-        if (!hal->m_ep_path.empty()) {
-            if (hal->m_ep_path != ep_path) {
+        if (!m_ep_path.empty()) {
+            if (m_ep_path != ep_path) {
                 return;
             }
         } else {
@@ -93,16 +93,15 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
                 }
             }
             //If not in the notif param, try querying itfname
-            if (intf_name.empty() &&
-                !hal->m_ambiorix_cl.get_param(intf_name, ep_path, "IntfName")) {
+            if (intf_name.empty() && !m_ambiorix_cl.get_param<>(intf_name, ep_path, "IntfName")) {
                 return;
             }
             //endpoint itfname must match
-            if (intf_name != hal->get_iface_name()) {
+            if (intf_name != get_iface_name()) {
                 return;
             }
             //Then save the resolved endpoint path
-            hal->m_ep_path = ep_path;
+            m_ep_path = ep_path;
         }
         for (auto &param_it : *params_map) {
             auto key       = param_it.first;
@@ -113,10 +112,9 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
                 old_value->empty()) {
                 continue;
             }
-            hal->process_ep_event(hal->get_iface_name(), key, new_value.get(), old_value.get());
+            process_ep_event(get_iface_name(), key, new_value.get(), old_value.get());
         }
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + wifi_ep_path +
                          "[0-9]+.$')"
@@ -131,18 +129,19 @@ void sta_wlan_hal_whm::subscribe_to_ep_events()
 
 void sta_wlan_hal_whm::subscribe_to_ep_wps_events()
 {
-    std::string wifi_wps_path  = m_ep_path + "WPS.";
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_WPS_PAIRING_DONE;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+    std::string wifi_wps_path = m_ep_path + "WPS.";
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_WPS_PAIRING_DONE;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         if (!event_data) {
             return;
         }
-        sta_wlan_hal_whm *hal = (static_cast<sta_wlan_hal_whm *>(context));
-        hal->process_ep_wps_event(hal->get_iface_name(), &event_data);
+
+        process_ep_wps_event(get_iface_name(), &event_data);
     };
-    event_handler->context = this;
-    std::string filter     = "path matches '" + wifi_wps_path + "'";
+
+    std::string filter = "path matches '" + wifi_wps_path + "'";
     m_ambiorix_cl.subscribe_to_object_event(wifi_wps_path, event_handler, filter);
 }
 
