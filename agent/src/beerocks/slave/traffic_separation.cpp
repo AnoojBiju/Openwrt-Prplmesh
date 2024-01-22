@@ -93,6 +93,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
     }
 
     LOG(DEBUG) << "Apply traffic separation policy";
+    LOG(DEBUG) << "Radio name, " << radio_iface;
 
     // Configure the Primary VLAN in Transport Process
     if (!m_broker_client->configure_primary_vlan_id(db->traffic_separation.primary_vlan_id, true)) {
@@ -132,7 +133,9 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
         } else {
-            set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
+            LOG(DEBUG) << "iface_name=" << radio->back.iface_name;
+            set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge,
+                            db->traffic_separation.primary_vlan_id);
         }
     }
 
@@ -150,7 +153,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
         return;
     }
 
-    for (const auto &bss : radio->front.bssids) {
+    for (auto &bss : radio->front.bssids) {
         // Skip unconfigured BSS.
         if (bss.ssid.empty()) {
             continue;
@@ -192,6 +195,11 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
                 }
                 LOG(DEBUG) << "profile_x_disallow_override is set on profile "
                            << m_profile_x_disallow_override_unsupported_configuration;
+                if (m_profile_x_disallow_override_unsupported_configuration == 1) {
+                    bss.backhaul_bss_disallow_profile1_agent_association = true;
+                } else if (m_profile_x_disallow_override_unsupported_configuration == 2) {
+                    bss.backhaul_bss_disallow_profile2_agent_association = true;
+                }
             }
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
@@ -344,6 +352,9 @@ void TrafficSeparation::set_vlan_policy(const std::string &iface, ePortMode port
         LOG(ERROR) << "iface is empty!";
         return;
     }
+
+    LOG(DEBUG) << "Inside set vlan policy, iface=" << iface << " port_mode=" << port_mode
+               << " is_bridge=" << is_bridge << " untagged_port_id=" << untagged_port_vid;
 
     // Helper variables to make the code more readable.
     bool del = true; // First, remove all VIDs (vid=0).

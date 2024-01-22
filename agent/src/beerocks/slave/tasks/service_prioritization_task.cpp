@@ -188,6 +188,8 @@ void ServicePrioritizationTask::gather_iface_details(
             LOG(ERROR) << "Could not find Backhaul Radio interface!";
             return;
         }
+        LOG(DEBUG) << "Inside wireless backhaul case, multi_ap_profile="
+                   << db->backhaul.bssid_multi_ap_profile;
         iface.iface_name = radio->back.iface_name;
         iface.tag_info =
             db->backhaul.bssid_multi_ap_profile > 1
@@ -232,8 +234,12 @@ void ServicePrioritizationTask::gather_iface_details(
                             ? bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_TAGGED
                             : bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
                     iface_tag_info_list->push_back(iface);
+                    LOG(DEBUG) << "Inside for loop bBSS case, disallow="
+                               << bss.backhaul_bss_disallow_profile1_agent_association;
+                    LOG(DEBUG) << "BSS " << iface.iface_name << " tag_info " << iface.tag_info;
                 }
             } else { // Combined fBSS & bBSS - Currently Support only Profile-1 (PPM-1418)
+                LOG(DEBUG) << "in else case BSS= " << bss_iface;
                 iface.iface_name = bss_iface;
                 iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
                 iface_tag_info_list->push_back(iface);
@@ -242,6 +248,7 @@ void ServicePrioritizationTask::gather_iface_details(
                     network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
 
                 for (const auto &bss_iface_netdev : bss_iface_netdevs) {
+                    LOG(DEBUG) << "in else case for loop BSS= " << bss_iface_netdev;
                     iface.iface_name = bss_iface_netdev;
                     iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::UNTAGGED_PORT;
                     iface_tag_info_list->push_back(iface);
