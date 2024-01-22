@@ -224,7 +224,10 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
             node->state = BML_NODE_STATE_UNKNOWN;
         }
     }
-
+    if (n_type == beerocks::TYPE_IRE) //ARRIS MOD AR-11015
+    {
+        node->isWiFiBH = database.is_node_wireless(n->mac);
+    }
     if (n_type == beerocks::TYPE_IRE &&
         database.is_node_wireless(database.get_node_parent(n->mac))) {
         auto parent_backhaul_mac          = database.get_node_parent_backhaul(n->mac);
@@ -238,7 +241,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         node->channel_ext_above_secondary = parent_backhaul_wifi_channel.get_ext_above_secondary();
     } else {
         if (n->wifi_channel.is_empty()) {
-            LOG(WARNING) << "wifi channel is empty";
+            LOG(WARNING) << "Badhri wifi channel is empty mac " << n->mac;
         }
         node->channel                     = n->wifi_channel.get_channel();
         node->bw                          = n->wifi_channel.get_bandwidth();

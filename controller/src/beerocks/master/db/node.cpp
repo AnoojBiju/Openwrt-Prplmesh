@@ -49,6 +49,16 @@ bool node::set_type(beerocks::eType type_)
     } else if ((type == beerocks::TYPE_CLIENT) && (type_ == beerocks::TYPE_IRE_BACKHAUL)) {
         type = type_;
         return true;
+    } else if ((type == beerocks::TYPE_CLIENT) && (type_ == beerocks::TYPE_SLAVE)) {
+        LOG(DEBUG) << "Badhri Can happen: node = " << mac << ", old type = " << int(type)
+                   << ", new type = " << int(type_);
+        type = type_;
+        return true;
+    } else if ((type == beerocks::TYPE_SLAVE) && (type_ == beerocks::TYPE_CLIENT)) {
+        LOG(DEBUG) << "Badhri Also can happen: node = " << mac << ", old type = " << int(type)
+                   << ", new type = " << int(type_);
+        type = type_;
+        return true;
     } else {
         LOG(ERROR) << "Not expected to happen: node = " << mac << ", old type = " << int(type)
                    << ", new type = " << int(type_);

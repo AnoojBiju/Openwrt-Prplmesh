@@ -35,6 +35,7 @@ static void fill_conn_map_node(
     n->freq_type                   = node->freq_type;
     n->channel_ext_above_secondary = node->channel_ext_above_secondary;
     n->rx_rssi                     = node->rx_rssi;
+    n->isWiFiBH                    = node->isWiFiBH;
     n->mac                         = tlvf::mac_to_string(node->mac);
     n->ip_v4                       = network_utils::ipv4_to_string(node->ip_v4);
     n->name.assign(node->name[0] ? node->name : "N/A");
@@ -151,8 +152,10 @@ static void bml_utils_dump_conn_map(
         } else { //PLATFORM
 
             // IRE BACKHAUL
-            if (node->type == BML_NODE_TYPE_IRE) {
-                ss << ind_inc(ind_str) << "IRE_BACKHAUL:"
+            if (node->type == BML_NODE_TYPE_IRE &&
+                node->gw_ire.backhaul_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
+                ss << ind_inc(ind_str) << "IRE_BACKHAUL "
+                   << std::string(node->isWiFiBH ? "(WiFi BH):" : "(Eth BH):")
                    << " mac: " << node->gw_ire.backhaul_mac
                    << ", ch: " << std::to_string(node->channel) << ", bw: "
                    << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
@@ -175,7 +178,7 @@ static void bml_utils_dump_conn_map(
                 network_utils::get_eth_sw_mac_from_bridge_mac(tlvf::mac_from_string(node->mac));
             auto eth_mac = tlvf::mac_to_string(eth_sw_mac_binary);
             ss << ind_inc(ind_str) << "ETHERNET:"
-               << " mac: " << eth_mac << std::endl;
+               << " mac: " << tlvf::mac_from_string(node->mac) << std::endl;
             // add clients which are connected to the Ethernet
             bml_utils_dump_conn_map(conn_map_nodes, eth_mac, ind_str, ss);
 

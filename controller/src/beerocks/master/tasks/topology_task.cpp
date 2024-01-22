@@ -182,7 +182,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             // wireless connection is considered active. (PPM-2043)
             if (iface_role == ieee1905_1::eRole::NON_AP_NON_PCP_STA &&
                 media_info->network_membership != beerocks::net::network_utils::ZERO_MAC) {
-
+                auto parent_node =
+                    database.get_node_parent(tlvf::mac_to_string(iface_mac)); //ARRIS MOD AR-11015
+                database.set_node_backhaul_iface_type(parent_node,
+                                                      beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+                LOG(DEBUG) << "Badhri  node: " << parent_node << " set to WiFi BH"
+                           << " verify " << database.get_node_backhaul_iface_type(parent_node);
                 // Search parent/connected agent
                 auto parent_agent = database.get_agent_by_bssid(media_info->network_membership);
                 if (!parent_agent) {
@@ -227,6 +232,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 agent->backhaul.parent_interface   = media_info->network_membership;
                 agent->backhaul.wireless_backhaul_radio =
                     database.get_radio_by_backhaul_cap(media_info->network_membership);
+            } else if (iface_role == ieee1905_1::eRole::NON_AP_NON_PCP_STA && //ARRIS MOD AR-11015
+                       media_info->network_membership == beerocks::net::network_utils::ZERO_MAC) {
+                auto parent_node = database.get_node_parent(tlvf::mac_to_string(iface_mac));
+                database.set_node_backhaul_iface_type(parent_node, beerocks::IFACE_TYPE_ETHERNET);
+                LOG(DEBUG) << "Badhri  node: " << parent_node << " set to Eth BH"
+                           << " verify " << database.get_node_backhaul_iface_type(parent_node);
             }
         }
     }
@@ -312,9 +323,18 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
                     LOG(DEBUG) << "Non-Prplmesh Agent";
+                    sMacAddr backhaul_to_al_mac =
+                        bss_entry
+                            .radio_bssid(); //tlvf::string_to_mac(bss->ssid);    //ARRIS MOD AR-11041 convert to the match backhaul SW MAC
+                    backhaul_to_al_mac.oct[0] |= 0xE;
+                    backhaul_to_al_mac.oct[5] = backhaul_to_al_mac.oct[5] - 3;
+                    if (al_mac == backhaul_to_al_mac) {
+                        LOG(DEBUG) << "Badhri Backhaul is set true for " << backhaul_to_al_mac;
+                        bss->backhaul = true;
+                    }
                     if (!database.update_vap(src_mac, radio_entry.radio_uid(),
                                              bss_entry.radio_bssid(), bss_entry.ssid_str(),
-                                             false)) {
+                                             bss->backhaul)) {
                         LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
                                    << " BSS " << bss_entry.radio_bssid() << " SSID "
                                    << bss_entry.ssid_str();

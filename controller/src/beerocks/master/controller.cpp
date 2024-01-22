@@ -803,7 +803,14 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         if (database.get_local_bridge_mac() == al_mac) {
             agent = database.add_node_gateway(al_mac);
         } else {
-            agent = database.add_node_ire(al_mac);
+            sMacAddr parent_mac = al_mac;
+            parent_mac.oct[5]++;
+            agent = database.add_node_ire(al_mac, parent_mac);
+            LOG(DEBUG) << "Badhri Arris";
+            LOG(DEBUG) << "add_node_ire al_mac " << tlvf::mac_to_string(al_mac)
+                       << " get_local_bridge_mac "
+                       << tlvf::mac_to_string(database.get_local_bridge_mac()) << " parent_mac "
+                       << tlvf::mac_to_string(parent_mac);
         }
         if (!agent) {
             LOG(ERROR) << "Failed adding agent: " << al_mac;
@@ -1050,7 +1057,7 @@ bool Controller::autoconfig_wsc_add_m2(WSC::m1 &m1,
         }
 
         LOG(DEBUG) << "WSC config_data:" << std::hex << std::endl
-                   << "     ssid: " << cfg.ssid << std::endl
+                   << "     ssid: " << cfg.ssid << " from " << bss_info_conf->ssid << std::endl
                    << "     authentication_type: " << int(cfg.auth_type) << std::endl
                    << "     encryption_type: " << int(cfg.encr_type) << std::dec << std::endl
                    << "     bss_type: " << std::hex << int(cfg.bss_type);
@@ -2831,14 +2838,15 @@ bool Controller::handle_non_intel_slave_join(
     mac.oct[0] |= 1 << 1;
     std::string backhaul_mac = tlvf::mac_to_string(mac);
     // generate eth address from bridge address
-    auto eth_switch_mac_binary = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(mac);
+    auto eth_switch_mac_binary = mac;
     std::string eth_switch_mac = tlvf::mac_to_string(eth_switch_mac_binary);
     LOG(INFO) << "IRE generic Slave joined" << std::endl
               << "    manufacturer=" << agent->device_info.manufacturer << std::endl
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
-              << "    radio_identifier = " << radio_mac << std::endl;
+              << "    radio_identifier = " << radio_mac << std::endl
+              << "    Badhri radio_band = " << m1.rf_bands() << std::endl;
 
     LOG(DEBUG) << "simulate backhaul connected to the GW's LAN switch ";
     auto gw = database.get_gw();
@@ -2851,7 +2859,7 @@ bool Controller::handle_non_intel_slave_join(
     auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
 
     if (gw_lan_switches.empty()) {
-        LOG(ERROR) << "GW has no LAN SWITCH node!";
+        LOG(ERROR) << "Badhri GW has no LAN SWITCH node! GW Eth Switch MAC " << gw_mac;
         return false;
     }
 
@@ -2888,7 +2896,10 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
-    database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    if (!database.has_node(tlvf::mac_from_string(eth_switch_mac))) {
+        LOG(DEBUG) << "Badhri Add wired Backhaul";
+        database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    }
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
@@ -3540,16 +3551,26 @@ bool Controller::handle_cmdu_control_message(
         std::string ipv4 = beerocks::net::network_utils::ipv4_to_string(notification_in->ipv4());
         LOG(DEBUG) << "dhcp complete for client " << client_mac << " new ip=" << ipv4
                    << " previous ip=" << database.get_node_ipv4(client_mac);
-
+        sMacAddr bridge_mac =
+            notification_in->mac(); //AR-10420 convert to the match backhaul SW MAC
+        bridge_mac.oct[0] |= 0x2;
+        bridge_mac.oct[5] = bridge_mac.oct[5] + 1;
+        if (database.has_node(bridge_mac) &&
+            database.get_node_type(tlvf::mac_to_string(bridge_mac)) == beerocks::TYPE_IRE) {
+            LOG(DEBUG) << "Badhri IRE mac " << tlvf::mac_to_string(bridge_mac) << " got ip "
+                       << ipv4;
+            client_mac = tlvf::mac_to_string(bridge_mac);
+        }
         if (!database.has_node(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
             database.add_node_station(src_mac, tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
         }
 
-        if (database.get_node_type(client_mac) != beerocks::TYPE_CLIENT) {
-            LOG(INFO) << "Ignoring DHCP notification for mac " << client_mac
-                      << ", as it's not a client";
+        if (database.get_node_type(client_mac) != beerocks::TYPE_CLIENT ||
+            database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
+            LOG(INFO) << "Badhri Ignoring DHCP notification for mac " << client_mac
+                      << ", as it's neither a client nor bridge";
             return true;
         }
 

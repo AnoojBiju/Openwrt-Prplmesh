@@ -521,7 +521,6 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE)) {
         LOG(ERROR) << "Failed to add radio node, mac: " << mac;
-        return false;
     }
 
     auto agent = m_agents.get(parent_mac);
@@ -2666,7 +2665,7 @@ bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceTy
     }
     if (is_node_wireless(mac) && (iface_type > beerocks::IFACE_TYPE_WIFI_END ||
                                   iface_type == beerocks::IFACE_TYPE_UNSUPPORTED)) {
-        LOG(ERROR) << "this should not happend!";
+        LOG(ERROR) << "Badhri this could happen to happend to switch from WBH to EBH";
         return false;
     }
     n->iface_type = iface_type;
