@@ -132,7 +132,8 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
             set_vlan_policy(radio->back.iface_name, ePortMode::TAGGED_PORT_PRIMARY_TAGGED,
                             is_bridge);
         } else {
-            set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge);
+            set_vlan_policy(radio->back.iface_name, ePortMode::UNTAGGED_PORT, is_bridge,
+                            db->traffic_separation.primary_vlan_id);
         }
     }
 
@@ -150,7 +151,7 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
         return;
     }
 
-    for (const auto &bss : radio->front.bssids) {
+    for (auto &bss : radio->front.bssids) {
         // Skip unconfigured BSS.
         if (bss.ssid.empty()) {
             continue;
@@ -192,6 +193,12 @@ void TrafficSeparation::apply_policy(const std::string &radio_iface)
                 }
                 LOG(DEBUG) << "profile_x_disallow_override is set on profile "
                            << m_profile_x_disallow_override_unsupported_configuration;
+
+                //Overriding bBSS profile disallow configuration if m_profile_x_disallow_override_unsupported_configuration > 0
+                bss.backhaul_bss_disallow_profile1_agent_association =
+                    (m_profile_x_disallow_override_unsupported_configuration == 1);
+                bss.backhaul_bss_disallow_profile2_agent_association =
+                    (m_profile_x_disallow_override_unsupported_configuration == 2);
             }
             auto bss_iface_netdevs =
                 network_utils::get_bss_ifaces(bss_iface, db->bridge.iface_name);
