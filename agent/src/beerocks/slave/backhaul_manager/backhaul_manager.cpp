@@ -2984,6 +2984,8 @@ void BackhaulManager::handle_dev_reset_default(
         active_hal->disconnect();
     }
 
+    LOG(DEBUG) << "****** THE VALUE OF STATE ********** " << m_eFSMState;
+
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
     auto db            = AgentDB::get();
