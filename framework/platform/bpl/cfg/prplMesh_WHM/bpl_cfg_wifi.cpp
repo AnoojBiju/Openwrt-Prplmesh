@@ -282,6 +282,33 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
     return RETURN_ERR;
 }
 
+void cfg_wifi_reset_wps_credentials()
+{
+
+    std::vector<std::string> ambiorix_paths;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+
+    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.", ambiorix_paths);
+
+    // clear all EndPoint.ProfileReference objects
+    for (const auto &path : ambiorix_paths) {
+        LOG(DEBUG) << "ProfileReference reset " << path;
+        args.set_type(AMXC_VAR_ID_HTABLE);
+        args.add_child("ProfileReference", "");
+        m_ambiorix_cl.update_object(path, args);
+    }
+
+    ambiorix_paths.clear();
+    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.Profile.*", ambiorix_paths);
+
+    // remove all profiles
+    for (const auto &path : ambiorix_paths) {
+        LOG(DEBUG) << "remove " << path;
+        m_ambiorix_cl.remove_instance(path, 0); // second argument is ignored
+    }
+    LOG(INFO) << "reset wps credentials";
+}
+
 int cfg_get_hostap_iface(int32_t radio_num, char hostap_iface[BPL_IFNAME_LEN])
 {
     if (!hostap_iface) {
