@@ -1473,6 +1473,28 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
         LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
         m_cmdu_server->set_client_name(fd, agent_name);
 
+        // Enable the VAPs during dev_reset_default, it will solve the timeout.
+        // Currently it solves the timeout error, it can optimize further.
+        for (const auto &radio_info : m_radios_info) {
+            auto notification = message_com::create_vs_message<
+                beerocks_message::cACTION_BACKHAUL_ENABLE_APS_REQUEST>(cmdu_tx);
+
+            if (!notification) {
+                LOG(ERROR) << "Failed building message!";
+            }
+
+            notification->set_iface(radio_info->hostap_iface);
+            notification->channel()        = radio_info->primary_channel;
+            notification->bandwidth()      = eWiFiBandwidth::BANDWIDTH_20;
+            notification->center_channel() = radio_info->primary_channel;
+
+            LOG(DEBUG) << "Send enable to radio " << radio_info->hostap_iface
+                       << ", channel = " << int(notification->channel())
+                       << ", center_channel = " << int(notification->center_channel());
+
+            send_cmdu(m_agent_fd, cmdu_tx);
+        }
+
         if (!m_agent_ucc_listener && m_ucc_server) {
             m_agent_ucc_listener =
                 std::make_unique<agent_ucc_listener>(*this, cert_cmdu_tx, std::move(m_ucc_server));
