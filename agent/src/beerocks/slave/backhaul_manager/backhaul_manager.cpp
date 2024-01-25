@@ -1328,7 +1328,6 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
         if (hidden_ssid) {
             std::string iface;
 
-            std::shared_ptr<bwl::sta_wlan_hal> selected_hal;
             for (auto it = pending_slave_sta_ifaces.cbegin();
                  it != pending_slave_sta_ifaces.end();) {
                 iface          = *it;
@@ -2998,6 +2997,8 @@ void BackhaulManager::handle_dev_reset_default(
         active_hal->set_3addr_mcast(false);
         active_hal->disconnect();
     }
+    bpl::cfg_wifi_reset_wps_credentials();
+    // clear all known WPS credentials from persistent memory
 
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
