@@ -780,6 +780,11 @@ int cfg_get_administrator_credentials(char pass[BPL_USER_PASS_LEN]);
 int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAME_LEN]);
 
 /**
+ * Clear credentials received during wps session
+*/
+void cfg_wifi_reset_wps_credentials();
+
+/**
  * Returns the HOSTAP interface for the specified radio id.
  *
  * @param [in] radio_num radio number in prplmesh UCI for the requested parameters.
