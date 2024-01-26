@@ -166,15 +166,15 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
         OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on pwhm 5.16.4 - mm/bump-pwhm with bwl patch removed"
-        OPENWRT_TOOLCHAIN_VERSION='4de69a4bf10923254c466d056d346a6e7d437db0'
-        OPENWRT_VERSION='4de69a4bf10923254c466d056d346a6e7d437db0'
+        dbg "Haze platform, build on prplos master (wps fix)"
+        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
         # Temporary workaround for Haze build failure
-        sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
+        #sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos UPDK 9.1.40 + pWHM 5.15.2"
-        OPENWRT_TOOLCHAIN_VERSION='8f7a86fd86005d91cc0558a22db514bb40b9b1e9'
-        OPENWRT_VERSION='8f7a86fd86005d91cc0558a22db514bb40b9b1e9'
+        dbg "OSP platform, build on prplos-v3.0.1"
+        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
     else
         dbg "Building on prplOS-next"
     fi
@@ -223,9 +223,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS for reference platforms (prplos)
-OPENWRT_TOOLCHAIN_VERSION='a838961a60e6cf1ba533afccc3517744bc197e1e'
-OPENWRT_VERSION='a838961a60e6cf1ba533afccc3517744bc197e1e'
+# prplOS 3.0.1 (after M2.1 merge)
+OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
