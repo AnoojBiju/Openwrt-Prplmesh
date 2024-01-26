@@ -190,12 +190,6 @@ bool agent_monitoring_task::start_agent_monitoring(const sMacAddr &src_mac,
         }
     }
 
-    // Delete radio entry detected as operational Agent from m_bss_configured.
-    for (uint8_t i = 0; i < ap_op_bss_tlv->radio_list_length(); i++) {
-        auto radio_entry = std::get<1>(ap_op_bss_tlv->radio_list(i));
-        m_bss_configured.erase(radio_entry.radio_uid());
-    }
-
     if (m_agents.count(src_mac)) {
         dm_add_agent_disconnected_event(src_mac); // Agent reconnecting.
 
