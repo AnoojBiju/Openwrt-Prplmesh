@@ -54,8 +54,6 @@ image-build-scripts:
 platform:
   stage: platform
   needs:
-    - build-in-docker
-    - build-in-docker-legacy
     - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
@@ -226,11 +224,15 @@ build-in-docker:
   extends: .build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DUSE_PRPLMESH_WHM=ON"
+  rules:
+    - when: manual
 
 build-in-docker-legacy:
   extends: .build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
+  rules:
+    - when: manual
 
 build-in-docker-alpine:
   extends: .build-in-docker
