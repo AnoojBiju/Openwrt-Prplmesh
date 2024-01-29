@@ -169,8 +169,6 @@ main() {
         dbg "Haze platform, build on prplos master (wps fix)"
         OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
         OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-        # Temporary workaround for Haze build failure
-        #sed -i 's/make -j"$(nproc)"/make -j1 V=sc/g' "$scriptdir/scripts/build.sh"
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos-v3.0.1"
         OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
@@ -198,11 +196,7 @@ main() {
     export OPENWRT_REPOSITORY
     export OPENWRT_VERSION
     export TARGET_SYSTEM
-    # We want to exclude tags from the git-describe output because we
-    # have no relevant tags to use at the moment.
-    # The '--exclude' option of git-describe is not available on older
-    # git version, so we use sed instead.
-    PRPLMESH_VERSION="$(git describe --always --dirty | sed -e 's/.*-g//')"
+    PRPLMESH_VERSION="$(git describe --always --dirty)"
     export PRPLMESH_VERSION
     export WHM_ENABLE
     export PRPLMESH_VARIANT
