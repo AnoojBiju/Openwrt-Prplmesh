@@ -7956,7 +7956,7 @@ bool db::dm_clear_radio_cac_capabilities(const Agent::sRadio &radio)
         return true;
     }
 
-    return m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".CACCapability");
+    return m_ambiorix_datamodel->remove_all_instances(radio.dm_path + ".CACCapability.CACMethod");
 }
 
 bool db::dm_add_radio_cac_capabilities(
