@@ -154,6 +154,13 @@ bool AgentDB::dm_set_agent_mac(const std::string &mac)
     return true;
 }
 
+void AgentDB::dm_set_fronthaul_interfaces(const std::string &interfaces)
+{
+    LOG_IF(!m_ambiorix_datamodel, FATAL) << "m_ambiorix_datamodel not set";
+
+    m_ambiorix_datamodel->set("X_PRPL-ORG.prplMeshAgent", "FronthaulIfaces", interfaces);
+}
+
 void AgentDB::dm_set_agent_state(const std::string &cur, const std::string &max)
 {
     LOG_IF(!m_ambiorix_datamodel, FATAL) << "m_ambiorix_datamodel not set";
@@ -162,14 +169,14 @@ void AgentDB::dm_set_agent_state(const std::string &cur, const std::string &max)
     m_ambiorix_datamodel->set("X_PRPL-ORG.prplMeshAgent", "BestState", max);
 }
 
-void AgentDB::dm_set_management_and_controller_mode(const std::string &mgmt_mode)
+void AgentDB::dm_set_management_mode(const std::string &mode)
 {
     LOG_IF(!m_ambiorix_datamodel, FATAL) << "m_ambiorix_datamodel not set";
 
-    m_ambiorix_datamodel->set("X_PRPL-ORG.prplMeshAgent", "ManagementMode", mgmt_mode);
+    m_ambiorix_datamodel->set("X_PRPL-ORG.prplMeshAgent", "ManagementMode", mode);
 }
 
-std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_t pid)
+std::string AgentDB::dm_create_fronthaul_object(const std::string &iface)
 {
     auto idx = m_ambiorix_datamodel->get_instance_index(
         "X_PRPL-ORG.prplMeshAgent.Fronthaul.[Iface == '%s']", iface);
@@ -185,7 +192,6 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
         << "Could not create X_PRPL-ORG.prplMeshAgent.Fronthaul instance for " << iface;
 
     m_ambiorix_datamodel->set(inst, "Iface", iface);
-    m_ambiorix_datamodel->set(inst, "PID", pid);
     m_ambiorix_datamodel->set(inst, "CurrentState", std::string("INIT (0)"));
     m_ambiorix_datamodel->set(inst, "BestState", std::string("INIT (0)"));
 
@@ -193,8 +199,8 @@ std::string AgentDB::dm_create_fronthaul_object(const std::string &iface, int32_
 #endif
 }
 
-void AgentDB::dm_update_fronthaul_object(const std::string &path, const std::string &cur,
-                                         const std::string &max)
+void AgentDB::dm_set_fronthaul_state(const std::string &path, const std::string &cur,
+                                     const std::string &max)
 {
     m_ambiorix_datamodel->set(path, "CurrentState", cur);
     m_ambiorix_datamodel->set(path, "BestState", max);

@@ -541,14 +541,16 @@ public:
      */
     bool dm_set_agent_mac(const std::string &mac);
 
-    void dm_set_management_and_controller_mode(const std::string &mgmt_mode);
+    void dm_set_fronthaul_interfaces(const std::string &interfaces);
+
+    void dm_set_management_mode(const std::string &mode);
 
     void dm_set_agent_state(const std::string &cur, const std::string &max);
 
-    std::string dm_create_fronthaul_object(const std::string &iface, int32_t pid);
+    std::string dm_create_fronthaul_object(const std::string &iface);
 
-    void dm_update_fronthaul_object(const std::string &path, const std::string &cur,
-                                    const std::string &max);
+    void dm_set_fronthaul_state(const std::string &path, const std::string &cur,
+                                const std::string &max);
 
     /**
      * @brief 1905.1 Neighbor device information
