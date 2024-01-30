@@ -753,6 +753,7 @@ void slave_thread::handle_client_disconnected(int fd)
         } else if (fd == radio_manager.monitor_fd) {
             LOG(DEBUG) << "Monitor " << fronthaul_iface << " disconnected";
             radio_manager.monitor_fd = net::FileDescriptor::invalid_descriptor;
+            AgentDB::get()->dm_fronthaul_disconnected(radio_manager.dm_instance);
             if (radio_manager.ap_manager_fd != net::FileDescriptor::invalid_descriptor) {
                 m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
             }

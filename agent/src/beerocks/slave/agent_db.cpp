@@ -206,4 +206,15 @@ void AgentDB::dm_set_fronthaul_state(const std::string &path, const std::string 
     m_ambiorix_datamodel->set(path, "BestState", max);
 }
 
+void AgentDB::dm_fronthaul_disconnected(const std::string &path)
+{
+    auto dot_pos = path.find_last_of('.');
+    if (dot_pos == std::string::npos) {
+        return;
+    }
+
+    auto idx = atoi(path.c_str() + dot_pos + 1);
+    m_ambiorix_datamodel->remove_instance(path.substr(0, dot_pos), idx);
+}
+
 } // namespace beerocks

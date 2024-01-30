@@ -552,6 +552,8 @@ public:
     void dm_set_fronthaul_state(const std::string &path, const std::string &cur,
                                 const std::string &max);
 
+    void dm_fronthaul_disconnected(const std::string &path);
+
     /**
      * @brief 1905.1 Neighbor device information
      * Information gathered from a neighbor device upon reception of a Topology Discovery message.
