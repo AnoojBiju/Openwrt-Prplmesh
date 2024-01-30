@@ -6725,6 +6725,12 @@ bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, con
     LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid << " al_mac "
                << al_mac;
 
+    auto agent = get_agent(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get agent with ALID: " << al_mac;
+        return false;
+    }
+
     auto radio = get_radio_by_uid(radio_mac);
     if (!radio) {
         LOG(ERROR) << "Failed to get radio with mac: " << radio_mac;
@@ -6763,7 +6769,10 @@ bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, con
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "IsVBSS", is_vbss);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits", bss->byte_counter_units);
+    LOG(DEBUG) << "Setting byte counter unit to " << agent->byte_counter_units;
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "ByteCounterUnits",
+                                         static_cast<uint32_t>(agent->byte_counter_units));
+    LOG(DEBUG) << "Result " << ret_val;
 
     /*
         Set value for LastChange variable - it is creation time, when someone will
