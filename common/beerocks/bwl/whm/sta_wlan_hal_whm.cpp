@@ -451,6 +451,8 @@ bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
 
 bool sta_wlan_hal_whm::set_4addr_mode(bool enable) { return true; }
 
+bool sta_wlan_hal_whm::set_3addr_mcast(int enable) { return true; }
+
 bool sta_wlan_hal_whm::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                                 int vht_center_frequency, int delay,
                                                 int window_size)

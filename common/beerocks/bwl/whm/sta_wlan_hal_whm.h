@@ -52,6 +52,7 @@ public:
 
     virtual bool get_4addr_mode() override;
     virtual bool set_4addr_mode(bool enable) override;
+    virtual bool set_3addr_mcast(int enable) override;
 
     virtual bool unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                           int vht_center_frequency, int delay,

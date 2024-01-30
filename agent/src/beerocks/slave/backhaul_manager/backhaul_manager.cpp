@@ -1908,6 +1908,9 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                    << " on channel=" << (iface_hal->get_channel()) << " on iface=" << iface;
 
         auto db = AgentDB::get();
+        if (db->device_conf.certification_mode) {
+            iface_hal->set_3addr_mcast(1);
+        }
 
         if (iface == db->backhaul.selected_iface_name && !hidden_ssid) {
             //this is generally not supposed to happen
@@ -2039,6 +2042,10 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             return true;
         }
         auto db = AgentDB::get();
+        if (db->device_conf.certification_mode) {
+            auto iface_hal = get_wireless_hal(iface);
+            iface_hal->set_3addr_mcast(0);
+        }
         if (iface == db->backhaul.selected_iface_name) {
             if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
 
@@ -2982,6 +2989,7 @@ void BackhaulManager::handle_dev_reset_default(
     // Get the HAL for the connected wireless interface and, if any, disconnect the interface
     auto active_hal = get_wireless_hal();
     if (active_hal) {
+        active_hal->set_3addr_mcast(0);
         active_hal->disconnect();
     }
 
