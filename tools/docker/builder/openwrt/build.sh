@@ -163,8 +163,8 @@ main() {
     legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
         dbg "Legacy platform, building on prplOS(-old)"
-        OPENWRT_TOOLCHAIN_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
-        OPENWRT_VERSION='8bb4bc1c34ff56e3ad51e925c162580978f59df7'
+        OPENWRT_TOOLCHAIN_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
+        OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
         dbg "Haze platform, build on prplos master (wps fix)"
         OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
