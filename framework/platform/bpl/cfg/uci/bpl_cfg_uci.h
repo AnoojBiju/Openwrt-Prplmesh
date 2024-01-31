@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 
 #ifdef BEEROCKS_UGW
 #define restrict __restrict
@@ -71,6 +70,7 @@ extern "C" {
 
 #endif
 
+#include <string>
 #include <unordered_map>
 
 #define RETURN_ERR_PARSE -3
