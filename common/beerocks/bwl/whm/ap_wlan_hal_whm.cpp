@@ -105,13 +105,21 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
 
 bool ap_wlan_hal_whm::enable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // API enable is not required with "PWHM",
+    // it's usage is only during WPS (some propietary use-case) in non PWHM scenario.
+    // WPS functionality in with PWHM scenario works as expected.
+    // Conclusion: API usuage during WPS (propietary use-case), not needed with PWHM.
+    // Hence no implementation is required.
     return true;
 }
 
 bool ap_wlan_hal_whm::disable()
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+    // API disable is not required with "PWHM",
+    // it's usage is only during WPS (some propietary use-case) in non PWHM scenario.
+    // WPS functionality in with PWHM scenario works as expected.
+    // Conclusion: API usuage during WPS (propietary use-case), not needed with PWHM.
+    // Hence no implementation is required.
     return true;
 }
 
