@@ -804,27 +804,27 @@ bool db::set_radio_channel_scan_capabilites(
     return true;
 }
 
-bool db::set_node_beacon_measurement_support_level(
+bool db::set_sta_beacon_measurement_support_level(
     const std::string &mac, beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement)
 {
-    auto n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
         return false;
     }
-    if (!n->supports_beacon_measurement) { // sticky
-        n->supports_beacon_measurement = support_beacon_measurement;
+    if (!pSta->supports_beacon_measurement) { // sticky
+        pSta->supports_beacon_measurement = support_beacon_measurement;
     }
     return true;
 }
 
 beerocks::eBeaconMeasurementSupportLevel
-db::get_node_beacon_measurement_support_level(const std::string &mac)
+db::get_sta_beacon_measurement_support_level(const std::string &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
         return beerocks::BEACON_MEAS_UNSUPPORTED;
     }
-    return n->supports_beacon_measurement;
+    return pSta->supports_beacon_measurement;
 }
 
 bool db::set_node_name(const std::string &mac, const std::string &name)
