@@ -290,7 +290,7 @@ void association_handling_task::handle_response(std::string mac,
         }
 
         if (database.settings_client_11k_roaming() &&
-            (database.get_node_beacon_measurement_support_level(sta_mac) ==
+            (database.get_sta_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
             (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
 
@@ -354,7 +354,7 @@ void association_handling_task::handle_response(std::string mac,
                 //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
                 support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
             }
-            database.set_node_beacon_measurement_support_level(
+            database.set_sta_beacon_measurement_support_level(
                 sta_mac, beerocks::eBeaconMeasurementSupportLevel(support_level));
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
             break;
@@ -469,8 +469,8 @@ void association_handling_task::handle_responses_timeout(
             TASK_LOG(DEBUG) << "state CHECK_11K_BEACON_MEASURE_CAP reached maximum attempts="
                             << attempts << " setting sta " << sta_mac
                             << " as beacon measurement unsupported ";
-            database.set_node_beacon_measurement_support_level(sta_mac,
-                                                               beerocks::BEACON_MEAS_UNSUPPORTED);
+            database.set_sta_beacon_measurement_support_level(sta_mac,
+                                                              beerocks::BEACON_MEAS_UNSUPPORTED);
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
         }
         break;
