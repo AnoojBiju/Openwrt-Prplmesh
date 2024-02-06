@@ -148,6 +148,8 @@ public:
      * @return String with the supported ZWDFS subfeatures.
      */
     static const std::string get_zwdfs_string(const int bitwise_flag);
+
+    static eFreqType get_freq_type_from_op_class(const uint8_t op_class);
 };
 
 } //namespace beerocks

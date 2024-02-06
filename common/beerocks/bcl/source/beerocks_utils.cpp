@@ -403,3 +403,16 @@ const std::string utils::get_zwdfs_string(const int bitwise_flag)
     }
     return zwdfs_str.str();
 }
+
+eFreqType utils::get_freq_type_from_op_class(const uint8_t op_class)
+{
+    if (op_class >= 81 && op_class <= 84) {
+        return eFreqType::FREQ_24G;
+    } else if (op_class >= 115 && op_class <= 130) {
+        return eFreqType::FREQ_5G;
+    } else if (op_class >= 131 && op_class <= 135) {
+        return eFreqType::FREQ_6G;
+    }
+
+    return eFreqType::FREQ_UNKNOWN;
+}

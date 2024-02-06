@@ -6474,6 +6474,8 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
+    radio->band = utils::get_freq_type_from_op_class(op_class);
+
     auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
         return true;
