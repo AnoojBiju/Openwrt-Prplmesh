@@ -113,23 +113,15 @@ public:
 
     class radio {
     public:
-        bool active = false;
-
-        std::string iface_name;
         beerocks::eIfaceType iface_type;
-        std::vector<beerocks::WifiChannel> supported_channels;
         uint8_t operating_class = 0;
-        int ant_gain            = 0;
-        int tx_power            = 0;
         std::string ssid;
         beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
-        bool cac_completed                        = false;
         bool on_dfs_reentry                       = false;
         std::set<std::string> dfs_reentry_clients;
         beerocks::eApActiveMode ap_activity_mode = beerocks::AP_ACTIVE_MODE;
 
         std::list<sWifiChannelRadarStats> Radar_stats;
-        std::vector<uint8_t> conf_restricted_channels;
 
         class ap_stats_params {
         public:
@@ -150,96 +142,6 @@ public:
         };
         std::shared_ptr<ap_stats_params> stats_info = std::make_shared<ap_stats_params>();
         std::unordered_map<int8_t, sVapElement> vaps_info;
-
-        /* The channel_scan_report structure holds channel scan report information
-         * The channel_scan_report_key is comprised of an operating-class & channel-number pair
-         * The channel_scan_report_hash is the hash function that resolves the pair's hash for the mapping function
-         */
-        class channel_scan_report {
-        public:
-            typedef std::pair<uint8_t, uint8_t> channel_scan_report_key;
-            struct channel_scan_report_hash {
-                std::size_t operator()(const std::pair<uint8_t, uint8_t> &pair) const
-                {
-                    return std::hash<uint8_t>()(pair.first) ^ std::hash<uint8_t>()(pair.second);
-                }
-            };
-            std::vector<beerocks_message::sChannelScanResults> neighbors;
-        };
-        typedef std::set<channel_scan_report::channel_scan_report_key> channel_scan_report_index;
-        std::unordered_map<channel_scan_report::channel_scan_report_key, channel_scan_report,
-                           channel_scan_report::channel_scan_report_hash>
-            scan_report;
-        // Key:     std::string ISO-8601-timestamp
-        // Value:   std::set<std::pair> Report index
-        std::unordered_map<std::string, channel_scan_report_index> channel_scan_report_records;
-
-        /**
-         *  Will be used as a key for the channel-preference report.
-         * First: Operating Class
-         * Second: Channel Number
-         */
-        using channel_preference_report_key = std::pair<uint8_t, uint8_t>;
-        struct channel_preference_report_hash {
-            std::size_t operator()(const channel_preference_report_key &key) const
-            {
-                return std::hash<uint8_t>()(key.first) ^ std::hash<uint8_t>()(key.second);
-            }
-        };
-        /**
-         * @brief Latest report of the Radio's Channel Preference
-         * 
-         * A pair that does not appear in the map is considered non-operable
-         * 
-         * Key: Operating Class & Channel Number pair
-         * Value: Preference score (1 is least preferred)
-        */
-        using PreferenceReportMap = std::unordered_map<channel_preference_report_key, uint8_t,
-                                                       channel_preference_report_hash>;
-        /**
-         * @brief Latest report of the Radio's Channel Preference
-         * 
-         * A pair that does not appear in the map is considered non-operable
-         * 
-         * Key: Operating Class & Channel Number pair
-         * Value: Preference score (1 is least preferred)
-        */
-        PreferenceReportMap channel_preference_report;
-        std::chrono::steady_clock::time_point last_preference_report_change = {};
-
-        struct channel_scan_config {
-            bool is_enabled = false;
-            std::unordered_set<uint8_t> default_channel_pool; // default value: empty list
-            std::unordered_set<uint8_t> active_channel_pool;  // default value: empty list
-            int interval_sec    = -1;                         //-1 (invalid)
-            int dwell_time_msec = -1;                         //-1 (invalid)
-        };
-
-        struct channel_scan_status {
-            // The scan is pending flag will be used to indicate when a single scan was requested
-            bool scan_is_pending  = false;
-            bool scan_in_progress = false;
-            beerocks::eChannelScanStatusCode last_scan_error_code =
-                beerocks::eChannelScanStatusCode::SUCCESS;
-        };
-
-        /**
-         * These members are part of the continuous channel scan.
-         * The contiuous scan runs every interval_sec.
-         */
-        channel_scan_config continuous_scan_config; /**< continues scan configuration */
-        channel_scan_status continuous_scan_status; /**< continues scan status        */
-        std::list<beerocks_message::sChannelScanResults>
-            continuous_scan_results; /**< continues scan results list  */
-
-        /**
-         * These members are part of the single channel scan.
-         * The single scan triggered once.
-         */
-        channel_scan_config single_scan_config; /**< single scan configuration */
-        channel_scan_status single_scan_status; /**< single scan status        */
-        std::list<beerocks_message::sChannelScanResults>
-            single_scan_results; /**< single scan results list  */
     };
     std::shared_ptr<radio> hostap = std::make_shared<radio>();
 

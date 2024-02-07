@@ -214,7 +214,7 @@ void optimal_path_task::work()
                 auto hostap      = tlvf::mac_to_string(radio->radio_uid);
                 bool sta_is_5ghz = database.is_node_5ghz(sta_mac);
                 station->get_cross_rx_rssi(current_hostap, rx_rssi, dummy);
-                if ((!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
+                if ((!database.is_radio_active(tlvf::mac_from_string(hostap))) ||
                     (!check_if_sta_can_steer_to_ap(hostap)) ||
                     (database.settings_client_optimal_path_roaming_prefer_signal_strength() &&
                      sta_is_5ghz && database.is_ap_out_of_band(hostap, sta_mac) &&
@@ -635,9 +635,9 @@ void optimal_path_task::work()
                     son::wireless_utils::sPhyApParams hostap_params;
                     hostap_params.is_5ghz  = hostap_is_5ghz;
                     hostap_params.bw       = hostap_bw;
-                    hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
-                    hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
-                    hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
+                    hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
+                    hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
+                    hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
                     current_ul_params = son::wireless_utils::estimate_ul_params(
                         rx_rssi, sta_phy_tx_rate_100kb, sta_capabilities, hostap_params.bw,
@@ -723,9 +723,9 @@ void optimal_path_task::work()
                     hostap_params.is_5ghz =
                         (hostap_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
                     hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
-                    hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
-                    hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
-                    hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
+                    hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
+                    hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
+                    hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
                     sta_capabilities = database.get_station_capabilities(
                         sta_mac, hostap_wifi_channel.get_freq_type());
@@ -879,7 +879,7 @@ void optimal_path_task::work()
                 }
                 int hostap_channel = hostap_wifi_channel.get_channel();
                 if (database.is_ap_out_of_band(hostap, sta_mac) ||
-                    (!database.is_hostap_active(tlvf::mac_from_string(hostap))) ||
+                    (!database.is_radio_active(tlvf::mac_from_string(hostap))) ||
                     is_hostap_on_cs_process(hostap)) {
                     TASK_LOG(DEBUG) << "continue " << hostap;
                     continue;
@@ -926,7 +926,7 @@ void optimal_path_task::work()
                     auto radio  = radio_map_element.second;
                     auto hostap = tlvf::mac_to_string(radio->radio_uid);
                     if (hostap == current_hostap || database.is_ap_out_of_band(hostap, sta_mac) ||
-                        (!database.is_hostap_active(tlvf::mac_from_string(hostap)))) {
+                        (!database.is_radio_active(tlvf::mac_from_string(hostap)))) {
                         continue;
                     }
                     if (database.capability_check(hostap, sta_channel)) {
@@ -1036,7 +1036,7 @@ void optimal_path_task::work()
         if (database.settings_client_band_steering()) {
             auto hostap_siblings = database.get_node_siblings(current_hostap);
             for (auto sibling : hostap_siblings) {
-                if (!database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
+                if (!database.is_radio_active(tlvf::mac_from_string(sibling)) ||
                     is_hostap_on_cs_process(sibling)) {
                     TASK_LOG(DEBUG) << "continue " << sibling;
                     continue;
@@ -1072,7 +1072,7 @@ void optimal_path_task::work()
                         //adding the backhaul_manager band_steering candidate
                         if (database.settings_client_band_steering()) {
                             //band steering candidate
-                            if (database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
+                            if (database.is_radio_active(tlvf::mac_from_string(sibling)) ||
                                 !is_hostap_on_cs_process(sibling)) {
                                 hostap_candidates.push_back({sibling, true});
                             } else {
@@ -1086,7 +1086,7 @@ void optimal_path_task::work()
                 if (database.settings_client_band_steering()) {
                     auto hostap_siblings = database.get_node_siblings(hostap);
                     for (auto &sibling : hostap_siblings) {
-                        if (!database.is_hostap_active(tlvf::mac_from_string(sibling)) ||
+                        if (!database.is_radio_active(tlvf::mac_from_string(sibling)) ||
                             is_hostap_on_cs_process(sibling)) {
                             TASK_LOG(DEBUG) << "continue " << sibling;
                             continue;
@@ -1294,9 +1294,9 @@ void optimal_path_task::work()
             print_station_capabilities(sta_capabilities);
 
             hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
-            hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
-            hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
-            hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
+            hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
+            hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
+            hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
             if (!hostap_sibling) {
                 int8_t rx_rssi, rx_packets;
@@ -2116,7 +2116,7 @@ bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
 
     if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac)) ||
         (wifi_channel.get_freq_type() == eFreqType::FREQ_5G && wifi_channel.is_dfs_channel() &&
-         !database.get_hostap_cac_completed(tlvf::mac_from_string(hostap_mac)))) {
+         !database.get_radio_cac_completed(tlvf::mac_from_string(hostap_mac)))) {
         TASK_LOG(DEBUG) << "is_hostap_on_cs_process return true";
         return true;
     }

@@ -316,9 +316,9 @@ void load_balancer_task::work()
                 LOG(WARNING) << "empty wifi channel of " << hostap_wifi_channel << " in DB";
             }
             hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
-            hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
-            hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
-            hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
+            hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
+            hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
+            hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
             auto station = database.get_station(tlvf::mac_from_string(sta_mac));
             if (!station) {
@@ -393,9 +393,9 @@ void load_balancer_task::work()
                 uint16_t predicted_chosen_client_phy_rate_100kb = database.get_load_rx_phy_rate_100kb(chosen_client) / 2;
                 //FIXME
                     // son::wireless_utils::calculate_basic_phy_rate_100kb(database.get_node_max_supported_phy_rate_100kb(chosen_client),
-                    //         database.get_hostap_ant_num(hostap),
-                    //         database.get_hostap_ant_gain(hostap), 
-                    //         database.get_hostap_tx_power(hostap), 
+                    //         database.get_radio_ant_num(hostap),
+                    //         database.get_radio_ant_gain(hostap), 
+                    //         database.get_radio_tx_power(hostap), 
                     //         database.get_rssi_rx_measurement(chosen_client, hostap), 
                     //         database.get_node_rx_phy_rate_100kb(chosen_client),
                     //         sta_is_5ghz,

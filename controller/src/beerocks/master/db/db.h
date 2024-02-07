@@ -666,8 +666,8 @@ public:
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
 
-    bool set_hostap_active(const sMacAddr &mac, bool active);
-    bool is_hostap_active(const sMacAddr &mac);
+    bool set_radio_active(const sMacAddr &mac, const bool active);
+    bool is_radio_active(const sMacAddr &mac);
 
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 
@@ -1175,18 +1175,18 @@ public:
      */
     bool set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database);
 
-    bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
-    beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
+    bool set_radio_ant_num(const sMacAddr &mac, const beerocks::eWiFiAntNum ant_num);
+    beerocks::eWiFiAntNum get_radio_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain);
-    int get_hostap_ant_gain(const sMacAddr &mac);
+    bool set_radio_ant_gain(const sMacAddr &radio_mac, const int ant_gain);
+    int get_radio_ant_gain(const sMacAddr &radio_mac);
 
-    bool set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power);
-    int get_hostap_tx_power(const sMacAddr &mac);
+    bool set_radio_tx_power(const sMacAddr &radio_mac, const int tx_power);
+    int get_radio_tx_power(const sMacAddr &radio_mac);
 
-    bool set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::WifiChannel *supported_channels, int length);
-    std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+    bool set_radio_supported_channels(const sMacAddr &mac,
+                                      beerocks::WifiChannel *supported_channels, const int length);
+    std::vector<beerocks::WifiChannel> get_radio_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
     std::string get_bss_color_bitmap_string(uint64_t decimal_value);
 
@@ -1223,9 +1223,8 @@ public:
     void update_node_11v_responsiveness(Station &station, bool success);
     bool get_node_11v_capability(const Station &mac);
 
-    bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
-                               const std::string &iface_name);
-    std::string get_hostap_iface_name(const sMacAddr &mac);
+    bool set_radio_iface_name(const sMacAddr &mac, const std::string &iface_name);
+    std::string get_radio_iface_name(const sMacAddr &mac);
 
     bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
                                beerocks::eIfaceType iface_type);
@@ -1296,9 +1295,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
-                                             const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
+    bool set_radio_conf_restricted_channels(const sMacAddr &ruid,
+                                            const uint8_t *restricted_channels);
+    std::vector<uint8_t> get_radio_conf_restricted_channels(const sMacAddr &hostap_mac);
 
     /**
      * @brief Sets channel scan capabilities parameters of Agent DB for given radio.
@@ -1321,8 +1320,8 @@ public:
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
 
-    bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
-    bool get_hostap_cac_completed(const sMacAddr &mac);
+    bool set_radio_cac_completed(const sMacAddr &mac, bool enable);
+    bool get_radio_cac_completed(const sMacAddr &mac);
 
     bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
     bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
@@ -1542,7 +1541,7 @@ public:
      *
      */
     bool get_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
-                                   node::radio::channel_scan_report_index &report_index);
+                                   Agent::sRadio::channel_scan_report_index &report_index);
 
     /**
      * @brief Get the channel pool containing all the supported channels.
@@ -1597,7 +1596,7 @@ public:
      */
     const std::vector<sChannelScanResults>
     get_channel_scan_report(const sMacAddr &RUID,
-                            const node::radio::channel_scan_report_index &index);
+                            const Agent::sRadio::channel_scan_report_index &index);
 
     /**
      * @brief Get the report records for a given radio using a given timestamp.
@@ -1659,7 +1658,7 @@ public:
                                   const uint8_t channel_number,
                                   const bool is_central_channel = false);
 
-    node::radio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
+    Agent::sRadio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
 
     /**
      * @brief Clear the channel preference for a given Radio.
@@ -2816,7 +2815,6 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<node::radio> get_hostap(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);

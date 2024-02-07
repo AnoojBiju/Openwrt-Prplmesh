@@ -167,10 +167,10 @@ int son_actions::start_btm_request_task(
     tasks.add_task(new_task);
     return new_task->id;
 }
-bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string hostap_mac,
-                                    bool active)
+bool son_actions::set_radio_active(db &database, task_pool &tasks, std::string hostap_mac,
+                                   const bool active)
 {
-    bool result = database.set_hostap_active(tlvf::mac_from_string(hostap_mac), active);
+    bool result = database.set_radio_active(tlvf::mac_from_string(hostap_mac), active);
 
     if (result) {
         bml_task::connection_change_event new_event;
@@ -327,7 +327,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
-            set_hostap_active(database, tasks, mac, false);
+            set_radio_active(database, tasks, mac, false);
         }
 
         /*
@@ -369,8 +369,8 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 }
 
                 database.set_node_state(node_mac, beerocks::STATE_DISCONNECTED);
-                set_hostap_active(database, tasks, node_mac,
-                                  false); //implementation checks for hostap node type
+                set_radio_active(database, tasks, node_mac,
+                                 false); //implementation checks for hostap node type
 
                 if (database.get_node_type(node_mac) == beerocks::TYPE_IRE ||
                     database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
