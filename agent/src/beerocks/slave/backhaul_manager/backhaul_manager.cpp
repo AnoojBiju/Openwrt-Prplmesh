@@ -1908,6 +1908,12 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
                    << " on channel=" << (iface_hal->get_channel()) << " on iface=" << iface;
 
         auto db = AgentDB::get();
+        if (db->device_conf.certification_mode) {
+            /* When the station is connected we wanted to enable
+               3addr multicast packets entering the system.
+            */
+            iface_hal->set_3addr_mcast(true);
+        }
 
         if (iface == db->backhaul.selected_iface_name && !hidden_ssid) {
             //this is generally not supposed to happen
@@ -2039,6 +2045,13 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             return true;
         }
         auto db = AgentDB::get();
+        if (db->device_conf.certification_mode) {
+            auto iface_hal = get_wireless_hal(iface);
+            /* When the station is disconnected we wanted to disable
+               3addr multicast packets entering the system.
+            */
+            iface_hal->set_3addr_mcast(false);
+        }
         if (iface == db->backhaul.selected_iface_name) {
             if (FSM_IS_IN_STATE(OPERATIONAL) || FSM_IS_IN_STATE(CONNECTED)) {
 
@@ -2982,6 +2995,7 @@ void BackhaulManager::handle_dev_reset_default(
     // Get the HAL for the connected wireless interface and, if any, disconnect the interface
     auto active_hal = get_wireless_hal();
     if (active_hal) {
+        active_hal->set_3addr_mcast(false);
         active_hal->disconnect();
     }
 

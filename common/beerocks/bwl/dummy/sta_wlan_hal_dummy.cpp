@@ -64,6 +64,8 @@ bool sta_wlan_hal_dummy::get_4addr_mode() { return true; }
 
 bool sta_wlan_hal_dummy::set_4addr_mode(bool enable) { return true; }
 
+bool sta_wlan_hal_dummy::set_3addr_mcast(bool enable) { return true; }
+
 bool sta_wlan_hal_dummy::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                                   int vht_center_frequency, int delay,
                                                   int window_size)
