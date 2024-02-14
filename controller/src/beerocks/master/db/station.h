@@ -120,6 +120,9 @@ public:
 
     friend class ::son::db;
 
+    beerocks::eBeaconMeasurementSupportLevel supports_beacon_measurement =
+        beerocks::BEACON_MEAS_UNSUPPORTED;
+
 private:
     int m_client_locating_task_id_new_connection   = -1;
     int m_client_locating_task_id_exist_connection = -1;
