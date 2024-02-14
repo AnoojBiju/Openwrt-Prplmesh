@@ -244,8 +244,7 @@ bool prplmesh_cli::prpl_conn_map()
 
     std::cout << "Found " << conn_map.device_number << " devices" << std::endl;
 
-    // Need to change br-lan to variable which depends on platform(rdkb/prplos)
-    if (!prplmesh_cli::get_ip_from_iface("br-lan", conn_map.bridge_ip_v4)) {
+    if (!prplmesh_cli::get_ip_from_iface(BRIDGE_IFACE, conn_map.bridge_ip_v4)) {
         LOG(ERROR) << "Can't get bridge ip.";
     }
 
