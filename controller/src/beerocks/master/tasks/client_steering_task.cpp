@@ -112,32 +112,32 @@ void client_steering_task::work()
                 m_database.is_node_5ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 2.4GHz to 5GHz failed --> updating failed 5ghz "
                                    "steering attempt";
-                m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_5ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_24ghz(m_original_bssid) &&
                        m_database.is_node_6ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 2.4GHz to 6GHz failed --> updating failed 6ghz "
                                    "steering attempt";
-                m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_6ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_5ghz(m_original_bssid) &&
                        m_database.is_node_24ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 5GHz to 2.4GHz failed, updating failed 2.4ghz "
                                    "steering attempt";
-                m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_24ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_5ghz(m_original_bssid) &&
                        m_database.is_node_6ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 5GHz to 6GHz failed, updating failed 6ghz "
                                    "steering attempt";
-                m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_6ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_6ghz(m_original_bssid) &&
                        m_database.is_node_24ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 6GHz to 2.4GHz failed, updating failed 2.4ghz "
                                    "steering attempt";
-                m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_24ghz_steer_attempt(m_sta_mac);
             } else if (m_database.is_node_6ghz(m_original_bssid) &&
                        m_database.is_node_5ghz(m_target_bssid)) {
                 TASK_LOG(DEBUG) << "steering from 6GHz to 5GHz failed, updating failed 5ghz "
                                    "steering attempt";
-                m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
+                m_database.update_sta_failed_5ghz_steer_attempt(m_sta_mac);
             }
 
         } else {
@@ -186,7 +186,7 @@ void client_steering_task::steer_sta()
     }
 
     if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (client && !m_database.set_node_handoff_flag(*client, true)) {
+        if (client && !m_database.set_sta_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -292,7 +292,7 @@ void client_steering_task::steer_sta()
                  * consider BTM support in current station capabilities (when available)
                  * independently from updated 11v responsiveness
 		 */
-                auto cur_sta_cap = m_database.get_station_current_capabilities(m_sta_mac);
+                auto cur_sta_cap = m_database.get_sta_current_capabilities(m_sta_mac);
                 if (cur_sta_cap && cur_sta_cap->btm_supported) {
                     continue;
                 }
@@ -470,7 +470,7 @@ void client_steering_task::handle_task_end()
         TASK_LOG(DEBUG) << "client didn't respond to 11v request, updating responsiveness";
         m_database.update_node_11v_responsiveness(*client, false);
     }
-    m_database.set_node_handoff_flag(*client, false);
+    m_database.set_sta_handoff_flag(*client, false);
 }
 
 bool client_steering_task::dm_set_steer_event_params(const std::string &event_path)

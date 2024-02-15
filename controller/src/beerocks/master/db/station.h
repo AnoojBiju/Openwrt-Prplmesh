@@ -38,13 +38,22 @@ class Station {
 public:
     Station()                = delete;
     Station(const Station &) = delete;
-    explicit Station(const sMacAddr &mac_) : mac(mac_) {}
+    explicit Station(const sMacAddr &mac_) : mac(mac_)
+    {
+        m_sta_6ghz_capabilities.valid  = false;
+        m_sta_5ghz_capabilities.valid  = false;
+        m_sta_24ghz_capabilities.valid = false;
+    }
 
     const sMacAddr mac;
+    std::string name;
 
     std::string dm_path; /**< data model path */
 
+    std::string ipv4;
     std::string ipv6;
+    int8_t vap_id              = beerocks::IFACE_ID_INVALID;
+    beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
 
     int association_handling_task_id = -1;
     int steering_task_id             = -1;
@@ -103,6 +112,36 @@ public:
         uint32_t last_steer_time     = 0;
     } steering_summary_stats;
 
+    class sSteeringAttempt {
+    public:
+        int failed_6ghz_steer_attemps  = 0;
+        int failed_5ghz_steer_attemps  = 0;
+        int failed_24ghz_steer_attemps = 0;
+    };
+    std::shared_ptr<sSteeringAttempt> steer_attempts = std::make_shared<sSteeringAttempt>();
+
+    class sta_stats_params {
+    public:
+        uint32_t rx_packets                             = 0;
+        uint32_t tx_packets                             = 0;
+        uint32_t rx_bytes                               = 0;
+        uint32_t tx_bytes                               = 0;
+        uint32_t retrans_count                          = 0;
+        uint8_t tx_load_percent                         = 0;
+        uint8_t rx_load_percent                         = 0;
+        uint16_t rx_phy_rate_100kb                      = 0;
+        uint16_t tx_phy_rate_100kb                      = 0;
+        int8_t rx_rssi                                  = beerocks::RSSI_INVALID;
+        uint16_t stats_delta_ms                         = 0;
+        std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
+    };
+
+    std::shared_ptr<sta_stats_params> stats_info = std::make_shared<sta_stats_params>();
+    beerocks::message::sRadioCapabilities *capabilities;
+    beerocks::message::sRadioCapabilities m_sta_6ghz_capabilities;
+    beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
+    beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
+
     std::string assoc_timestamp;
 
     std::string assoc_event_path; /**< assoc event data model path */
@@ -117,6 +156,9 @@ public:
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
+    beerocks::eType get_type();
+    bool set_type(beerocks::eType type_);
+    void clear_sta_stats_info();
 
     friend class ::son::db;
 
@@ -130,8 +172,8 @@ private:
     bool m_supports_11v            = true;
     int m_failed_11v_request_count = 0;
 
-    bool m_handoff     = false;
-    bool m_ire_handoff = false;
+    bool m_handoff = false;
+    std::chrono::steady_clock::time_point last_state_change;
 
     class beacon_measurement;
     std::unordered_map<std::string, std::shared_ptr<beacon_measurement>> m_beacon_measurements;
@@ -140,6 +182,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
     std::vector<uint8_t> m_assoc_frame;
+    beerocks::eType type;
 };
 
 } // namespace db

@@ -767,7 +767,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_TRUE(m_db->set_vap_stats_info(tlvf::mac_from_string(g_bssid_1), 1, 2, 3, 4, 5, 6));
 }
 
-TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
+TEST_F(DbTestRadio1Sta1, test_set_sta_capabilities)
 {
     std::string ht_capabilities1  = std::string(g_sta_path_1) + ".HTCapabilities.";
     std::string vht_capabilities1 = std::string(g_sta_path_1) + ".VHTCapabilities.";
@@ -993,8 +993,8 @@ TEST_F(DbTestRadio1Sta1, test_set_station_capabilities)
         .WillOnce(Return(true));
 
     //execute test
-    EXPECT_TRUE(m_db->set_station_capabilities(g_client_mac, sta_cap));
-    auto cur_sta_caps = m_db->get_station_current_capabilities(g_client_mac);
+    EXPECT_TRUE(m_db->set_sta_capabilities(g_client_mac, sta_cap));
+    auto cur_sta_caps = m_db->get_sta_current_capabilities(g_client_mac);
     EXPECT_NE(cur_sta_caps, nullptr);
     EXPECT_EQ(m_db->dm_add_association_event(tlvf::mac_from_string(g_radio_mac_1),
                                              tlvf::mac_from_string(g_client_mac)),

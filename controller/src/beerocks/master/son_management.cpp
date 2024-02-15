@@ -2221,7 +2221,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto client_mac = request->sta_mac();
 
         // If client doesn't have node in runtime DB - add node to runtime DB.
-        if (!database.has_node(client_mac)) {
+        if (!database.has_station(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
             if (!database.add_node_station(network_utils::ZERO_MAC, client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
@@ -2271,7 +2271,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Set selected_bands if requested.
         if (request->client_config().selected_bands != PARAMETER_NOT_CONFIGURED) {
             auto selected_bands = eClientSelectedBands(request->client_config().selected_bands);
-            if (!database.set_client_selected_bands(*client, selected_bands, false)) {
+            if (!database.set_sta_selected_bands(*client, selected_bands, false)) {
                 LOG(ERROR) << " Failed to set selected-bands to " << selected_bands
                            << " for client " << client_mac;
                 send_response(false);
@@ -2323,7 +2323,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         auto client_mac = request->sta_mac();
         auto client     = database.get_station(client_mac);
-        if (!database.has_node(client_mac) || !client) {
+        if (!database.has_station(client_mac) || !client) {
             LOG(DEBUG) << "Requested client " << client_mac << " is not listed in the DB";
             response->result() = 1; //Fail.
             controller_ctx->send_cmdu(sd, cmdu_tx);

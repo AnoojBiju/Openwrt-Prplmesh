@@ -49,7 +49,6 @@ std::ostream &operator<<(std::ostream &os, eTriStateBool value);
 class node {
 public:
     node(beerocks::eType type_, const std::string &mac_);
-    void clear_node_stats_info();
 
     beerocks::eType get_type();
     bool set_type(beerocks::eType type_);
@@ -67,8 +66,6 @@ public:
     std::string name;
     int hierarchy = -1; //redundant but more efficient
     beerocks::message::sRadioCapabilities *capabilities;
-    beerocks::message::sRadioCapabilities m_sta_6ghz_capabilities;
-    beerocks::message::sRadioCapabilities m_sta_5ghz_capabilities;
     beerocks::message::sRadioCapabilities m_sta_24ghz_capabilities;
 
     bool channel_ext_above_secondary = true;
@@ -93,23 +90,6 @@ public:
     int measurement_recv_delta  = 0;
     int measurement_delay       = 0;
     int measurement_window_size = 60;
-
-    class sta_stats_params {
-    public:
-        uint32_t rx_packets                             = 0;
-        uint32_t tx_packets                             = 0;
-        uint32_t rx_bytes                               = 0;
-        uint32_t tx_bytes                               = 0;
-        uint32_t retrans_count                          = 0;
-        uint8_t tx_load_percent                         = 0;
-        uint8_t rx_load_percent                         = 0;
-        uint16_t rx_phy_rate_100kb                      = 0;
-        uint16_t tx_phy_rate_100kb                      = 0;
-        int8_t rx_rssi                                  = beerocks::RSSI_INVALID;
-        uint16_t stats_delta_ms                         = 0;
-        std::chrono::steady_clock::time_point timestamp = std::chrono::steady_clock::now();
-    };
-    std::shared_ptr<sta_stats_params> stats_info = std::make_shared<sta_stats_params>();
 
     class radio {
     public:

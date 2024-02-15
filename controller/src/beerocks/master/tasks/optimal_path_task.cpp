@@ -115,7 +115,7 @@ void optimal_path_task::work()
             return;
         }
 
-        if (database.get_node_handoff_flag(*station)) {
+        if (database.get_sta_handoff_flag(*station)) {
             LOG_CLI(DEBUG, sta_mac << " is already in handoff, killing task");
             finish();
             return;
@@ -593,7 +593,7 @@ void optimal_path_task::work()
                 TASK_LOG(DEBUG) << "getting capabilities for sta_mac " << sta_mac << " on band "
                                 << (hostap_is_5ghz ? "5GHz" : "2.4GHz");
                 sta_capabilities =
-                    database.get_station_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
+                    database.get_sta_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
                 if (sta_capabilities == nullptr) {
                     TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";
                     if (!get_station_default_capabilities(hostap_wifi_channel.get_freq_type(),
@@ -727,8 +727,8 @@ void optimal_path_task::work()
                     hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
                     hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
-                    sta_capabilities = database.get_station_capabilities(
-                        sta_mac, hostap_wifi_channel.get_freq_type());
+                    sta_capabilities =
+                        database.get_sta_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
                     current_ul_params = son::wireless_utils::estimate_ul_params(
                         rx_rssi, sta_phy_tx_rate_100kb, sta_capabilities, hostap_params.bw,
                         hostap_params.is_5ghz);
@@ -1281,7 +1281,7 @@ void optimal_path_task::work()
             TASK_LOG(DEBUG) << "getting capabilities for sta_mac " << sta_mac << " on band "
                             << (hostap_params.is_5ghz ? "5GHz" : "2.4GHz");
             sta_capabilities =
-                database.get_station_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
+                database.get_sta_capabilities(sta_mac, hostap_wifi_channel.get_freq_type());
             if (sta_capabilities == nullptr) {
                 TASK_LOG(WARNING) << "STA capabilities are empty - use default capabilities";
                 if (!get_station_default_capabilities(hostap_wifi_channel.get_freq_type(),

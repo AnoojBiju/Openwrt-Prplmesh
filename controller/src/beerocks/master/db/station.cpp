@@ -126,6 +126,27 @@ void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 
+void Station::clear_sta_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
+
+beerocks::eType Station::get_type() { return type; }
+
+bool Station::set_type(beerocks::eType type_)
+{
+    //only allow TYPE_CLIENT to TYPE_IRE_BACKHAUL change
+    if (type_ == type) {
+        return true;
+    } else if ((type == beerocks::TYPE_CLIENT) && (type_ == beerocks::TYPE_IRE_BACKHAUL)) {
+        type = type_;
+        return true;
+    } else if ((type == beerocks::TYPE_IRE_BACKHAUL) && (type_ == beerocks::TYPE_CLIENT)) {
+        type = type_;
+        return true;
+    } else {
+        LOG(ERROR) << "Not expected to happen: Station = " << mac << ", old type = " << int(type)
+                   << ", new type = " << int(type_);
+    }
+    return false;
+}
 } // namespace db
 } // namespace controller
 } // namespace prplmesh

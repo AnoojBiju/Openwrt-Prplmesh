@@ -3269,7 +3269,7 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        bool new_node = !database.has_node(tlvf::mac_from_string(client_mac));
+        bool new_node = !database.has_station(tlvf::mac_from_string(client_mac));
 
         beerocks::eType new_node_type = database.get_node_type(client_mac);
 
@@ -3495,7 +3495,7 @@ bool Controller::handle_cmdu_control_message(
 
         if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
             (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
-            (!database.get_node_handoff_flag(*client)) && is_parent) {
+            (!database.get_sta_handoff_flag(*client)) && is_parent) {
 
             client->set_cross_rx_rssi(radio_mac_str, notification->params().rx_rssi,
                                       notification->params().rx_packets);
@@ -3561,7 +3561,7 @@ bool Controller::handle_cmdu_control_message(
                        << ipv4;
             client_mac = tlvf::mac_to_string(bridge_mac);
         }
-        if (!database.has_node(tlvf::mac_from_string(client_mac))) {
+        if (!database.has_station(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
             database.add_node_station(src_mac, tlvf::mac_from_string(client_mac));
             database.update_node_last_seen(client_mac);
@@ -3689,7 +3689,7 @@ bool Controller::handle_cmdu_control_message(
             auto &sta_stats = std::get<1>(sta_stats_tuple);
             auto client_mac = tlvf::mac_to_string(sta_stats.mac);
 
-            if (!database.has_node(tlvf::mac_from_string(client_mac))) {
+            if (!database.has_station(tlvf::mac_from_string(client_mac))) {
                 LOG(ERROR) << "sta " << client_mac << " is not in DB!";
                 continue;
             } else if (database.get_node_state(client_mac) != beerocks::STATE_CONNECTED) {
@@ -3707,7 +3707,7 @@ bool Controller::handle_cmdu_control_message(
 
             // Note: The Database node stats and the Datamodels' stats are not the same.
             // Therefore, client information in data model and in node DB might differ.
-            database.set_node_stats_info(sta_stats.mac, &sta_stats);
+            database.set_sta_stats_info(sta_stats.mac, &sta_stats);
         }
 
         if (response->ap_stats_size() == 0) {
@@ -3795,7 +3795,7 @@ bool Controller::handle_cmdu_control_message(
                                 m_task_pool.add_task(new_task);
                             }
                         } else {
-                            database.set_node_handoff_flag(*station, false);
+                            database.set_sta_handoff_flag(*station, false);
                         }
                     }
                 }

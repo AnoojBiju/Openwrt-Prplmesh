@@ -667,12 +667,12 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.
-        database.clear_node_stats_info(client_mac);
+        database.clear_sta_stats_info(client_mac);
         client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_node_handoff_flag(*client))) {
+              database.get_sta_handoff_flag(*client))) {
             // The node is not an IRE in handoff
             database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
         }
@@ -681,8 +681,8 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                                               beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
         if (vs_tlv) {
-            database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
-            database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
+            database.set_sta_vap_id(client_mac_str, vs_tlv->vap_id());
+            database.set_sta_capabilities(client_mac_str, vs_tlv->capabilities());
         }
 
         // Notify existing steering task of completed connection
@@ -753,7 +753,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         uint16_t reason_code = (vs_tlv)
                                    ? vs_tlv->disconnect_reason()
                                    : (uint16_t)wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
-        if (!database.notify_disconnection(client_mac_str, reason_code, bssid_str)) {
+        if (!database.notify_sta_disconnection(client_mac_str, reason_code, bssid_str)) {
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 
