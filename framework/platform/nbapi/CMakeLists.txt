@@ -12,7 +12,6 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
-option (ENABLE_NBAPI "Build the northbound (high-level) API" ON)
 
 # Common Sources
 set(nbapi_sources ${MODULE_PATH}/ambiorix_dummy.cpp)
