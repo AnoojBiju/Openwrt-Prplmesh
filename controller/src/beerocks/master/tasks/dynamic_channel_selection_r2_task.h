@@ -377,7 +377,8 @@ private:
      * @return True on success, false otherwise.
     */
     bool handle_tlv_channel_preference(
-        const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv);
+        const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv,
+        const wfa_map::tlvProfile2MultiApProfile::eMultiApProfile &agent_profile);
 
     /**
      * @brief Handles Tlv of Profile-2 CAC Completion Report.

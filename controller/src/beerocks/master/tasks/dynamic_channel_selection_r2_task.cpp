@@ -1609,7 +1609,7 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
     for (const auto &channel_preference_tlv :
          cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
 
-        if (!handle_tlv_channel_preference(channel_preference_tlv)) {
+        if (!handle_tlv_channel_preference(channel_preference_tlv, agent->profile)) {
             LOG(ERROR) << "Failed to parse the Channel Preference TLV";
             return false;
         }
@@ -1658,7 +1658,8 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
 }
 
 bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
-    const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv)
+    const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv,
+    const wfa_map::tlvProfile2MultiApProfile::eMultiApProfile &agent_profile)
 {
     std::stringstream ss;
 
@@ -1705,12 +1706,35 @@ bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
             ss << "Channel list: [";
             for (const auto channel_num : channel_set) {
                 ss << int(channel_num) << " ";
-                if (!database.set_channel_preference(radio_uid, op_cls_num, channel_num,
-                                                     op_cls_flags.preference)) {
-                    LOG(ERROR) << "Failed to update Channel Preference";
-                    return false;
+
+                // In case of R1 agent, check if the operating class falls within the range 125-130
+                if (agent_profile ==
+                        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+                    (op_cls_num >= 125 && op_cls_num <= 130)) {
+                    /* 
+                       Set the channel preference to lowest for UNII-4 channels in case of R1 agent,
+                       as these channels were added newly into the IEEE802.11 standard after the release of EM R1.
+                       Retaining these channels in the preference list could lead to undefined behavior.
+                    */
+                    LOG(DEBUG) << "Channel preference of " << channel_num << " set to "
+                               << beerocks::eChannelPreferenceRankingConsts::LOWEST;
+                    if (!database.set_channel_preference(
+                            radio_uid, op_cls_num, channel_num,
+                            static_cast<uint8_t>(
+                                beerocks::eChannelPreferenceRankingConsts::LOWEST))) {
+                        LOG(ERROR) << "Failed to update Channel Preference";
+                        return false;
+                    }
+                } else {
+                    // Set the channel preference based on the operating class flags
+                    if (!database.set_channel_preference(radio_uid, op_cls_num, channel_num,
+                                                         op_cls_flags.preference)) {
+                        LOG(ERROR) << "Failed to update Channel Preference";
+                        return false;
+                    }
                 }
             }
+
             ss << "]." << std::endl;
         }
     }
