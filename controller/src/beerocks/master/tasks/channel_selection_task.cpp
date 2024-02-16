@@ -739,12 +739,12 @@ void channel_selection_task::work()
                 if (csa_event->cs_params.is_dfs_channel) {
                     wait_for_cac_completed(csa_event->cs_params.channel,
                                            csa_event->cs_params.bandwidth);
-                    if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+                    if (database.get_radio_on_dfs_reentry(radio_mac)) {
                         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " DFS reentry flow";
                         if (database.get_radio_cac_completed(radio_mac)) {
                             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                                             << " was on reentry back on dfs channel";
-                            database.set_hostap_on_dfs_reentry(radio_mac, false);
+                            database.set_radio_on_dfs_reentry(radio_mac, false);
                             FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         } else {
                             TASK_LOG(DEBUG)
@@ -754,10 +754,10 @@ void channel_selection_task::work()
                         break;
                     }
                 } else {
-                    if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+                    if (database.get_radio_on_dfs_reentry(radio_mac)) {
                         TASK_LOG(DEBUG)
                             << "radio_mac - " << radio_mac << " was on reentry back on dfs channel";
-                        database.set_hostap_on_dfs_reentry(radio_mac, false);
+                        database.set_radio_on_dfs_reentry(radio_mac, false);
                         FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
                         break;
                     }
@@ -798,10 +798,10 @@ void channel_selection_task::work()
             //optimal path for all non dfs reentry clients
             run_optimal_path_for_connected_clients();
 
-            if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+            if (database.get_radio_on_dfs_reentry(radio_mac)) {
                 TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                                 << " was on reentry back on dfs channel";
-                database.set_hostap_on_dfs_reentry(radio_mac, false);
+                database.set_radio_on_dfs_reentry(radio_mac, false);
                 //optimal path for all non dfs reentry clients
                 run_optimal_path_for_connected_clients();
                 FSM_MOVE_STATE(STEER_STA_BACK_AFTER_DFS_REENTRY);
@@ -917,7 +917,7 @@ void channel_selection_task::work()
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
         }
-        if (database.get_hostap_on_dfs_reentry(radio_mac)) {
+        if (database.get_radio_on_dfs_reentry(radio_mac)) {
             LOG(DEBUG) << "radio " << radio_mac << "is already on dfs reentry";
             FSM_MOVE_STATE(GOTO_IDLE);
             break;
@@ -944,7 +944,7 @@ void channel_selection_task::work()
 
         ccl_fill_affected_supported_channels();
         auto has_unaffected_channels = ccl_has_free_dfs_channels(beerocks::BANDWIDTH_160);
-        auto ap_idle_mode = (database.get_hostap_activity_mode(radio_mac) == AP_IDLE_MODE);
+        auto ap_idle_mode = (database.get_radio_activity_mode(radio_mac) == AP_IDLE_MODE);
         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " has_unaffected_channels = " << int(has_unaffected_channels)
                         << " ap_idle_mode = " << int(ap_idle_mode);
@@ -952,7 +952,7 @@ void channel_selection_task::work()
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " found at list one 80 Mhz un-affected band  ";
             FSM_MOVE_STATE(STEER_STA_BEFORE_DFS_REENTRY);
-            database.set_hostap_on_dfs_reentry(radio_mac, true);
+            database.set_radio_on_dfs_reentry(radio_mac, true);
             break;
         }
         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
@@ -961,7 +961,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BEFORE_DFS_REENTRY: {
-        database.clear_hostap_dfs_reentry_clients(radio_mac);
+        database.clear_radio_dfs_reentry_clients(radio_mac);
 
         auto set_reentry_clients = database.get_node_children(tlvf::mac_to_string(radio_mac),
                                                               TYPE_CLIENT, STATE_CONNECTED);
@@ -973,7 +973,7 @@ void channel_selection_task::work()
         }
         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " client connected to reentry hostap steering to 2.4 hostap ";
-        database.set_hostap_dfs_reentry_clients(radio_mac, set_reentry_clients);
+        database.set_radio_dfs_reentry_clients(radio_mac, set_reentry_clients);
         auto hostaps_sibling =
             database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
         auto hostap_mac_2g = std::find_if(
@@ -1021,7 +1021,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::STEER_STA_BACK_AFTER_DFS_REENTRY: {
-        auto set_reentry_clients = database.get_hostap_dfs_reentry_clients(radio_mac);
+        auto set_reentry_clients = database.get_radio_dfs_reentry_clients(radio_mac);
         if (set_reentry_clients.empty()) {
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << "no dfs_reentry_clients - not supposed to happen!!!";
@@ -1761,7 +1761,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {
-        auto dfs_reentry_clients = database.get_hostap_dfs_reentry_clients(radio_mac);
+        auto dfs_reentry_clients = database.get_radio_dfs_reentry_clients(radio_mac);
         auto conn_clients =
             database.get_node_children(*hostap_mac_2g, TYPE_CLIENT, STATE_CONNECTED);
         for (auto &dfs_reentry_client : dfs_reentry_clients) {

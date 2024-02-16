@@ -1194,9 +1194,9 @@ public:
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
-                                    beerocks::eRadioBandCapability capability);
-    beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
+    bool set_radio_band_capability(const sMacAddr &mac,
+                                   const beerocks::eRadioBandCapability capability);
+    beerocks::eRadioBandCapability get_radio_band_capability(const sMacAddr &mac);
 
     bool capability_check(const std::string &mac, int channel);
 
@@ -1226,9 +1226,9 @@ public:
     bool set_radio_iface_name(const sMacAddr &mac, const std::string &iface_name);
     std::string get_radio_iface_name(const sMacAddr &mac);
 
-    bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
-                               beerocks::eIfaceType iface_type);
-    beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
+    bool set_radio_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
+                              const beerocks::eIfaceType iface_type);
+    beerocks::eIfaceType get_radio_iface_type(const sMacAddr &mac);
 
     bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
@@ -1313,8 +1313,9 @@ public:
     //
     // CS - DFS
     //
-    bool set_hostap_activity_mode(const sMacAddr &mac, beerocks::eApActiveMode ap_activity_mode);
-    beerocks::eApActiveMode get_hostap_activity_mode(const sMacAddr &mac);
+    bool set_radio_activity_mode(const sMacAddr &mac,
+                                 const beerocks::eApActiveMode ap_activity_mode);
+    beerocks::eApActiveMode get_radio_activity_mode(const sMacAddr &mac);
     bool set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry);
     bool set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected);
@@ -1323,13 +1324,13 @@ public:
     bool set_radio_cac_completed(const sMacAddr &mac, bool enable);
     bool get_radio_cac_completed(const sMacAddr &mac);
 
-    bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
-    bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
+    bool set_radio_on_dfs_reentry(const sMacAddr &mac, bool enable);
+    bool get_radio_on_dfs_reentry(const sMacAddr &mac);
 
-    bool set_hostap_dfs_reentry_clients(const sMacAddr &mac,
-                                        const std::set<std::string> &dfs_reentry_clients);
-    std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
-    bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
+    bool set_radio_dfs_reentry_clients(const sMacAddr &mac,
+                                       const std::set<std::string> &dfs_reentry_clients);
+    std::set<std::string> get_radio_dfs_reentry_clients(const sMacAddr &mac);
+    bool clear_radio_dfs_reentry_clients(const sMacAddr &mac);
 
     //
     // Channel Scan
@@ -1868,8 +1869,8 @@ public:
     // Measurements
     //
 
-    bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
-    void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
+    bool set_radio_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
+    void clear_radio_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
 
     /**
      * @brief Notify about client disconnection.
@@ -1916,8 +1917,8 @@ public:
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
 
-    int get_hostap_stats_measurement_duration(const sMacAddr &mac);
-    std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const sMacAddr &mac);
+    int get_radio_stats_measurement_duration(const sMacAddr &mac);
+    std::chrono::steady_clock::time_point get_radio_stats_info_timestamp(const sMacAddr &mac);
 
     uint32_t get_node_rx_bytes(const std::string &mac);
     uint32_t get_node_tx_bytes(const std::string &mac);
@@ -1931,13 +1932,13 @@ public:
     uint16_t get_node_rx_phy_rate_100kb(const std::string &mac);
     uint16_t get_node_tx_phy_rate_100kb(const std::string &mac);
 
-    int get_hostap_channel_load_percent(const sMacAddr &mac);
+    int get_radio_channel_load_percent(const sMacAddr &mac);
 
-    uint32_t get_hostap_total_sta_rx_bytes(const sMacAddr &mac);
-    uint32_t get_hostap_total_sta_tx_bytes(const sMacAddr &mac);
+    uint32_t get_radio_total_sta_rx_bytes(const sMacAddr &mac);
+    uint32_t get_radio_total_sta_tx_bytes(const sMacAddr &mac);
 
-    int get_hostap_total_client_tx_load_percent(const sMacAddr &mac);
-    int get_hostap_total_client_rx_load_percent(const sMacAddr &mac);
+    int get_radio_total_client_tx_load_percent(const sMacAddr &mac);
+    int get_radio_total_client_rx_load_percent(const sMacAddr &mac);
 
     int get_node_rx_load_percent(const std::string &mac);
     int get_node_tx_load_percent(const std::string &mac);

@@ -253,6 +253,19 @@ public:
         channel_scan_status single_scan_status; /**< single scan status        */
         std::list<beerocks_message::sChannelScanResults>
             single_scan_results; /**< single scan results list  */
+        beerocks::eIfaceType iface_type;
+        beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
+        beerocks::eApActiveMode ap_activity_mode  = beerocks::AP_ACTIVE_MODE;
+        bool on_dfs_reentry                       = false;
+        std::set<std::string> dfs_reentry_clients;
+        struct sWifiChannelRadarStats {
+            uint8_t channel;
+            uint8_t bandwidth;
+            int8_t channel_ext_above_secondary;
+            std::chrono::steady_clock::time_point csa_exit_timestamp;
+            std::chrono::steady_clock::time_point csa_enter_timestamp;
+        };
+        std::list<sWifiChannelRadarStats> Radar_stats;
 
         class s_ap_stats_params {
         public:

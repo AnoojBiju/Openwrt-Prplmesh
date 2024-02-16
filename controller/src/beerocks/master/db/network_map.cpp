@@ -325,7 +325,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                     BML_NODE_IFACE_NAME_LEN);
 
                 // Radio Vendor
-                switch (database.get_hostap_iface_type(tlvf::mac_from_string(c->mac))) {
+                switch (database.get_radio_iface_type(tlvf::mac_from_string(c->mac))) {
                 case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
                     node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
                     break;
@@ -786,7 +786,8 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
 
     switch (n_type) {
     case beerocks::TYPE_SLAVE: {
-        auto radio = database.get_radio_by_uid(tlvf::mac_from_string(n->mac));
+        std::shared_ptr<Agent::sRadio> radio =
+            database.get_radio_by_uid(tlvf::mac_from_string(n->mac));
         if (!radio) {
             LOG(ERROR) << "radio " << n->mac << " does not exist";
             return 0;
