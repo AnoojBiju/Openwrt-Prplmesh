@@ -148,15 +148,15 @@ void association_handling_task::work()
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST message!";
             return;
         }
-        auto wifi_channel = database.get_node_wifi_channel(bssid);
+        auto wifi_channel = database.get_radio_wifi_channel(tlvf::mac_from_string(radio_mac));
         if (wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << bssid << " in DB";
+            LOG(WARNING) << "empty wifi channel of " << radio_mac << " in DB";
         }
         measurement_request->params().measurement_mode =
             beerocks::MEASURE_MODE_ACTIVE; // son::eMeasurementMode11K "passive"/"active"/"table"
         measurement_request->params().channel = wifi_channel.get_channel();
         measurement_request->params().op_class =
-            database.get_hostap_operating_class(tlvf::mac_from_string(bssid));
+            database.get_radio_operating_class(tlvf::mac_from_string(radio_mac));
         measurement_request->params().rand_ival = beerocks::
             BEACON_MEASURE_DEFAULT_RANDOMIZATION_INTERVAL; // random interval - specifies the upper bound of the random delay to be used prior to making the measurement, expressed in units of TUs [=1024usec]
         measurement_request->params().duration = beerocks::
@@ -203,10 +203,10 @@ void association_handling_task::work()
          * send measurement request to get a valid RSSI reading
          */
         TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
-        std::string hostap_mac = database.get_node_parent(sta_mac);
-        auto agent_mac         = database.get_node_parent_ire(hostap_mac);
+        std::string radio_mac = database.get_node_parent(sta_mac);
+        auto agent_mac        = database.get_node_parent_ire(radio_mac);
 
-        if (hostap_mac != original_parent_mac ||
+        if (radio_mac != original_parent_mac ||
             database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
@@ -223,20 +223,20 @@ void association_handling_task::work()
                 << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
             return;
         }
-        auto hostap_wifi_channel = database.get_node_wifi_channel(hostap_mac);
-        if (hostap_wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << hostap_mac << " in DB";
+        auto radio_wifi_channel = database.get_radio_wifi_channel(tlvf::mac_from_string(radio_mac));
+        if (radio_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << radio_mac << " in DB";
         }
         measurement_request->params().mac       = tlvf::mac_from_string(sta_mac);
         measurement_request->params().ipv4      = network_utils::ipv4_from_string(ipv4);
-        measurement_request->params().channel   = hostap_wifi_channel.get_channel();
-        measurement_request->params().bandwidth = hostap_wifi_channel.get_bandwidth();
+        measurement_request->params().channel   = radio_wifi_channel.get_channel();
+        measurement_request->params().bandwidth = radio_wifi_channel.get_bandwidth();
         measurement_request->params().cross     = 0;
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_node_parent_radio(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
 
-        TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
+        TASK_LOG(DEBUG) << "requested rx rssi measurement from " << radio_mac << " for sta "
                         << sta_mac;
 
         add_pending_mac(parent_radio,

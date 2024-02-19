@@ -267,7 +267,8 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        auto sta_parent_wifi_channel =
+            database.get_radio_wifi_channel(tlvf::mac_from_string(sta_parent));
         if (sta_parent_wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << sta_parent << " in DB";
         }
@@ -1612,7 +1613,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
         std::string sta_parent = database.get_node_parent(client_mac);
 
-        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        auto sta_parent_wifi_channel =
+            database.get_radio_wifi_channel(tlvf::mac_to_string(sta_parent));
         if (sta_parent_wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << sta_parent_wifi_channel << " in DB";
             break;
@@ -1681,8 +1683,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
-        auto radio_mac_str = tlvf::mac_to_string(request->radio_mac());
-        auto freq_type     = database.get_node_wifi_channel(radio_mac_str).get_freq_type();
+        auto freq_type = database.get_radio_wifi_channel(request->radio_mac()).get_freq_type();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()

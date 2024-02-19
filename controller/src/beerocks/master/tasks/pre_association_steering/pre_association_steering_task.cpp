@@ -762,8 +762,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto wifi_channel =
-                m_database.get_node_wifi_channel(m_database.get_node_parent_radio(client_mac));
+            auto wifi_channel = m_database.get_radio_wifi_channel(
+                tlvf::mac_from_string(m_database.get_node_parent_radio(client_mac)));
             if (wifi_channel.is_empty()) {
                 TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_node_parent_radio(client_mac)
                                 << " is empty";

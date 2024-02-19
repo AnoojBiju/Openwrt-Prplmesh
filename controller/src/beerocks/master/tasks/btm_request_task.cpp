@@ -214,9 +214,15 @@ void btm_request_task::steer_sta()
         return;
     }
 
-    auto target_wifi_channel = m_database.get_node_wifi_channel(m_target_bssid);
+    std::shared_ptr<Agent::sRadio> target_radio =
+        m_database.get_radio_by_bssid(tlvf::mac_from_string(m_target_bssid));
+    if (!target_radio) {
+        LOG(ERROR) << "No radio found hosting BSS " << m_target_bssid;
+        return;
+    }
+    auto target_wifi_channel = m_database.get_radio_wifi_channel(target_radio->radio_uid);
     if (target_wifi_channel.is_empty()) {
-        LOG(WARNING) << "empty wifi channel of " << m_target_bssid << "in DB";
+        LOG(WARNING) << "empty wifi channel of " << target_radio->radio_uid << "in DB";
     }
 
     steering_request_tlv->request_flags().request_mode =
@@ -234,8 +240,12 @@ void btm_request_task::steer_sta()
     steering_request_tlv->alloc_target_bssid_list();
     auto bssid_list                      = steering_request_tlv->target_bssid_list(0);
     std::get<1>(bssid_list).target_bssid = tlvf::mac_from_string(m_target_bssid);
-    std::get<1>(bssid_list).target_bss_operating_class =
-        m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
+    std::shared_ptr<Agent::sRadio::sBss> bss =
+        m_database.get_bss(tlvf::mac_from_string(m_target_bssid));
+    if (bss) {
+        std::get<1>(bssid_list).target_bss_operating_class =
+            m_database.get_radio_operating_class(bss->radio.radio_uid);
+    }
     std::get<1>(bssid_list).target_bss_channel_number = target_wifi_channel.get_channel();
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));

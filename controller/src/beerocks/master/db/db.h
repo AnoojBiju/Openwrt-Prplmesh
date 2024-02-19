@@ -641,7 +641,7 @@ public:
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 
-    int get_hostap_operating_class(const sMacAddr &mac);
+    int get_radio_operating_class(const sMacAddr &mac);
 
     bool set_node_vap_id(const std::string &mac, int8_t vap_id);
     int8_t get_node_vap_id(const std::string &mac);
@@ -1960,6 +1960,10 @@ public:
 
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
+
+    beerocks::WifiChannel get_radio_wifi_channel(const sMacAddr &radio_mac);
+    bool set_radio_wifi_channel(const sMacAddr &radio_mac,
+                                const beerocks::WifiChannel &wifi_channel);
 
     /**
      * @brief Search a node that is identified by the mac

@@ -3622,8 +3622,8 @@ bool Controller::handle_cmdu_control_message(
             notification->params().channel, notification->params().center_frequency1,
             static_cast<beerocks::eWiFiBandwidth>(notification->params().bandwidth),
             channel_ext_above);
-        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
-            LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
+        if (!database.set_radio_wifi_channel(radio_mac, wifi_channel)) {
+            LOG(ERROR) << "set radio wifi channel failed, mac=" << radio_mac;
         }
 
         break;

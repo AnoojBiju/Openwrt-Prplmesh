@@ -82,11 +82,6 @@ public:
     int load_balancer_task_id             = -1;
     int dynamic_channel_selection_task_id = -1;
 
-    std::chrono::steady_clock::time_point measurement_sent_timestamp;
-    int measurement_recv_delta  = 0;
-    int measurement_delay       = 0;
-    int measurement_window_size = 60;
-
     class sta_stats_params {
     public:
         uint32_t rx_packets                             = 0;
@@ -106,7 +101,6 @@ public:
 
     class radio {
     public:
-        uint8_t operating_class = 0;
         std::unordered_map<int8_t, sVapElement> vaps_info;
     };
     std::shared_ptr<radio> hostap = std::make_shared<radio>();
