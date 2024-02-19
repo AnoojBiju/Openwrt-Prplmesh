@@ -149,7 +149,7 @@ protected:
         const std::string radio_path = std::string(g_device_path) + ".1.Radio";
         const std::string bss_path   = radio_path + ".1.BSS";
 
-        //expectations for add_vap
+        //expectations for add_bss
         EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
         EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BSSID",
                                      Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bssid_1))))
@@ -173,15 +173,12 @@ protected:
         EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
         //add virtual AP to radio
-        // Update BSSes in the Agent otherwise, add_vap fails.
         auto radio = m_db->get_radio(tlvf::mac_from_string(g_bridge_mac),
                                      tlvf::mac_from_string(g_radio_mac_1));
         if (radio) {
-            m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
+            EXPECT_TRUE(m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1,
+                                      g_vap_id_1) != nullptr);
         }
-
-        EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
-                                  g_bssid_1, g_ssid_1, false));
     }
 };
 
@@ -360,10 +357,6 @@ TEST_F(DbTest, test_add_vap)
     //BSS node and path may not exist
     EXPECT_FALSE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
 
-    //must fail because radio does not exist
-    EXPECT_FALSE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
-                               g_bssid_1, g_ssid_1, false));
-
     //expectations for add_node_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(radio_path)))
@@ -379,7 +372,7 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_EQ(std::string(radio_path) + ".1",
               m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
-    //expectations for add_vap
+    //expectations for add_bss
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
     EXPECT_CALL(*m_ambiorix, set(std::string(bss_path) + ".1", "BSSID",
                                  Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bssid_1))))
@@ -407,17 +400,12 @@ TEST_F(DbTest, test_add_vap)
         .WillOnce(Return(true));
 
     //add virtual AP to radio
-    // Update BSSes in the Agent otherwise, add_vap fails.
     auto radio =
         m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
     if (radio) {
-        m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
+        EXPECT_TRUE(m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1) !=
+                    nullptr);
     }
-
-    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
-                              g_bssid_1, g_ssid_1, false));
-    //BSS node and path must exist
-    EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_bssid_1)));
 }
 
 TEST_F(DbTest, test_set_ap_ht_capabilities)
@@ -786,7 +774,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_EQ(std::string(radio_path) + ".1",
               m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
-    //expectations for add_vap
+    //expectations for add_bss
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
     EXPECT_CALL(*m_ambiorix, set(bss_path + ".1", "BSSID",
                                  Matcher<const sMacAddr &>(tlvf::mac_from_string(g_bssid_1))))
@@ -798,15 +786,12 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillOnce(Return(true));
 
     //add virtual AP to radio
-    // Update BSSes in the Agent otherwise, add_vap fails.
     auto radio =
         m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
     if (radio) {
-        m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
+        EXPECT_TRUE(m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1) !=
+                    nullptr);
     }
-
-    EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
-                              g_bssid_1, g_ssid_1, false));
 
     //expectations for set_vap_stats_info
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bssid_1)).WillRepeatedly(Return(1));
