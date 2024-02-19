@@ -55,8 +55,8 @@ public:
         return std::extent<A>::value;
     }
 
-    static int write_to_file(std::string full_path, const std::string &val);
-    static beerocks::eIfaceType get_iface_type_from_string(std::string iface_type_name);
+    static int write_to_file(const std::string &full_path, const std::string &val);
+    static beerocks::eIfaceType get_iface_type_from_string(const std::string &iface_type_name);
     static std::string get_iface_type_string(beerocks::eIfaceType iface_type);
     static bool is_node_wireless(beerocks::eIfaceType iface_type);
     /**

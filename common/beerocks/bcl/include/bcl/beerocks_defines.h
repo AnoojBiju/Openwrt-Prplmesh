@@ -33,9 +33,9 @@ constexpr uint8_t IEEE80211_QOS_TID_MAX_UP =
 
 // configuration files path
 #ifdef BEEROCKS_RDKB
-#define CONF_FILES_WRITABLE_PATH std::string("/nvram/")
+constexpr char CONF_FILES_WRITABLE_PATH[] = "/nvram/";
 #else
-#define CONF_FILES_WRITABLE_PATH std::string("./")
+constexpr char CONF_FILES_WRITABLE_PATH[] = "./";
 #endif
 
 #if __GNUC__ >= 7 || __cplussplus >= 201703L
@@ -345,13 +345,13 @@ enum eIfaceType : uint8_t {
     IFACE_TYPE_GW_BRIDGE = 0xFF,
 };
 
-#define IFACE_TYPE_STR_UNSUPPORTED "UNSUPPORTED"
-#define IFACE_TYPE_STR_WIFI_INTEL "WIFI_INTEL"
-#define IFACE_TYPE_STR_WIFI_UNSPECIFIED "WIFI_UNSPECIFIED"
+constexpr char IFACE_TYPE_STR_UNSUPPORTED[]      = "UNSUPPORTED";
+constexpr char IFACE_TYPE_STR_WIFI_INTEL[]       = "WIFI_INTEL";
+constexpr char IFACE_TYPE_STR_WIFI_UNSPECIFIED[] = "WIFI_UNSPECIFIED";
 
-#define IFACE_TYPE_STR_ETHERNET "ETHERNET"
-#define IFACE_TYPE_STR_BRIDGE "BRIDGE"
-#define IFACE_TYPE_STR_GW_BRIDGE "GW_BRIDGE"
+constexpr char IFACE_TYPE_STR_ETHERNET[]  = "ETHERNET";
+constexpr char IFACE_TYPE_STR_BRIDGE[]    = "BRIDGE";
+constexpr char IFACE_TYPE_STR_GW_BRIDGE[] = "GW_BRIDGE";
 
 enum eNodeState : uint8_t {
     STATE_DISCONNECTED = 0,
@@ -488,8 +488,8 @@ enum class eUnAssocStaLinkMetricErrCode : uint8_t {
     RESULT_NOT_AVAILABLE_FOR_STA
 };
 
-#define CHANNEL_SCAN_INVALID_PARAM -1
-#define SCAN_ALL_CHANNELS 0
+constexpr int CHANNEL_SCAN_INVALID_PARAM = -1;
+constexpr int SCAN_ALL_CHANNELS          = 0;
 
 constexpr int PARAMETER_NOT_CONFIGURED = -1;
 

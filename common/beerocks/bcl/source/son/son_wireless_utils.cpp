@@ -929,7 +929,7 @@ uint16_t wireless_utils::channel_to_freq(int channel, beerocks::eFreqType freq_t
     return 0;
 }
 
-int wireless_utils::freq_to_channel(int center_freq)
+int wireless_utils::freq_to_channel(uint32_t center_freq)
 {
     /* see 802.11-2007 17.3.8.3.2 and Annex J */
     if (center_freq == 2484) {

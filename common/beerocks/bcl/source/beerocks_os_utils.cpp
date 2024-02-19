@@ -109,7 +109,7 @@ void os_utils::kill_pid(const std::string &path, const std::string &file_name)
     }
 }
 
-bool os_utils::is_pid_running(const std::string &path, std::string file_name, int *pid_out)
+bool os_utils::is_pid_running(const std::string &path, const std::string &file_name, int *pid_out)
 {
     std::string pid_file_name = path + file_name;
     std::string pid_str;
@@ -188,7 +188,7 @@ bool os_utils::write_pid_file(const std::string &path, const std::string &file_n
     }
 }
 
-bool os_utils::touch_pid_file(std::string file_path)
+bool os_utils::touch_pid_file(const std::string &file_path)
 {
     if (utimensat(0, file_path.c_str(), nullptr, 0)) {
         LOG(ERROR) << "couldn't update file timestamp: " << file_path;
@@ -198,7 +198,7 @@ bool os_utils::touch_pid_file(std::string file_path)
     return true;
 }
 
-int os_utils::redirect_console_std(std::string log_file_name)
+int os_utils::redirect_console_std(const std::string &log_file_name)
 {
     int fd_log_file_std = open(log_file_name.c_str(), O_CREAT | O_APPEND | O_RDWR, 0644);
     if (fd_log_file_std > 0) {

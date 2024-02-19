@@ -97,7 +97,7 @@ public:
      * 
      * @return Container of type T (vector or string) where each cell contains a single character.
      */
-    template <class T> static T hex_to_bytes(std::string hex_data)
+    template <class T> static T hex_to_bytes(const std::string &hex_data)
     {
         T data;
 
