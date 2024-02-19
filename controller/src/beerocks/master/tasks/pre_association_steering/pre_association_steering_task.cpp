@@ -139,7 +139,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 update->params().steeringGroupIndex = event_obj->steeringGroupIndex;
                 update->params().cfg                = cfg;
                 auto vap_mac                        = tlvf::mac_to_string(cfg.bssid);
-                auto radio_mac                      = m_database.get_node_parent_radio(vap_mac);
+                auto radio_mac                      = m_database.get_bss_parent_radio(vap_mac);
                 if (radio_mac.empty()) {
                     TASK_LOG(ERROR) << "Database error: parent radio node of VAP MAC " << vap_mac
                                     << " is not found";
@@ -208,7 +208,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             TASK_LOG(INFO) << "STEERING_CLIENT_SET_REQUEST event was received for client_mac "
                            << client_mac << " bssid " << event_obj->bssid;
 
-            auto radio_mac = m_database.get_node_parent_radio(event_obj->bssid);
+            auto radio_mac = m_database.get_bss_parent_radio(event_obj->bssid);
             if (radio_mac.empty()) {
                 TASK_LOG(ERROR) << "Couldn't find radio with bssid " << event_obj->bssid;
                 send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_OP_FAILED);
@@ -398,7 +398,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             std::copy_n(event_obj->params.ipv4.oct, sizeof(update->params().mac.oct),
                         update->params().ipv4.oct);
 
-            auto radio_mac = m_database.get_node_parent_radio(event_obj->bssid);
+            auto radio_mac = m_database.get_bss_parent_radio(event_obj->bssid);
             if (radio_mac.empty()) {
                 TASK_LOG(ERROR) << "Couldn't find radio with bssid " << event_obj->bssid;
                 send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
@@ -1239,7 +1239,7 @@ bool pre_association_steering_task::check_ap_cfgs_are_valid(
     }
     for (size_t i = 0; i < ap_cfgs.size(); ++i) {
         vap_bssid = tlvf::mac_to_string(ap_cfgs[i].bssid);
-        radio_mac = m_database.get_node_parent_radio(vap_bssid);
+        radio_mac = m_database.get_bss_parent_radio(vap_bssid);
         if (radio_mac.empty()) {
             TASK_LOG(ERROR)
                 << "STEERING_SET_GROUP_REQUEST event: radio_mac that was retrieved from VAP "

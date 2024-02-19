@@ -1248,7 +1248,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         bss->enabled   = false;
         bss->fronthaul = bss_info_conf.fronthaul;
         bss->backhaul  = bss_info_conf.backhaul;
-        if (!database.update_vap(src_mac, ruid, bss->bssid, bss->ssid, bss->backhaul)) {
+        if (!database.update_bss(src_mac, ruid, bss->bssid, bss->ssid)) {
             LOG(ERROR) << "Failed to update VAP for radio " << ruid << " BSS " << bss->bssid
                        << " SSID " << bss->ssid;
         }
@@ -3014,7 +3014,7 @@ bool Controller::handle_cmdu_control_message(
         LOG(INFO) << "received ACTION_CONTROL_HOSTAP_AP_DISABLED_NOTIFICATION from " << radio_mac
                   << " vap_id=" << vap_id;
 
-        const auto disabled_bssid = database.get_hostap_vap_mac(radio_mac, vap_id);
+        const auto disabled_bssid = database.get_radio_bss_mac(radio_mac, vap_id);
         if (disabled_bssid == beerocks::net::network_utils::ZERO_MAC) {
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
@@ -3040,7 +3040,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         LOG(DEBUG) << "Removing vap from DB: " << bss->dm_path;
-        database.remove_vap(*radio, *bss);
+        database.disable_bss(*radio, *bss);
 
         if (radio->bsses.erase(disabled_bssid) != 1) {
             LOG(ERROR) << "No BSS " << disabled_bssid << " could be erased on " << radio_mac;
@@ -3080,9 +3080,6 @@ bool Controller::handle_cmdu_control_message(
         bss->enabled   = true;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
-
-        database.add_vap(src_mac, radio_mac_str, vap_id, tlvf::mac_to_string(bssid), ssid,
-                         notification->vap_info().backhaul_vap);
 
         // update bml listeners
         bml_task::connection_change_event new_event;
@@ -3172,7 +3169,6 @@ bool Controller::handle_cmdu_control_message(
                 vaps_info[vap_id].mac = vap_mac;
                 vaps_info[vap_id].ssid =
                     std::string((char *)notification->params().vaps[vap_id].ssid);
-                vaps_info[vap_id].backhaul_vap = notification->params().vaps[vap_id].backhaul_vap;
                 vaps_list += ("    vap_id=" + std::to_string(vap_id) +
                               ", vap_mac=" + (vaps_info[vap_id]).mac +
                               " , ssid=" + (vaps_info[vap_id]).ssid + std::string("\n"));
@@ -3185,14 +3181,12 @@ bool Controller::handle_cmdu_control_message(
                   << vaps_list;
 
         for (auto vap : vaps_info) {
-            if (!database.update_vap(src_mac, radio_mac, tlvf::mac_from_string(vap.second.mac),
-                                     vap.second.ssid, vap.second.backhaul_vap)) {
+            if (!database.update_bss(src_mac, radio_mac, tlvf::mac_from_string(vap.second.mac),
+                                     vap.second.ssid)) {
                 LOG(ERROR) << "Failed to update VAP for radio " << radio_mac << " BSS "
                            << vap.second.mac << " SSID " << vap.second.ssid;
             }
         }
-
-        database.set_hostap_vap_list(radio_mac, vaps_info);
 
         auto removed = radio->bsses.keep_new_remove_old();
         for (const auto &bss : removed) {
@@ -3207,7 +3201,7 @@ bool Controller::handle_cmdu_control_message(
             // Remove the vap from DB
             LOG(DEBUG) << "Removing BSS " << bss->bssid << " with path " << bss->dm_path
                        << " from DB";
-            database.remove_vap(*radio, *bss);
+            database.disable_bss(*radio, *bss);
         }
 
         // update bml listeners
@@ -3385,8 +3379,8 @@ bool Controller::handle_cmdu_control_message(
         }
 
         bool is_parent = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
-                          database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                      notification->params().vap_id));
+                          database.get_radio_bss_mac(tlvf::mac_from_string(ap_mac),
+                                                     notification->params().vap_id));
 
         auto agent = database.m_agents.get(src_mac);
         if (!agent) {
@@ -3422,7 +3416,7 @@ bool Controller::handle_cmdu_control_message(
             database.is_node_wireless(database.get_node_parent_backhaul(ap_mac)) &&
             database.is_node_5ghz(client_mac)) {
             auto priv_ap_mac = ap_mac;
-            ap_mac           = database.get_5ghz_sibling_hostap(ap_mac);
+            ap_mac           = database.get_5ghz_sibling_bss(ap_mac);
             LOG(DEBUG) << "update rssi measurement BH manager from ap_mac = " << priv_ap_mac
                        << " to = " << ap_mac;
         }
@@ -3440,8 +3434,8 @@ bool Controller::handle_cmdu_control_message(
             beerocks_message::sSteeringEvSnr new_event;
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
-            new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+            new_event.bssid      = database.get_radio_bss_mac(tlvf::mac_from_string(ap_mac),
+                                                         notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
@@ -3466,7 +3460,7 @@ bool Controller::handle_cmdu_control_message(
         }
 
         std::string client_parent_mac = database.get_node_parent(client_mac);
-        sMacAddr bssid = database.get_hostap_vap_mac(radio_mac, notification->params().vap_id);
+        sMacAddr bssid = database.get_radio_bss_mac(radio_mac, notification->params().vap_id);
         bool is_parent = (tlvf::mac_from_string(client_parent_mac) == bssid);
 
         int rx_rssi = int(notification->params().rx_rssi);
@@ -3568,7 +3562,7 @@ bool Controller::handle_cmdu_control_message(
                 LOG(WARNING) << "Client does not have a valid parent hostap on the database";
                 return true;
             }
-            auto client_radio = database.get_node_parent_radio(client_bssid);
+            auto client_radio = database.get_bss_parent_radio(client_bssid);
             LOG(WARNING) << "Client " << client_mac
                          << " is connected wirelessly, Sending IP addr notification to radio="
                          << client_radio;

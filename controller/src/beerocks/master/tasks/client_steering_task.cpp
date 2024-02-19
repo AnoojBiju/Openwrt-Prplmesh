@@ -55,7 +55,7 @@ void client_steering_task::work()
         station->steering_task_id = id;
 
         m_original_bssid = m_database.get_node_parent(m_sta_mac);
-        m_ssid_name      = m_database.get_hostap_ssid(tlvf::mac_from_string(m_original_bssid));
+        m_ssid_name      = m_database.get_bss_ssid(tlvf::mac_from_string(m_original_bssid));
         update_sta_steer_attempt_stats(*station);
 
         if (m_original_bssid == m_target_bssid) {
@@ -205,7 +205,7 @@ void client_steering_task::steer_sta()
         }
     }
 
-    std::string target_radio_mac = m_database.get_node_parent_radio(m_target_bssid);
+    std::string target_radio_mac = m_database.get_bss_parent_radio(m_target_bssid);
     if (target_radio_mac.empty()) {
         LOG(ERROR) << "parent radio for target-bssid=" << m_target_bssid
                    << " not found, exiting steering task";
@@ -287,17 +287,21 @@ void client_steering_task::steer_sta()
     }
 
     auto hostaps                   = m_database.get_active_hostaps();
-    std::string original_radio_mac = m_database.get_node_parent_radio(m_original_bssid);
+    std::string original_radio_mac = m_database.get_bss_parent_radio(m_original_bssid);
 
     hostaps.erase(target_radio_mac); // remove chosen hostap from the general list
     for (auto &hostap : hostaps) {
         /*
         * send disallow to all others
         */
-        const auto &hostap_vaps = m_database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
-        const auto &ssid        = m_database.get_hostap_ssid(tlvf::mac_from_string(m_target_bssid));
-        for (const auto &hostap_vap : hostap_vaps) {
-            if (hostap_vap.second.ssid != ssid) {
+        std::shared_ptr<Agent::sRadio> radio =
+            m_database.get_radio_by_uid(tlvf::mac_from_string(hostap));
+        if (!radio) {
+            continue;
+        }
+        const auto &ssid = m_database.get_bss_ssid(tlvf::mac_from_string(m_target_bssid));
+        for (const auto &bss : radio->bsses) {
+            if (bss.second->ssid != ssid) {
                 continue;
             }
 
@@ -306,12 +310,12 @@ void client_steering_task::steer_sta()
              * Temporay fix: when steering station supporting 11v,
              * do not disallow station on the original bss to let btm happen before deauth,
              */
-            if (hostap_vap.second.mac == m_original_bssid) {
+            if (tlvf::mac_to_string(bss.first) == m_original_bssid) {
 
                 /*
                  * consider BTM support in current station capabilities (when available)
                  * independently from updated 11v responsiveness
-		 */
+		         */
                 auto cur_sta_cap = m_database.get_sta_current_capabilities(m_sta_mac);
                 if (cur_sta_cap && cur_sta_cap->btm_supported) {
                     continue;
@@ -319,12 +323,15 @@ void client_steering_task::steer_sta()
             }
 
             // Send 17.1.27	Client Association Control Request : Block
-            sMacAddr agent_mac = m_database.get_node_parent_ire(hostap);
+            std::shared_ptr<Agent> agent = m_database.get_agent_by_radio_uid(radio->radio_uid);
+            if (!agent) {
+                continue;
+            }
             std::unordered_set<sMacAddr> block_list{tlvf::mac_from_string(m_sta_mac)};
 
             son_actions::send_client_association_control(
-                m_database, m_cmdu_tx, agent_mac, tlvf::mac_from_string(hostap_vap.second.mac),
-                block_list, STEERING_WAIT_TIME_MS / 1000,
+                m_database, m_cmdu_tx, agent->al_mac, bss.first, block_list,
+                STEERING_WAIT_TIME_MS / 1000,
                 wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK);
 
             // update bml listeners
