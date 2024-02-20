@@ -172,7 +172,7 @@ protected:
         auto radio = m_db->get_radio(tlvf::mac_from_string(g_bridge_mac),
                                      tlvf::mac_from_string(g_radio_mac_1));
         if (radio) {
-            radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
+            m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
         }
 
         EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
@@ -343,7 +343,7 @@ TEST_F(DbTest, test_add_vap)
     auto radio =
         m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
     if (radio) {
-        radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
+        m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
     }
 
     EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,
@@ -733,7 +733,7 @@ TEST_F(DbTest, test_set_vap_stats_info)
     auto radio =
         m_db->get_radio(tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_radio_mac_1));
     if (radio) {
-        radio->bsses.add(tlvf::mac_from_string(g_bssid_1), *radio, g_vap_id_1);
+        m_db->add_bss(*radio, tlvf::mac_from_string(g_bssid_1), g_ssid_1, g_vap_id_1);
     }
 
     EXPECT_TRUE(m_db->add_vap(tlvf::mac_from_string(g_bridge_mac), g_radio_mac_1, g_vap_id_1,

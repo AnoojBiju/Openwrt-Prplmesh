@@ -305,9 +305,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     LOG(DEBUG) << "bssid=" << vap_map_it->first << ", vap_id=" << int(vap_id);
                 }
 
-                auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio, vap_id);
+                auto bss =
+                    database.add_bss(*radio, bss_entry.radio_bssid(), bss_entry.ssid_str(), vap_id);
                 bss->enabled = true;
-                bss->ssid    = bss_entry.ssid_str();
                 // Backhaul is not reported in this message. Leave it unchanged.
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
