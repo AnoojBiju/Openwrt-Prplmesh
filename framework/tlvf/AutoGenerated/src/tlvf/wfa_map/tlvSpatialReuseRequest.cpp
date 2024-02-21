@@ -57,12 +57,12 @@ uint8_t& tlvSpatialReuseRequest::srg_obsspd_max_offset() {
     return (uint8_t&)(*m_srg_obsspd_max_offset);
 }
 
-uint64_t& tlvSpatialReuseRequest::srg_bss_color_bitmap() {
-    return (uint64_t&)(*m_srg_bss_color_bitmap);
+tlvf_uint64_t tlvSpatialReuseRequest::srg_bss_color_bitmap() {
+    return tlvf_uint64_t(*m_srg_bss_color_bitmap);
 }
 
-uint64_t& tlvSpatialReuseRequest::srg_partial_bssid_bitmap() {
-    return (uint64_t&)(*m_srg_partial_bssid_bitmap);
+tlvf_uint64_t tlvSpatialReuseRequest::srg_partial_bssid_bitmap() {
+    return tlvf_uint64_t(*m_srg_partial_bssid_bitmap);
 }
 
 uint16_t& tlvSpatialReuseRequest::reserved() {
