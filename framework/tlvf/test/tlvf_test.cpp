@@ -2134,6 +2134,68 @@ int test_topology_response_including_vbss_configuration_report()
     return errors;
 }
 
+int test_spatial_reuse_request_srg_bss_color_bitmap()
+{
+    int errors = 0;
+
+    MAPF_INFO(__FUNCTION__ << " Start");
+    struct atexit {
+        const char *fn;
+        const int &errors;
+
+        ~atexit() { MAPF_INFO(fn << " Finished, errors = " << errors << std::endl); }
+    } atexit{__FUNCTION__, errors};
+
+    uint8_t buf[1024] = {};
+    auto bitmap       = (1 << 7) | (1 << 8) | (uint64_t(1) << 61);
+    auto bitmap_str   = "\x20\x00\x00\x00\x00\x00\x01\x80";
+
+    {
+        ieee1905_1::CmduMessageTx cmdu_tx(buf, sizeof(buf));
+
+        if (!cmdu_tx.create(0, ieee1905_1::eMessageType::CHANNEL_SELECTION_REQUEST_MESSAGE)) {
+            LOG(ERROR) << "cmdu creation of type CHANNEL_SELECTION_REQUEST, has failed";
+            return ++errors;
+        }
+
+        auto spatial_reuse_request_tlv = cmdu_tx.addClass<wfa_map::tlvSpatialReuseRequest>();
+        if (!spatial_reuse_request_tlv) {
+            LOG(ERROR) << "addClass wfa_map::tlvSpatialReuseRequest has failed";
+            return ++errors;
+        }
+
+        spatial_reuse_request_tlv->srg_bss_color_bitmap() = bitmap;
+        cmdu_tx.finalize();
+    }
+
+    if (memcmp(buf + 22, bitmap_str, sizeof(uint64_t))) {
+        LOG(ERROR) << "Wrong srg_bss_color_bitmap binary representation!\n"
+                   << " expected 20 00 00 00 00 00 01 80\n"
+                   << " got " << utils::dump_buffer(buf + 22, sizeof(uint64_t));
+
+        return ++errors;
+    }
+
+    {
+        CmduMessageRx cmdu_rx(buf, sizeof(buf));
+        if (!cmdu_rx.parse()) {
+            LOG(ERROR) << "Failed parsing the buffer!";
+            return ++errors;
+        }
+
+        auto spatial_reuse_request_tlv = cmdu_rx.getClass<wfa_map::tlvSpatialReuseRequest>();
+        if (!spatial_reuse_request_tlv) {
+            LOG(ERROR) << "getClass wfa_map::tlvSpatialReuseRequest has failed";
+            return ++errors;
+        }
+
+        errors += check_field<uint64_t>(spatial_reuse_request_tlv->srg_bss_color_bitmap(), bitmap,
+                                        "srg_bss_color_bitmap");
+    }
+
+    return errors;
+}
+
 int main(int argc, char *argv[])
 {
     int errors = 0;
@@ -2154,6 +2216,7 @@ int main(int argc, char *argv[])
     errors += test_create_ap_radio_vbss_response_cmdu();
     errors += test_virtual_bss_creation();
     errors += test_topology_response_including_vbss_configuration_report();
+    errors += test_spatial_reuse_request_srg_bss_color_bitmap();
     MAPF_INFO(__FUNCTION__ << " Finished, errors = " << errors << std::endl);
     return errors;
 }
