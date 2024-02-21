@@ -10,7 +10,12 @@
 #define AMBIORIX_H
 
 #include "tlvf/common/sMacAddr.h"
+
 #include <easylogging++.h>
+
+#include <memory>
+#include <string>
+#include <utility>
 
 namespace beerocks {
 namespace nbapi {
@@ -21,10 +26,49 @@ namespace nbapi {
  */
 class Ambiorix {
 public:
-    Ambiorix(){};
-    Ambiorix(const Ambiorix &) = delete;
-    Ambiorix &operator=(const Ambiorix &) = delete;
-    virtual ~Ambiorix()                   = 0;
+    class SingleObjectTransaction {
+    public:
+        virtual ~SingleObjectTransaction() = default;
+
+        virtual bool set(const std::string &parameter, const int8_t &value)   = 0;
+        virtual bool set(const std::string &parameter, const int16_t &value)  = 0;
+        virtual bool set(const std::string &parameter, const int32_t &value)  = 0;
+        virtual bool set(const std::string &parameter, const int64_t &value)  = 0;
+        virtual bool set(const std::string &parameter, const uint8_t &value)  = 0;
+        virtual bool set(const std::string &parameter, const uint16_t &value) = 0;
+        virtual bool set(const std::string &parameter, const uint32_t &value) = 0;
+        virtual bool set(const std::string &parameter, const uint64_t &value) = 0;
+        virtual bool set(const std::string &parameter, const bool &value)     = 0;
+        virtual bool set(const std::string &parameter, const double &value)   = 0;
+        virtual bool set(const std::string &parameter, const char *value)     = 0;
+        virtual bool set(const std::string &parameter, const sMacAddr &value) = 0;
+        virtual bool set_time(const std::string &time_stamp)                  = 0;
+        virtual bool set_current_time(const std::string &param = "TimeStamp") = 0;
+
+        bool set(const std::string &parameter, const std::string &value)
+        {
+            return set(parameter, value.c_str());
+        }
+    };
+
+    virtual ~Ambiorix() = default;
+
+    /**
+     * @brief Starts a transaction
+     *
+     * @param relative_path Path to the object in datamodel (example: "Device.WiFi.DataElements.Network")
+     * @param new_instance Whether to create a new object instance under \p relative_path
+     * @return null pointer on failure
+     */
+    virtual std::unique_ptr<SingleObjectTransaction>
+    begin_transaction(const std::string &relative_path, bool new_instance = false) = 0;
+
+    /**
+     * @brief Commits a transaction
+     *
+     * @return \p relative_path (with a new instance index, if apply) on success, empty string otherwise
+     */
+    virtual std::string commit_transaction(std::unique_ptr<SingleObjectTransaction>) = 0;
 
     /**
      * @brief Set the value to the object variable.
@@ -34,30 +78,13 @@ public:
      * @param value Value which need to set.
      * @return True on success and false otherwise.
      */
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const std::string &value) = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const int8_t &value)      = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const int16_t &value)     = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const int32_t &value)     = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const int64_t &value)     = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const uint8_t &value)     = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const uint16_t &value)    = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const uint32_t &value)    = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const uint64_t &value)    = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const bool &value)        = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const double &value)      = 0;
-    virtual bool set(const std::string &relative_path, const std::string &parameter,
-                     const sMacAddr &value)    = 0;
+    template <typename T>
+    auto set(const std::string &relative_path, const std::string &parameter, const T &value)
+        -> decltype(std::declval<SingleObjectTransaction>().set(parameter, value))
+    {
+        auto trans = begin_transaction(relative_path);
+        return trans->set(parameter, value) and !commit_transaction(std::move(trans)).empty();
+    }
 
     /**
      * @brief Reads and returns the value of the paramater from the given object.
@@ -92,12 +119,42 @@ public:
     virtual bool read_param(const std::string &obj_path, const std::string &param_name,
                             sMacAddr *param_val)    = 0;
 
-    /* @brief Add instance to the data model object with type list
+    /**
+     * @brief Set current data and time in RFC 3339 format.
+     *
+     * @param path_to_object Path to NBAPI object which has parameter object.
+     * @param param parameter name which is TimeStamp as default.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    bool set_current_time(const std::string &path_to_object, const std::string &param = "TimeStamp")
+    {
+        auto trans = begin_transaction(path_to_object);
+        return trans->set_current_time(param) and !commit_transaction(std::move(trans)).empty();
+    }
+
+    /**
+     * @brief Set field 'TimeStamp'  in RFC 3339 format.
+     *
+     * @param path_to_object Path to NBAPI object which has parameter object 'TimeStamp'
+     * @param param time_stamp specific time_stamp, by default, it will use the actual time.
+     * @return True if date and time successfully set, false otherwise.
+     */
+    bool set_time(const std::string &path_to_object, const std::string &time_stamp)
+    {
+        auto trans = begin_transaction(path_to_object);
+        return trans->set_time(time_stamp) and !commit_transaction(std::move(trans)).empty();
+    }
+
+    /**
+     * @brief Add instance to the data model object with type list
      *
      * @param relative_path Path to the object with type list in datamodel (example: "Device.WiFi.DataElements.Network.Device").
      * @return Path to recently added object on success, empty string otherwise
      */
-    virtual std::string add_instance(const std::string &relative_path) = 0;
+    std::string add_instance(const std::string &relative_path)
+    {
+        return commit_transaction(begin_transaction(relative_path, true));
+    }
 
     /**
      * @brief Remove instance from the data model object with type list
@@ -158,27 +215,7 @@ public:
      */
     virtual bool remove_optional_subobject(const std::string &path_to_obj,
                                            const std::string &subobject_name) = 0;
-
-    /**
-     * @brief Set current data and time in RFC 3339 format.
-     *
-     * @param path_to_object Path to NBAPI object which has parameter object.
-     * @param param parameter name which is TimeStamp as default.
-     * @return True if date and time successfully set, false otherwise.
-     */
-    virtual bool set_current_time(const std::string &path_to_object,
-                                  const std::string &param = "TimeStamp") = 0;
-    /**
-     * @brief Set field 'TimeStamp'  in RFC 3339 format.
-     *
-     * @param path_to_object Path to NBAPI object which has parameter object 'TimeStamp'
-     * @param param time_stamp specific time_stamp, by default, it will use the actual time.
-     * @return True if date and time successfully set, false otherwise.
-     */
-    virtual bool set_time(const std::string &path_to_object, const std::string &time_stamp) = 0;
 };
-
-inline Ambiorix::~Ambiorix() {}
 
 } // namespace nbapi
 } // namespace beerocks

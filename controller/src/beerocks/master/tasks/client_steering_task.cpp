@@ -497,7 +497,7 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
     m_database.dm_set_status(event_path, m_status_code);
 
     if (m_steering_success) {
-        ambiorix_dm->set(event_path, "Result", std::string("Success"));
+        ambiorix_dm->set(event_path, "Result", "Success");
         ambiorix_dm->set(event_path, "TimeTaken", m_duration.count());
 
         int8_t rx_rssi = 0, rx_packets = 0;
@@ -513,7 +513,7 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
         }
         ambiorix_dm->set(event_path, "NewLinkRate", rx_rssi);
     } else {
-        ambiorix_dm->set(event_path, "Result", std::string("Fail"));
+        ambiorix_dm->set(event_path, "Result", "Fail");
     }
 
     std::string steer_origin = "Unknown";
@@ -537,7 +537,7 @@ bool client_steering_task::dm_set_steer_event_params(const std::string &event_pa
 
         // Steering type is always BTM if the controller initiated
         // the steering, and unknown otherwise.
-        ambiorix_dm->set(event_path, "SteeringType", std::string("BTM"));
+        ambiorix_dm->set(event_path, "SteeringType", "BTM");
         steer_type = "BTM";
     }
     ambiorix_dm->set(event_path, "SteeringOrigin", steer_origin);

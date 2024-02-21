@@ -20,30 +20,6 @@ namespace nbapi {
  */
 class AmbiorixDummy : public Ambiorix {
 public:
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const std::string &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int8_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int16_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int32_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const int64_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint8_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint16_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint32_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const uint64_t &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const bool &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const double &value) override;
-    bool set(const std::string &relative_path, const std::string &parameter,
-             const sMacAddr &value) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     int8_t *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
@@ -68,7 +44,10 @@ public:
                     std::string *param_val) override;
     bool read_param(const std::string &obj_path, const std::string &param_name,
                     sMacAddr *param_val) override;
-    std::string add_instance(const std::string &relative_path) override;
+
+    std::unique_ptr<SingleObjectTransaction> begin_transaction(const std::string &, bool) override;
+    std::string commit_transaction(std::unique_ptr<SingleObjectTransaction>) override;
+
     bool remove_instance(const std::string &relative_path, uint32_t index) override;
     uint32_t get_instance_index(const std::string &specific_path, const std::string &key) override;
     std::string get_datamodel_time_format() override;
@@ -77,9 +56,6 @@ public:
                                 const std::string &subobject_name) override;
     bool remove_optional_subobject(const std::string &path_to_obj,
                                    const std::string &subobject_name) override;
-    bool set_current_time(const std::string &path_to_object,
-                          const std::string &param = "TimeStamp") override;
-    bool set_time(const std::string &path_to_object, const std::string &time_stamp) final;
 };
 
 } // namespace nbapi
