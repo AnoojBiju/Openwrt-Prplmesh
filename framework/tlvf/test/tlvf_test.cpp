@@ -8,11 +8,6 @@
 
 #include "tlvf/CmduMessageRx.h"
 #include "tlvf/CmduMessageTx.h"
-#include "tlvf/tlvftypes.h"
-#include <cstring>
-#include <iostream>
-#include <sstream>
-
 #include "tlvf/WSC/configData.h"
 #include "tlvf/WSC/m1.h"
 #include "tlvf/WSC/m2.h"
@@ -27,6 +22,7 @@
 #include "tlvf/wfa_map/tlvApRadioVbssCapabilities.h"
 #include "tlvf/wfa_map/tlvProfile2ChannelScanResult.h"
 #include "tlvf/wfa_map/tlvProfile2ErrorCode.h"
+#include "tlvf/wfa_map/tlvSpatialReuseRequest.h"
 #include "tlvf/wfa_map/tlvVbssConfigurationReport.h"
 #include "tlvf/wfa_map/tlvVirtualBssCreation.h"
 #include <tlvf/AssociationRequestFrame/AssocReqFrame.h>
@@ -37,11 +33,14 @@
 #include <mapf/common/err.h>
 #include <mapf/common/logger.h>
 #include <mapf/common/utils.h>
-#include <tlvf/wfa_map/tlvApCapability.h>
 
 #include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
 #include <iterator>
-#include <stdio.h>
+#include <sstream>
 
 using namespace ieee1905_1;
 using namespace wfa_map;
