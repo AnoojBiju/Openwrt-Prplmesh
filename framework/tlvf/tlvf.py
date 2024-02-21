@@ -1049,11 +1049,22 @@ class TlvF:
 
                     # add function to return reference
                     const = "const " if param_val_const != None or obj_meta.is_tlv_class and param_name == MetaData.TLV_TYPE_LENGTH else ""
-                    lines_h.append("%s%s& %s();" % (const, param_type, param_name))  # const
-                    lines_cpp.append("%s%s& %s::%s() {" % (
-                        const, param_type_full, obj_meta.name, param_name))
-                    lines_cpp.append("%sreturn (%s%s&)(*m_%s);" %
-                                     (self.getIndentation(1), const, param_type, param_name))
+                    if param_type in ('int64_t', 'uint64_t'):
+                        self.needMisalignedProxy = True
+
+                        if const:
+                            const = "_const"
+
+                        lines_h.append("tlvf_%s%s %s();" % (param_type, const, param_name))  # const
+                        lines_cpp.append("tlvf_%s%s %s::%s() {" % (param_type, const, obj_meta.name, param_name))
+                        lines_cpp.append("%sreturn tlvf_%s%s(*m_%s);" %
+                                        (self.getIndentation(1), param_type, const, param_name))
+                    else:
+                        lines_h.append("%s%s& %s();" % (const, param_type, param_name))  # const
+                        lines_cpp.append("%s%s& %s::%s() {" % (
+                            const, param_type_full, obj_meta.name, param_name))
+                        lines_cpp.append("%sreturn (%s%s&)(*m_%s);" %
+                                        (self.getIndentation(1), const, param_type, param_name))
                     lines_cpp.append("}")
                     lines_cpp.append("")
 
@@ -1758,6 +1769,7 @@ class TlvF:
         self.logger.debug("openFile: %s" % (self.yaml_fname))
         self.root_obj_meta = None
         self.is_root_obj = True
+        self.needMisalignedProxy = False
         self.hasClass = False
         self.multi_class = False
         self.multi_class_auto_insert = None
@@ -1808,6 +1820,8 @@ class TlvF:
             self.include_list.append("<cstddef>")
             self.include_list.append("<stdint.h>")
             self.include_list.append('<tlvf/swap.h>')
+        if self.needMisalignedProxy:
+            self.include_list.append('<tlvf/MisalignedProxy.h>')
         if not self.hasClass and obj_meta.type == MetaData.TYPE_CLASS:
             self.include_list.append('<string.h>')
             self.include_list.append('<memory>')
