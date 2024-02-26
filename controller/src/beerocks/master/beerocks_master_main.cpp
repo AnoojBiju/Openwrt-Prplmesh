@@ -742,6 +742,11 @@ int main(int argc, char *argv[])
 
     son::db master_db(master_conf, logger, tlvf::mac_from_string(bridge_info.mac), amb_dm_obj);
 
+    #ifdef ENABLE_NBAPI
+    prplmesh::controller::actions::g_database   = &master_db;
+    #endif
+
+
     // The prplMesh controller needs to be configured with the SSIDs and credentials that have to
     // be configured on the agents. Even though NBAPI exists to configure this, there is a lot of
     // existing software out there that doesn't use it. Therefore, prplMesh should also read the

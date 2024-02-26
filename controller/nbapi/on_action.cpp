@@ -1045,7 +1045,6 @@ amxd_status_t update_unassociatedStations_stats(amxd_object_t *object, amxd_func
 
 // Events
 
-amxd_dm_t *g_data_model = nullptr;
 
 /**
  * @brief Renew configurations on agents.
@@ -1086,11 +1085,11 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
 
     son::db::sDbNbapiConfig nbapi_config;
     nbapi_config.client_band_steering =
-        amxd_object_get_bool(configuration, "BandSteeringEnabled", nullptr);
+        amxd_object_get_bool(configuration, "BandSteering", nullptr);
     nbapi_config.client_11k_roaming =
         amxd_object_get_bool(configuration, "Client_11kRoaming", nullptr);
     nbapi_config.client_optimal_path_roaming =
-        amxd_object_get_bool(configuration, "ClientSteeringEnabled", nullptr);
+        amxd_object_get_bool(configuration, "ClientRoaming", nullptr);
     nbapi_config.roaming_hysteresis_percent_bonus =
         amxd_object_get_int32_t(configuration, "SteeringCurrentBonus", nullptr);
     nbapi_config.steering_disassoc_timer_msec = std::chrono::milliseconds{
@@ -1099,22 +1098,22 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
         amxd_object_get_int32_t(configuration, "LinkMetricsRequestInterval", nullptr)};
 
     nbapi_config.channel_select_task =
-        amxd_object_get_bool(configuration, "ChannelSelectionTaskEnabled", nullptr);
+        amxd_object_get_bool(configuration, "ChannelSelection", nullptr);
 
     nbapi_config.ire_roaming =
         amxd_object_get_bool(configuration, "BackhaulOptimizationEnabled", nullptr);
 
     nbapi_config.dynamic_channel_select_task =
-        amxd_object_get_bool(configuration, "DynamicChannelSelectionTaskEnabled", nullptr);
+        amxd_object_get_bool(configuration, "DynamicChannelSelection", nullptr);
 
     nbapi_config.load_balancing =
-        amxd_object_get_bool(configuration, "LoadBalancingTaskEnabled", nullptr);
+        amxd_object_get_bool(configuration, "LoadBalancing", nullptr);
 
     nbapi_config.optimal_path_prefer_signal_strength =
         amxd_object_get_bool(configuration, "OptimalPathPreferSignalStrength", nullptr);
 
     nbapi_config.health_check =
-        amxd_object_get_bool(configuration, "HealthCheckTaskEnabled", nullptr);
+        amxd_object_get_bool(configuration, "HealthCheck", nullptr);
 
     nbapi_config.diagnostics_measurements =
         amxd_object_get_bool(configuration, "StatisticsPollingTaskEnabled", nullptr);

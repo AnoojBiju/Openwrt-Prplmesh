@@ -120,24 +120,24 @@
     // Define main data model
     %persistent @CONTROLLER_ROOT_DM_Header@
                 %persistent object Configuration {
-                    %persistent bool BandSteeringEnabled = false;
-                    %persistent bool ClientRoamingEnabled = false;
-
+                    %persistent bool BandSteering = false;
+                    %persistent bool ClientRoaming = false;
+                    %persistent bool Client_11kRoaming = true;
                     %persistent uint32 SteeringCurrentBonus = 0 {
                         on action validate call check_range [0, 10000];
                     }
                     %persistent uint32 SteeringDisassociationTimer = 0;
-
-                    // Link Metric Request Interval in Seconds
                     %persistent uint32 LinkMetricsRequestInterval = 0;
-
-                    %persistent bool ChannelSelectionTaskEnabled = false;
-                    %persistent bool DynamicChannelSelectionTaskEnabled = false;
-                    %persistent bool BackhaulOptimizationEnabled = false;
-                    %persistent bool LoadBalancingTaskEnabled = false;
+                    %persistent bool ChannelSelection{
+                        default false;
+                        userflags %upc;
+                    }
+                    %persistent bool DynamicChannelSelection = false;
+                    %persistent bool BackhaulOptimization = false;
+                    %persistent bool LoadBalancing = false;
                     %persistent bool OptimalPathPreferSignalStrength = false;
-                    %persistent bool HealthCheckTaskEnabled = false;
-                    %persistent bool StatisticsPollingTaskEnabled = false;
+                    %persistent bool HealthCheck = false;
+                    %persistent bool StatisticsPolling = false;
                     %persistent uint32 StatisticsPollingRateSec = 1 {
                         on action validate call check_range [1, 10000];
                     }
