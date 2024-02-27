@@ -14,7 +14,7 @@
 
 using namespace beerocks;
 
-int utils::write_to_file(std::string full_path, const std::string &val)
+int utils::write_to_file(const std::string &full_path, const std::string &val)
 {
     std::ofstream out_file(full_path);
     if (out_file.is_open()) {
@@ -26,7 +26,7 @@ int utils::write_to_file(std::string full_path, const std::string &val)
     }
 }
 
-beerocks::eIfaceType utils::get_iface_type_from_string(std::string iface_type_name)
+beerocks::eIfaceType utils::get_iface_type_from_string(const std::string &iface_type_name)
 {
     if (!iface_type_name.compare(0, sizeof(IFACE_TYPE_STR_WIFI_INTEL), IFACE_TYPE_STR_WIFI_INTEL))
         return beerocks::IFACE_TYPE_WIFI_INTEL;
@@ -44,33 +44,20 @@ beerocks::eIfaceType utils::get_iface_type_from_string(std::string iface_type_na
 
 std::string utils::get_iface_type_string(beerocks::eIfaceType iface_type)
 {
-    std::string result;
     switch (iface_type) {
-    case beerocks::IFACE_TYPE_WIFI_INTEL: {
-        result = std::string(IFACE_TYPE_STR_WIFI_INTEL);
-        break;
+    case beerocks::IFACE_TYPE_WIFI_INTEL:
+        return std::string(IFACE_TYPE_STR_WIFI_INTEL);
+    case beerocks::IFACE_TYPE_WIFI_UNSPECIFIED:
+        return std::string(IFACE_TYPE_STR_WIFI_UNSPECIFIED);
+    case beerocks::IFACE_TYPE_ETHERNET:
+        return std::string(IFACE_TYPE_STR_ETHERNET);
+    case beerocks::IFACE_TYPE_BRIDGE:
+        return std::string(IFACE_TYPE_STR_BRIDGE);
+    case beerocks::IFACE_TYPE_GW_BRIDGE:
+        return std::string(IFACE_TYPE_STR_GW_BRIDGE);
+    default:
+        return std::string(IFACE_TYPE_STR_UNSUPPORTED);
     }
-    case beerocks::IFACE_TYPE_WIFI_UNSPECIFIED: {
-        result = std::string(IFACE_TYPE_STR_WIFI_UNSPECIFIED);
-        break;
-    }
-    case beerocks::IFACE_TYPE_ETHERNET: {
-        result = std::string(IFACE_TYPE_STR_ETHERNET);
-        break;
-    }
-    case beerocks::IFACE_TYPE_BRIDGE: {
-        result = std::string(IFACE_TYPE_STR_BRIDGE);
-        break;
-    }
-    case beerocks::IFACE_TYPE_GW_BRIDGE: {
-        result = std::string(IFACE_TYPE_STR_GW_BRIDGE);
-        break;
-    }
-    default: {
-        result = std::string(IFACE_TYPE_STR_UNSUPPORTED);
-    }
-    }
-    return result;
 }
 
 bool utils::is_node_wireless(beerocks::eIfaceType iface_type)
@@ -93,7 +80,7 @@ bool utils::is_allowed_ifname_prefix(const std::string &prefix, bool partial)
     if (!partial) {
         return (allowed_list.find(prefix) != allowed_list.end());
     }
-    for (auto allowed_entry : allowed_list) {
+    for (const auto &allowed_entry : allowed_list) {
         if (prefix.compare(0, allowed_entry.size(), allowed_entry) == 0) {
             return true;
         }
@@ -201,25 +188,18 @@ std::string utils::get_iface_string_from_iface_vap_ids(const std::string &iface,
 
 beerocks::eWiFiBandwidth utils::convert_bandwidth_to_enum(int bandwidth_int)
 {
-    beerocks::eWiFiBandwidth bw;
     switch (bandwidth_int) {
     case 20:
-        bw = beerocks::BANDWIDTH_20;
-        break;
+        return beerocks::BANDWIDTH_20;
     case 40:
-        bw = beerocks::BANDWIDTH_40;
-        break;
+        return beerocks::BANDWIDTH_40;
     case 80:
-        bw = beerocks::BANDWIDTH_80;
-        break;
+        return beerocks::BANDWIDTH_80;
     case 160:
-        bw = beerocks::BANDWIDTH_160;
-        break;
+        return beerocks::BANDWIDTH_160;
     default:
-        bw = beerocks::BANDWIDTH_80;
-        break;
+        return beerocks::BANDWIDTH_80;
     }
-    return bw;
 }
 
 int utils::convert_bandwidth_to_int(beerocks::eWiFiBandwidth bandwidth)

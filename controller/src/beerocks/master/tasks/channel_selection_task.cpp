@@ -1427,7 +1427,8 @@ bool channel_selection_task::ccl_fill_channel_switch_request_with_least_used_cha
                        "************************* :";
 
     //finding secondary min and calculating right and left score for least used channel
-    for (int channel = END_OF_HIGH_BAND_NON_DFS; channel >= START_OF_LOW_BAND_NON_DFS; channel--) {
+    for (uint32_t channel = END_OF_HIGH_BAND_NON_DFS; channel >= START_OF_LOW_BAND_NON_DFS;
+         channel--) {
         auto it = ccl.find(channel);
         if (it == ccl.end())
             continue;
