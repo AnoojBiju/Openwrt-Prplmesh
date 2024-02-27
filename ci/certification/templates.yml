@@ -108,16 +108,11 @@ include:
 # Merge train tests
 ##################
 
-merge-train:R1:glinet-b1300:MAP-4.2.3_ETH_FH24G:
-  extends: .certification:R1:glinet-b1300
-  rules:
-    - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
-      when: on_success
-      allow_failure: true
-  retry: 1
-
 merge-train:R1:turris-omnia:MAP-4.2.1:
   extends: .certification:R1:turris-omnia
+  before_script:
+    - tools/deploy_firmware.py --full --device turris-omnia --target-name "$RUN_ON_DEVICE" --image "$TURRIS_OMNIA_FULLIMAGE" --whm --configuration ci/configuration/certification/R1/whm/turris-omnia.sh
+    - tools/deploy_ipk.sh --certification-mode $RUN_ON_DEVICE buildWHM/$RUN_ON_DEVICE/prplmesh.ipk
   rules:
     - if: '$CI_MERGE_REQUEST_EVENT_TYPE == "merge_train"'
       when: on_success
