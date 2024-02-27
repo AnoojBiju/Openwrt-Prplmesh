@@ -913,7 +913,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -937,7 +937,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
@@ -2688,6 +2688,9 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                    << " (tunnelled: " << int(tunnelled_proto_type) << ")"
                    << ", data length: " << std::dec << mgmt_frame->data.size();
 
+        LOG(DEBUG) << "Data: " << mgmt_frame->data;
+        LOG(DEBUG) << "BSSID: " << mgmt_frame->bssid;
+
         // Create a tunnelled message
         auto cmdu_tx_header = cmdu_tx.create(0, ieee1905_1::eMessageType::TUNNELLED_MESSAGE);
         if (!cmdu_tx_header) {
@@ -3411,6 +3414,5 @@ void ApManager::start_csa_notification_timer(
     std::thread([this, request]() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         csa_notification_timer_elapsed(std::move(request));
-    })
-        .detach();
+    }).detach();
 }
