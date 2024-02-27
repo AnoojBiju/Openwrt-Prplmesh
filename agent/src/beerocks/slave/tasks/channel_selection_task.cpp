@@ -54,15 +54,14 @@ get_preference_for_channel(const AgentDB::sRadio::channel_preferences_map &chann
                            uint8_t operating_class, uint8_t channel_number)
 {
     auto db = AgentDB::get();
-    if (db->controller_info.profile_support ==
-        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1) {
+    if (db->device_conf.certification_mode) {
         /*
-            U-NII-4 channels (typically falling under operating class 125 - 130)
-            added in the standard IEEE802.11-2020 are not recognized by the
-            Easymesh R1 standard, released earlier. Therefore, the preference
-            of these channels is reduced here to prevent the agent
-            from selecting them during any Easymesh R1 certification runs,
-            which could result in failure.
+            If certification mode is enabled, then the channels falling under
+            the operating classes range 125 to 130 needs to be given low priority
+            since the controller may not block these in it's channel selection
+            request, which can lead to the agent switching unintentionally to 
+            one of these channels.
+
         */
         if (operating_class >= 125 && operating_class <= 130)
             return (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
