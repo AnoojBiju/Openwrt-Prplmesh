@@ -143,6 +143,7 @@ private:
                                                                   const std::string &sta_mac);
     bool process_radio_event(const std::string &interface, const std::string &key,
                              const beerocks::wbapi::AmbiorixVariant *value) override;
+    bool process_radio_channel_change_event(const beerocks::wbapi::AmbiorixVariant *value) override;
     bool process_ap_event(const std::string &interface, const std::string &key,
                           const beerocks::wbapi::AmbiorixVariant *value) override;
     bool process_sta_event(const std::string &interface, const std::string &sta_mac,
