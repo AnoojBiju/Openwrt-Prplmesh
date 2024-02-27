@@ -148,7 +148,7 @@ public:
 
         /** Name of the Wi-Fi chip vendor of this radio */
         std::string chipset_vendor;
-
+        beerocks::eFreqType band = beerocks::FREQ_UNKNOWN;
         class s_ap_stats_params {
         public:
             int active_sta_count                 = 0;
@@ -243,6 +243,11 @@ public:
             // Encoded per [Table 9-176/802.11-2020]
             uint8_t rcpi_steering_threshold;
         } steering_policies;
+
+        /**
+         * Get the band this radio is currently operating on
+         */
+        beerocks::eFreqType get_band() const { return band; };
 
         struct sBss {
             sBss()             = delete;
