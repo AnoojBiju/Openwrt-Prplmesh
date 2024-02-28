@@ -1571,53 +1571,68 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it =
-            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                         [&](const std::pair<int, bwl::VAPElement> &element) {
-                             return element.second.mac == tlvf::mac_to_string(request->bssid());
-                         });
+        uint8_t sta_mac_list_length = request->sta_list_size();
 
-        if (it == vap_unordered_map.end()) {
-            //AP does not have the requested vap, probably will be handled on the other AP
-            return;
-        }
+        for (auto i = 0; i < sta_mac_list_length; i++) {
+            auto sta_info_tuple = request->sta(i);
+            if (!std::get<0>(sta_info_tuple)) {
+                LOG(ERROR) << "getting sta info entry has failed!";
+                return;
+            }
+            auto sta_info = std::get<1>(sta_info_tuple);
 
-        LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << request->mac()
-                   << ", bssid = " << request->bssid();
+            const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
+            auto it =
+                std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                             [&](const std::pair<int, bwl::VAPElement> &element) {
+                                 return element.second.mac == tlvf::mac_to_string(request->bssid());
+                             });
 
-        ap_wlan_hal->sta_deny(request->mac(), request->bssid());
+            if (it == vap_unordered_map.end()) {
+                //AP does not have the requested vap, probably will be handled on the other AP
+                return;
+            }
 
-        // Check if validity period is set then add it to the "disallowed client timeouts" list
-        // This list will be polled in ap_manager_fsm() while in operational state through method
-        // `allow_expired_clients()`
-        // When validity period is timed out sta_allow will be called.
-        if (request->validity_period_sec()) {
+            LOG(DEBUG) << "CLIENT_DISALLOW: mac = " << tlvf::mac_to_string(sta_info.mac)
+                       << ", bssid = " << tlvf::mac_to_string(request->bssid());
 
-            disallowed_client_t disallowed_client;
+            if (sta_info.disassoc) {
+                ap_wlan_hal->sta_disassoc(it->first, tlvf::mac_to_string(sta_info.mac),
+                                          wfa_map::tlvProfile2ReasonCode::AP_INITIATED);
+            }
 
-            // calculate new disallow timeout from client validity period parameter [sec]
-            disallowed_client.timeout = std::chrono::steady_clock::now() +
-                                        std::chrono::seconds(request->validity_period_sec());
-            disallowed_client.mac   = request->mac();
-            disallowed_client.bssid = request->bssid();
+            ap_wlan_hal->sta_deny(sta_info.mac, request->bssid());
 
-            // Remove old disallow period timeout from the list before inserting new
-            remove_client_from_disallowed_list(request->mac(), request->bssid());
+            // Check if validity period is set then add it to the "disallowed client timeouts" list
+            // This list will be polled in ap_manager_fsm() while in operational state through method
+            // `allow_expired_clients()`
+            // When validity period is timed out sta_allow will be called.
+            if (request->validity_period_sec()) {
+                disallowed_client_t disallowed_client;
 
-            // insert new disallow timeout to the list
-            m_disallowed_clients.push_back(disallowed_client);
+                // calculate new disallow timeout from client validity period parameter [sec]
+                disallowed_client.timeout = std::chrono::steady_clock::now() +
+                                            std::chrono::seconds(request->validity_period_sec());
+                disallowed_client.mac   = sta_info.mac;
+                disallowed_client.bssid = request->bssid();
 
-            LOG(DEBUG) << "client " << disallowed_client.mac
-                       << " will be allowed to associate with bssid " << disallowed_client.bssid
-                       << " in "
-                       << std::chrono::duration_cast<std::chrono::seconds>(
-                              disallowed_client.timeout - std::chrono::steady_clock::now())
-                              .count()
-                       << "sec";
-        } else {
-            LOG(WARNING) << "CLIENT_DISALLOW validity period set to 0, STA mac " << request->mac()
-                         << " will remain blocked from bssid " << request->bssid();
+                // Remove old disallow period timeout from the list before inserting new
+                remove_client_from_disallowed_list(sta_info.mac, request->bssid());
+
+                // insert new disallow timeout to the list
+                m_disallowed_clients.push_back(disallowed_client);
+
+                LOG(DEBUG) << "client " << disallowed_client.mac
+                           << " will be allowed to associate with bssid " << disallowed_client.bssid
+                           << " in "
+                           << std::chrono::duration_cast<std::chrono::seconds>(
+                                  disallowed_client.timeout - std::chrono::steady_clock::now())
+                                  .count()
+                           << "sec";
+            } else {
+                LOG(WARNING) << "CLIENT_DISALLOW validity period set to 0, STA mac " << sta_info.mac
+                             << " will remain blocked from bssid " << request->bssid();
+            }
         }
         break;
     }
@@ -1629,23 +1644,33 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
             return;
         }
 
-        const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
-        auto it =
-            std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
-                         [&](const std::pair<int, bwl::VAPElement> &element) {
-                             return element.second.mac == tlvf::mac_to_string(request->bssid());
-                         });
+        auto sta_mac_list_length = request->mac_list_size();
 
-        if (it == vap_unordered_map.end()) {
-            //AP does not have the requested vap, probably will be handled on the other AP
-            return;
+        for (auto i = 0; i < sta_mac_list_length; i++) {
+            auto sta_tuple = request->mac(i);
+            if (!std::get<0>(sta_tuple)) {
+                LOG(ERROR) << "getting sta mac entry has failed!";
+                return;
+            }
+
+            const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
+            auto it =
+                std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                             [&](const std::pair<int, bwl::VAPElement> &element) {
+                                 return element.second.mac == tlvf::mac_to_string(request->bssid());
+                             });
+
+            if (it == vap_unordered_map.end()) {
+                //AP does not have the requested vap, probably will be handled on the other AP
+                return;
+            }
+
+            remove_client_from_disallowed_list(std::get<1>(sta_tuple), request->bssid());
+
+            LOG(DEBUG) << "CLIENT_ALLOW: mac = " << tlvf::mac_to_string(std::get<1>(sta_tuple))
+                       << ", bssid = " << tlvf::mac_to_string(request->bssid());
+            ap_wlan_hal->sta_allow(std::get<1>(sta_tuple), request->bssid());
         }
-
-        remove_client_from_disallowed_list(request->mac(), request->bssid());
-
-        LOG(DEBUG) << "CLIENT_ALLOW: mac = " << request->mac() << ", bssid = " << request->bssid();
-        ap_wlan_hal->sta_allow(request->mac(), request->bssid());
-
         break;
     }
     case beerocks_message::ACTION_APMANAGER_CHANNELS_LIST_REQUEST: {

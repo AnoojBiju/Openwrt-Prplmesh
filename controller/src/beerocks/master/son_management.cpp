@@ -319,7 +319,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         association_control_request_tlv->bssid_to_block_client() =
             tlvf::mac_from_string(hostap_mac);
         association_control_request_tlv->association_control() =
-            wfa_map::tlvClientAssociationControlRequest::BLOCK;
+            wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK;
         //TODO: Get real validity_period_sec
         association_control_request_tlv->validity_period_sec() = 1;
         association_control_request_tlv->alloc_sta_list();

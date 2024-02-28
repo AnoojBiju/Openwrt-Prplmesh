@@ -780,7 +780,9 @@ class cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST : public BaseClass
         static eActionOp_APMANAGER get_action_op(){
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_CLIENT_DISALLOW_REQUEST);
         }
-        sMacAddr& mac();
+        uint8_t& sta_list_size();
+        std::tuple<bool, sStaAssociationControl&> sta(size_t idx);
+        bool alloc_sta(size_t count = 1);
         sMacAddr& bssid();
         uint16_t& validity_period_sec();
         void class_swap() override;
@@ -790,7 +792,10 @@ class cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
-        sMacAddr* m_mac = nullptr;
+        uint8_t* m_sta_list_size = nullptr;
+        sStaAssociationControl* m_sta = nullptr;
+        size_t m_sta_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         sMacAddr* m_bssid = nullptr;
         uint16_t* m_validity_period_sec = nullptr;
 };
@@ -805,7 +810,9 @@ class cACTION_APMANAGER_CLIENT_ALLOW_REQUEST : public BaseClass
         static eActionOp_APMANAGER get_action_op(){
             return (eActionOp_APMANAGER)(ACTION_APMANAGER_CLIENT_ALLOW_REQUEST);
         }
-        sMacAddr& mac();
+        uint8_t& mac_list_size();
+        std::tuple<bool, sMacAddr&> mac(size_t idx);
+        bool alloc_mac(size_t count = 1);
         sMacAddr& bssid();
         void class_swap() override;
         bool finalize() override;
@@ -814,7 +821,10 @@ class cACTION_APMANAGER_CLIENT_ALLOW_REQUEST : public BaseClass
     private:
         bool init();
         eActionOp_APMANAGER* m_action_op = nullptr;
+        uint8_t* m_mac_list_size = nullptr;
         sMacAddr* m_mac = nullptr;
+        size_t m_mac_idx__ = 0;
+        int m_lock_order_counter__ = 0;
         sMacAddr* m_bssid = nullptr;
 };
 

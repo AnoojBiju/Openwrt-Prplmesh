@@ -30,3 +30,5 @@ eAssociationControl:
   _enum_storage: uint8_t
   BLOCK: 0x00
   UNBLOCK: 0x01
+  TIMED_BLOCK: 0x02
+  INDEFINITE_BLOCK: 0x03

@@ -565,7 +565,8 @@ bool son_actions::send_client_association_control(
     association_control_request_tlv->bssid_to_block_client() = agent_bssid;
     association_control_request_tlv->association_control()   = association_flag;
 
-    if (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) {
+    if (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK ||
+        association_flag == wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK) {
         association_control_request_tlv->validity_period_sec() = duration_sec;
     } else {
         association_control_request_tlv->validity_period_sec() = 0;
@@ -592,8 +593,10 @@ bool son_actions::send_client_association_control(
     }
 
     std::string action_str =
-        (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) ? "block"
-                                                                                 : "unblock";
+        (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK ||
+         association_flag == wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK)
+            ? "block"
+            : "unblock";
 
     std::string duration_str =
         duration_sec != 0 ? "for " + std::to_string(duration_sec) + " seconds" : "";

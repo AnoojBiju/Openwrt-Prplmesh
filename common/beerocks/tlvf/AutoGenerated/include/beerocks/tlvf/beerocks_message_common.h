@@ -1482,6 +1482,17 @@ typedef struct sSpatialReuseParams {
     }
 } __attribute__((packed)) sSpatialReuseParams;
 
+typedef struct sStaAssociationControl {
+    sMacAddr mac;
+    uint8_t disassoc;
+    void struct_swap(){
+        mac.struct_swap();
+    }
+    void struct_init(){
+        mac.struct_init();
+    }
+} __attribute__((packed)) sStaAssociationControl;
+
 
 }; // close namespace: beerocks_message
 

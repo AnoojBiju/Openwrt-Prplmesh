@@ -38,13 +38,17 @@ class tlvClientAssociationControlRequest : public BaseClass
         enum eAssociationControl: uint8_t {
             BLOCK = 0x0,
             UNBLOCK = 0x1,
+            TIMED_BLOCK = 0x2,
+            INDEFINITE_BLOCK = 0x3,
         };
         // Enum AutoPrint generated code snippet begining- DON'T EDIT!
         // clang-format off
         static const char *eAssociationControl_str(eAssociationControl enum_value) {
             switch (enum_value) {
-            case BLOCK:   return "BLOCK";
-            case UNBLOCK: return "UNBLOCK";
+            case BLOCK:            return "BLOCK";
+            case UNBLOCK:          return "UNBLOCK";
+            case TIMED_BLOCK:      return "TIMED_BLOCK";
+            case INDEFINITE_BLOCK: return "INDEFINITE_BLOCK";
             }
             static std::string out_str = std::to_string(int(enum_value));
             return out_str.c_str();

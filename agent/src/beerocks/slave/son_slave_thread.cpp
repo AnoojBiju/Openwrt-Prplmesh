@@ -50,6 +50,7 @@
 #include <tlvf/wfa_map/tlvChannelSelectionResponse.h>
 #include <tlvf/wfa_map/tlvClientAssociationControlRequest.h>
 #include <tlvf/wfa_map/tlvClientAssociationEvent.h>
+#include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
@@ -4881,9 +4882,24 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
         return false;
     }
 
-    const auto &bssid   = association_control_request_tlv->bssid_to_block_client();
-    const auto &sta_mac = std::get<1>(association_control_request_tlv->sta_list(0));
+    const auto &bssid = association_control_request_tlv->bssid_to_block_client();
 
+    auto db    = AgentDB::get();
+    auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
+    if (!radio) {
+        LOG(ERROR) << "BSSID " << bssid << " was not found in any of the Agent radios";
+        return false;
+    }
+    /**
+     * 'sta_connected' list contains all STAs reported in ClientAssociationControlRequest tlv with
+     * information on whether it is connected to the involved AP.
+     * Client Association Control request specify 4 differents control parameter :
+     *  - BLOCK : All STA connected to the AP specified in the tlv must be reported in an error code
+     *            tlv in the ACK returned. And no disallow request are performed for them.
+     *  - INDEFINITE_BLOCK/TIMED_BLOCK : All STA connected to the AP specified in the tlv must be disconnected
+     *                                   and then blacklisted
+     */
+    std::multimap<bool, sMacAddr> sta_connected = {};
     auto block = association_control_request_tlv->association_control();
     if (block == wfa_map::tlvClientAssociationControlRequest::UNBLOCK) {
         auto request_out = message_com::create_vs_message<
@@ -4892,28 +4908,67 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
             LOG(ERROR) << "Failed building ACTION_APMANAGER_CLIENT_ALLOW_REQUEST message!";
             return false;
         }
+        if (!request_out->alloc_mac(association_control_request_tlv->sta_list_length())) {
+            LOG(ERROR) << "alloc_mac failed";
+            return false;
+        }
+        for (size_t sta_idx = 0; sta_idx < association_control_request_tlv->sta_list_length();
+             sta_idx++) {
+            auto sta_tuple = association_control_request_tlv->sta_list(sta_idx);
+            if (!std::get<0>(sta_tuple)) {
+                LOG(ERROR) << "Failed to get STA from tlvClientAssociationControlRequest";
+            }
+            auto &sta_mac = std::get<1>(request_out->mac(sta_idx));
 
-        request_out->mac()   = sta_mac;
+            sta_mac = std::get<1>(sta_tuple);
+        }
         request_out->bssid() = bssid;
-    } else if (block == wfa_map::tlvClientAssociationControlRequest::BLOCK) {
+    } else {
+        for (size_t sta_idx = 0; sta_idx < association_control_request_tlv->sta_list_length();
+             sta_idx++) {
+            auto sta_tuple = association_control_request_tlv->sta_list(sta_idx);
+            if (!std::get<0>(sta_tuple)) {
+                LOG(ERROR) << "Failed to get STA from tlvClientAssociationControlRequest";
+            }
+
+            auto associated_sta = find_if(
+                radio->associated_clients.begin(), radio->associated_clients.end(),
+                [&](const std::pair<sMacAddr, AgentDB::sRadio::sClient> &sta) {
+                    return ((sta.first == std::get<1>(sta_tuple)) && (sta.second.bssid == bssid));
+                });
+            sta_connected.insert(std::pair<bool, sMacAddr>(
+                (associated_sta != radio->associated_clients.end()), std::get<1>(sta_tuple)));
+        }
+
         auto request_out = message_com::create_vs_message<
             beerocks_message::cACTION_APMANAGER_CLIENT_DISALLOW_REQUEST>(cmdu_tx, mid);
         if (!request_out) {
             LOG(ERROR) << "Failed building ACTION_APMANAGER_CLIENT_DISALLOW_REQUEST message!";
             return false;
         }
-
-        request_out->mac()                 = sta_mac;
-        request_out->bssid()               = bssid;
-        request_out->validity_period_sec() = association_control_request_tlv->validity_period_sec();
+        size_t disallow_sta_length = ((block == wfa_map::tlvClientAssociationControlRequest::BLOCK)
+                                          ? sta_connected.count(false)
+                                          : sta_connected.size());
+        if (!request_out->alloc_sta(disallow_sta_length)) {
+            LOG(ERROR) << "alloc_sta failed";
+            return false;
+        }
+        size_t sta_idx = 0;
+        for (auto &sta : sta_connected) {
+            if ((block == wfa_map::tlvClientAssociationControlRequest::BLOCK) && sta.first) {
+                continue;
+            }
+            auto &sta_info    = std::get<1>(request_out->sta(sta_idx++));
+            sta_info.disassoc = sta.first;
+            sta_info.mac      = sta.second;
+        }
+        request_out->bssid() = bssid;
+        request_out->validity_period_sec() =
+            (block != wfa_map::tlvClientAssociationControlRequest::INDEFINITE_BLOCK)
+                ? association_control_request_tlv->validity_period_sec()
+                : 0;
     }
 
-    auto db    = AgentDB::get();
-    auto radio = db->get_radio_by_mac(bssid, AgentDB::eMacType::BSSID);
-    if (!radio) {
-        LOG(ERROR) << "BSSID " << bssid << " was not found in any of the Agent radios";
-        return false;
-    }
     const auto &radio_manager = m_radio_managers[radio->front.iface_name];
 
     send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
@@ -4921,6 +4976,23 @@ bool slave_thread::handle_client_association_request(int fd, ieee1905_1::CmduMes
     if (!cmdu_tx.create(mid, ieee1905_1::eMessageType::ACK_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type ACK_MESSAGE, has failed";
         return false;
+    }
+
+    if (block == wfa_map::tlvClientAssociationControlRequest::BLOCK) {
+        for (const auto &sta : sta_connected) {
+            if (sta.first) {
+                auto error_code_tlv = cmdu_tx.addClass<wfa_map::tlvErrorCode>();
+                if (!error_code_tlv) {
+                    LOG(ERROR) << "addClass wfa_map::tlvErrorCode has failed";
+                    continue;
+                }
+
+                error_code_tlv->reason_code() =
+                    wfa_map::tlvErrorCode::STA_ASSOCIATED_WITH_A_BSS_OPERATED_BY_THE_AGENT;
+
+                error_code_tlv->sta_mac() = sta.second;
+            }
+        }
     }
 
     LOG(DEBUG) << "sending ACK message back to controller with mid: " << std::hex << mid;
