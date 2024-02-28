@@ -1,0 +1,10 @@
+{
+    "@CONTROLLER_ROOT_DM@.": {
+        "Order": 1,
+        "Param": "rwxn",
+        "Obj": "rwxn",
+        "InstantiatedObj": "rwxn",
+        "CommandEvent": "rwxn"
+    }
+} 
+
