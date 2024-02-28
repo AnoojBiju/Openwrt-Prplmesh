@@ -447,9 +447,30 @@ bool sta_wlan_hal_whm::roam(const sMacAddr &bssid, ChannelFreqPair channel)
     return true;
 }
 
-bool sta_wlan_hal_whm::get_4addr_mode() { return true; }
+bool sta_wlan_hal_whm::get_4addr_mode()
+{
+    // API get_4addr_mode is not required with PWHM, see set_4addr_mode first
+    // get_4addr_mode is not called in prplMesh
+    // Hence no implementation is required.
+    return true;
+}
 
-bool sta_wlan_hal_whm::set_4addr_mode(bool enable) { return true; }
+bool sta_wlan_hal_whm::set_4addr_mode(bool enable)
+{
+
+    // API set_4addr_mode is not required with PWHM
+    // PWHM implicitly set the 4addr_mode on endpoint interface in both generic and vendor module
+    // It is implicit to manage STA mac management behind repeater
+    // Analysis of prplMesh code base only 4_addr_mode is set in FSM of backhaul manager
+    // EState::WIRELESS_CONFIG_4ADDR_MODE (sta_wlan_hal->set_4addr_mode(true))
+    // No instance of disabling of 4addr_mode exists
+    // Niether the get_4addr_mode is called
+    // This is set only in dwpal backend when prplMesh backhaul manager is controlling
+    // the connection sequence through wpa_supplicabt and is specific to MXL target.
+    // see also get_4addr_mode.
+    // Hence no implementation is required.
+    return true;
+}
 
 bool sta_wlan_hal_whm::set_3addr_mcast(bool enable) { return true; }
 
