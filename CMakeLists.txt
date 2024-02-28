@@ -151,6 +151,10 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
     set(BEEROCKS_BH_WIRE_IFACE "eth1" CACHE STRING "Backhaul wire iface")
 endif()
 
+if (TARGET_PLATFORM_TYPE STREQUAL "turris-omnia")
+    add_compile_definitions(MISALIGNED_DWORD_ACCESS_NEEDS_SPECIAL_HANDLING)
+endif()
+
 # Default values - cached (are set only if not previously set)
 set(BEEROCKS_WLAN1_IFACE   "wlan0" CACHE STRING "1st WLAN iface")
 set(BEEROCKS_WLAN2_IFACE   "wlan2" CACHE STRING "2nd WLAN iface")

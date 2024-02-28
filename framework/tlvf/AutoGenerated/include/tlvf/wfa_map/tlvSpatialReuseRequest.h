@@ -22,6 +22,7 @@
 #include <tlvf/ClassList.h>
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
+#include <tlvf/MisalignedProxy.h>
 #include <asm/byteorder.h>
 
 namespace wfa_map {
@@ -78,8 +79,8 @@ class tlvSpatialReuseRequest : public BaseClass
         uint8_t& non_srg_obsspd_max_offset();
         uint8_t& srg_obsspd_min_offset();
         uint8_t& srg_obsspd_max_offset();
-        uint64_t& srg_bss_color_bitmap();
-        uint64_t& srg_partial_bssid_bitmap();
+        tlvf_uint64_t srg_bss_color_bitmap();
+        tlvf_uint64_t srg_partial_bssid_bitmap();
         uint16_t& reserved();
         void class_swap() override;
         bool finalize() override;
