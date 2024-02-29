@@ -953,6 +953,12 @@ bool ap_wlan_hal_whm::process_radio_event(const std::string &interface, const st
             return true;
         }
         LOG(WARNING) << "radio " << interface << " status " << status;
+    } else if (key == "Channel") {
+
+        refresh_radio_info();
+        // Event not processed by ap_manager.cpp (agent)
+        event_queue_push(Event::CTRL_Channel_Switch);
+        return true;
     } else if (key == "AccessPointNumberOfEntries") {
         LOG(WARNING) << "request updating vaps list of radio " << interface;
         event_queue_push(Event::APS_update_list);
