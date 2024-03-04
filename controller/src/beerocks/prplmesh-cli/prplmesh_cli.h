@@ -26,6 +26,28 @@
 namespace beerocks {
 namespace prplmesh_api {
 
+enum operating_mode {
+    PPM_OPMODE_NONE                 = 0b00,
+    PPM_OPMODE_AGENT_ONLY           = 0b01,
+    PPM_OPMODE_CONTROLLER_ONLY      = 0b10,
+    PPM_OPMODE_AGENT_AND_CONTROLLER = PPM_OPMODE_AGENT_ONLY | PPM_OPMODE_CONTROLLER_ONLY,
+};
+
+inline std::string to_string(operating_mode mode)
+{
+    switch (mode) {
+    default:
+    case PPM_OPMODE_NONE:
+        return "Not operational";
+    case PPM_OPMODE_AGENT_ONLY:
+        return "Agent only";
+    case PPM_OPMODE_CONTROLLER_ONLY:
+        return "Controller only";
+    case PPM_OPMODE_AGENT_AND_CONTROLLER:
+        return "Agent+Controller";
+    }
+}
+
 class prplmesh_cli {
 public:
     prplmesh_cli();
@@ -33,6 +55,7 @@ public:
     bool prpl_conn_map();
     void print_help();
     void print_version();
+    operating_mode get_operating_mode(bool &agt_timed_out, bool &ctl_timed_out);
 
     /**
      * @brief Get an AP path by index or SSID
@@ -84,6 +107,23 @@ public:
     * @return True on success, false otherwise.
     */
     bool print_radio(std::string device_path);
+
+    /**
+    * @brief Print current prplMesh mode.
+    *
+    * Possible output: "Not operational", "Agent only", "Controller only", "Agent+Controller"
+    */
+    bool print_mode();
+
+    /**
+    * @brief Print prplMesh status information.
+    *
+    * This is meant to replace the old status check in prplmesh_utils.sh that greps log files for the operational status.
+    * It will inspect the data model to determine the status and configuration of prplMesh.
+    *
+    * @return True on successful retrieval of status (even if the status is bad), false if unable to get the status.
+    */
+    bool print_status(const std::string &format);
 
     /**
     * @brief Get frequency using operating classes.

@@ -158,6 +158,7 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
     db->backhaul.preferred_bssid             = tlvf::mac_from_string(conf.backhaul_preferred_bssid);
     db->device_conf.stop_on_failure_attempts = conf.stop_on_failure_attempts;
 
+    std::string interfaces;
     for (const auto &radio_map_element : config.radios) {
 
         const auto &fronthaul_iface = radio_map_element.first;
@@ -174,7 +175,15 @@ slave_thread::slave_thread(sAgentConfig conf, beerocks::logging &logger_)
         }
 
         radio->sta_iface_filter_low = radio_conf.backhaul_wireless_iface_filter_low;
+
+        interfaces += fronthaul_iface;
+        interfaces += ',';
     }
+    if (interfaces.length()) {
+        interfaces.pop_back();
+    }
+
+    db->dm_set_fronthaul_interfaces(interfaces);
 }
 
 slave_thread::~slave_thread()
@@ -552,7 +561,7 @@ bool slave_thread::read_platform_configuration()
 
     std::string mgmt_mode;
     bpl::cfg_get_management_mode(mgmt_mode);
-    db->dm_set_management_and_controller_mode(mgmt_mode);
+    db->dm_set_management_mode(mgmt_mode);
 
     if ((temp_int = bpl::cfg_get_operating_mode()) < 0) {
         LOG(ERROR) << "Failed reading 'operating_mode'";
@@ -744,6 +753,7 @@ void slave_thread::handle_client_disconnected(int fd)
         } else if (fd == radio_manager.monitor_fd) {
             LOG(DEBUG) << "Monitor " << fronthaul_iface << " disconnected";
             radio_manager.monitor_fd = net::FileDescriptor::invalid_descriptor;
+            AgentDB::get()->dm_fronthaul_disconnected(radio_manager.dm_instance);
             if (radio_manager.ap_manager_fd != net::FileDescriptor::invalid_descriptor) {
                 m_cmdu_server->disconnect(radio_manager.ap_manager_fd);
             }
@@ -2366,16 +2376,10 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        ucred ucred;
-        socklen_t len = sizeof(ucred);
-        if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
-            PLOG(FATAL) << "getsockopt SO_PEERCRED failed";
-        }
-
         auto db               = AgentDB::get();
         config_msg->channel() = db->device_conf.front_radio.config.at(iface).configured_channel;
         config_msg->certification_mode() = db->device_conf.certification_mode;
-        radio_manager.dm_instance        = db->dm_create_fronthaul_object(iface, ucred.pid);
+        radio_manager.dm_instance        = db->dm_create_fronthaul_object(iface);
 
         return send_cmdu(radio_manager.ap_manager_fd, cmdu_tx);
     }
@@ -2396,7 +2400,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
-        AgentDB::get()->dm_update_fronthaul_object(
+        AgentDB::get()->dm_set_fronthaul_state(
             radio_manager.dm_instance, notification->curstate_str(), notification->maxstate_str());
 
         return true;

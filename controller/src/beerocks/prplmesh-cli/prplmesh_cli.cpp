@@ -10,15 +10,18 @@
 #include "prplmesh_amx_client.h"
 
 #include <arpa/inet.h>
-#include <iostream>
-#include <iterator>
-#include <map>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
 
 namespace beerocks {
 namespace prplmesh_api {
@@ -273,6 +276,224 @@ bool prplmesh_cli::prpl_conn_map()
     return true;
 }
 
+operating_mode prplmesh_cli::get_operating_mode(bool &agt_timed_out, bool &ctl_timed_out)
+{
+    std::string agent_path = "X_PRPL-ORG.prplMeshAgent.";
+    bool agent_dm_found    = m_amx_client->get_object(agent_path, agt_timed_out);
+
+    std::string network_path = CONTROLLER_ROOT_DM ".Network.";
+    bool controller_dm_found = m_amx_client->get_object(network_path, ctl_timed_out);
+
+    return static_cast<operating_mode>(agent_dm_found | (controller_dm_found << 1));
+}
+
+static bool print_mode_(operating_mode mode, bool agt_timed_out, bool ctl_timed_out)
+{
+    std::cout << "Mode: " << to_string(mode) << std::endl;
+    if (agt_timed_out) {
+        std::cout << "Requesting agent status timed out!!!" << std::endl;
+    }
+    if (ctl_timed_out > 0) {
+        std::cout << "Requesting controller status timed out!!!" << std::endl;
+    }
+
+    return !agt_timed_out && !ctl_timed_out;
+}
+
+bool prplmesh_cli::print_mode()
+{
+    bool agt_timed_out, ctl_timed_out;
+    auto mode = get_operating_mode(agt_timed_out, ctl_timed_out);
+
+    return print_mode_(mode, agt_timed_out, ctl_timed_out);
+}
+
+bool prplmesh_cli::print_status(const std::string &format)
+{
+    using std::cout;
+    using std::endl;
+    using std::string;
+
+    if (format != "pretty" && format != "json") {
+        return false;
+    }
+
+    struct {
+        operating_mode mode;
+        bool agt_timed_out, ctl_timed_out;
+
+        // Controller
+        string bridge_mac;
+        int num_devices;
+
+        // Agent
+        string agent_mac;
+        string agent_mmode;
+        string agent_currentstate;
+        string agent_beststate;
+
+        // ordered set so that ifaces are in lexicographic order
+        std::set<string> agent_ifaces;
+
+        // Fronthauls
+        struct fh_state {
+            string currentstate;
+            string beststate;
+        };
+        // Iface name -> FH state
+        std::map<string, fh_state> fhs;
+    } state{};
+
+    state.mode = get_operating_mode(state.agt_timed_out, state.ctl_timed_out);
+    bool ret   = state.mode && !state.agt_timed_out && !state.ctl_timed_out;
+
+    if (state.mode & PPM_OPMODE_CONTROLLER_ONLY) {
+        string network_path     = CONTROLLER_ROOT_DM ".Network.";
+        amxc_var_t *network_obj = m_amx_client->get_object(network_path);
+        state.bridge_mac        = GET_CHAR(network_obj, "ControllerID");
+        state.num_devices       = GET_UINT32(network_obj, "DeviceNumberOfEntries");
+    }
+
+    if (state.mode & PPM_OPMODE_AGENT_ONLY) {
+        string agent_path = "X_PRPL-ORG.prplMeshAgent.";
+        auto agent_obj    = m_amx_client->get_object(agent_path);
+
+        state.agent_mac           = GET_CHAR(agent_obj, "MACAddress");
+        state.agent_mmode         = GET_CHAR(agent_obj, "ManagementMode");
+        string agent_fh_ifaces    = GET_CHAR(agent_obj, "FronthaulIfaces");
+        string agent_currentstate = GET_CHAR(agent_obj, "CurrentState");
+        string agent_beststate    = GET_CHAR(agent_obj, "BestState");
+
+        // Trim state number
+        state.agent_currentstate = agent_currentstate.substr(0, agent_currentstate.find(' '));
+        state.agent_beststate    = agent_beststate.substr(0, agent_beststate.find(' '));
+
+        std::stringstream ss(std::move(agent_fh_ifaces));
+        for (string s; getline(ss, s, ',');) {
+            state.agent_ifaces.insert(std::move(s));
+        }
+
+        auto fronthaul_iface_root = agent_path + "Fronthaul.*";
+        auto fronthaul_ifaces     = m_amx_client->get_htable_object(fronthaul_iface_root);
+
+        amxc_htable_iterate(iface_it, fronthaul_ifaces)
+        {
+            auto iface_obj         = amxc_var_from_htable_it(iface_it);
+            auto iface_name        = GET_CHAR(iface_obj, "Iface");
+            string fh_currentstate = GET_CHAR(iface_obj, "CurrentState");
+            string fh_beststate    = GET_CHAR(iface_obj, "BestState");
+
+            auto &fh_state = state.fhs[iface_name];
+
+            // Trim state number
+            fh_state.currentstate = fh_currentstate.substr(0, fh_currentstate.find(' '));
+            fh_state.beststate    = fh_beststate.substr(0, fh_beststate.find(' '));
+        }
+
+        ret = ret && (state.agent_ifaces.size() == state.fhs.size());
+    }
+
+    if (format == "pretty") {
+        print_mode_(state.mode, state.agt_timed_out, state.ctl_timed_out);
+
+        if (state.mode & PPM_OPMODE_CONTROLLER_ONLY) {
+            cout << "Controller:\n\tbridge mac: " << state.bridge_mac << endl;
+            cout << '\t' << state.num_devices << " agent(s) connected" << endl;
+        }
+
+        if (state.mode & PPM_OPMODE_AGENT_ONLY) {
+            string agent_fh_ifaces;
+            for (const auto &iface : state.agent_ifaces) {
+                agent_fh_ifaces += iface;
+                agent_fh_ifaces += ',';
+            }
+            if (agent_fh_ifaces.size()) {
+                agent_fh_ifaces.pop_back();
+            }
+
+            cout << "Agent:" << endl
+                 << "\tmac address: " << state.agent_mac << endl
+                 << "\tmanagement mode: " << state.agent_mmode << endl
+                 << "\tfronthaul ifaces: " << agent_fh_ifaces << endl
+                 << "\tcurrent state: " << state.agent_currentstate << endl
+                 << "\tbest state: " << state.agent_beststate << endl;
+
+            for (const auto &fh : state.fhs) {
+                cout << "\tFronthaul:" << endl
+                     << "\t\tinterface: " << fh.first << endl
+                     << "\t\tcurrent state: " << fh.second.currentstate << endl
+                     << "\t\tbest state: " << fh.second.beststate << endl;
+
+                state.agent_ifaces.erase(fh.first);
+            }
+            string missing_ifaces;
+            for (const auto &iface : state.agent_ifaces) {
+                missing_ifaces += iface;
+                missing_ifaces += ',';
+            }
+            if (missing_ifaces.length()) {
+                missing_ifaces.pop_back();
+                cout << "\tMissing info about: " << missing_ifaces << endl;
+            }
+        }
+    }
+
+    if (format == "json") {
+        using std::quoted;
+
+        std::stringstream output;
+
+        output << "{\"Mode\": " << quoted(to_string(state.mode)) << ',' << std::boolalpha
+               << "\"Agent timeout\": " << state.agt_timed_out << ','
+               << "\"Controller timeout\": " << state.ctl_timed_out;
+
+        if (state.mode & PPM_OPMODE_CONTROLLER_ONLY) {
+            output << ",\"Controller\": {"
+                   << "\"ControllerID\": " << quoted(state.bridge_mac) << ','
+                   << "\"Agents connected\": " << state.num_devices << '}';
+        }
+
+        if (state.mode & PPM_OPMODE_AGENT_ONLY) {
+            string agent_fh_ifaces;
+            for (const auto &iface : state.agent_ifaces) {
+                agent_fh_ifaces += iface;
+                agent_fh_ifaces += ',';
+            }
+            if (agent_fh_ifaces.size()) {
+                agent_fh_ifaces.pop_back();
+            }
+
+            output << ",\"Agent\": {"
+                   << "\"MACAddress\": \"" << state.agent_mac << "\","
+                   << "\"ManagementMode\": " << quoted(state.agent_mmode) << ','
+                   << "\"FronthaulIfaces\": " << quoted(agent_fh_ifaces) << ','
+                   << "\"CurrentState\": " << quoted(state.agent_currentstate) << ','
+                   << "\"BestState\": " << quoted(state.agent_beststate) << ',';
+
+            output << "\"Fronthauls\": {";
+            for (const auto &fh : state.fhs) {
+                output << quoted(fh.first) << ": {"
+                       << "\"CurrentState\": " << quoted(fh.second.currentstate) << ','
+                       << "\"BestState\": " << quoted(fh.second.beststate) << '}';
+
+                output << ',';
+            }
+            if (state.fhs.size()) {
+                output.seekp(-1, std::ios_base::end);
+            }
+            output << '}'; // Fronthauls
+
+            output << '}'; // Agent
+        }
+
+        output << '}';
+
+        cout << std::move(output).str() << endl;
+    }
+
+    return ret;
+}
+
 void prplmesh_cli::print_help()
 {
     std::cerr << R"help!(
@@ -283,17 +504,20 @@ The following options are available:
 -h	: prints this help text
 
 The following commands are available :
-help      		: get supported commands
-version   		: get current prplMesh version
-show_ap   		: show AccessPoints
-set_ssid  		: set SSID
-  -o .<ap_object_number>|<ap_ssid>	Use .. if <ap_ssid> starts with .
+help            : get supported commands
+version         : get current prplMesh version
+mode            : get current prplMesh mode (Agent only/Controller only/Agent+Controller)
+status          : print an overview of the current prplMesh status
+  -o <output format>                Either "pretty" (default if stdout is a TTY) or "json" (otherwise)
+show_ap         : show AccessPoints
+set_ssid        : set SSID
+  -o .<ap_object_number>|<ap_ssid>  Use .. if <ap_ssid> starts with .
   -n <new_ssid_name>
-set_security		: set security
-  -o .<ap_object_number>|<ap_ssid>	Same as for set_ssid
+set_security        : set security
+  -o .<ap_object_number>|<ap_ssid>  Same as for set_ssid
   -m None|WPA2-Personal
-  -p <passphrase>			For the WPA2-Personal mode
-conn_map  		: dump the latest network map
+  -p <passphrase>                   For the WPA2-Personal mode
+conn_map        : dump the latest network map
 )help!";
 }
 
