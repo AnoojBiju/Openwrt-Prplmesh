@@ -192,7 +192,7 @@ bool prplmesh_cli::print_device_info(std::string agent_mac, std::string skip_mac
     amxc_htable_iterate(device_it, ht_device)
     {
         std::string device_path_i = amxc_htable_it_get_key(device_it);
-        std::string backhaul_path = device_path_i + ".MultiAPDevice.Backhaul.";
+        std::string backhaul_path = device_path_i + "MultiAPDevice.Backhaul.";
         amxc_var_t *backhaul_obj  = m_amx_client->get_object(backhaul_path);
         backhaul_device_id        = GET_CHAR(backhaul_obj, "BackhaulDeviceID");
         std::string linktype      = GET_CHAR(backhaul_obj, "LinkType");
