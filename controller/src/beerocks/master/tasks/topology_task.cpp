@@ -366,7 +366,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         iface_node->m_neighbors.keep_new_prepare();
         auto interface = agent->interfaces.get(iface_mac);
         if (interface) {
-            interface->neighbors.keep_new_prepare();
+            interface->m_neighbors.keep_new_prepare();
         }
     }
 
@@ -487,7 +487,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
         auto removed_neighbors = iface_node->m_neighbors.keep_new_remove_old();
         auto interface         = agent->interfaces.get(iface_mac);
         if (interface) {
-            interface->neighbors.keep_new_remove_old();
+            interface->m_neighbors.keep_new_remove_old();
         }
 
         // Removed members needs to be cleaned up from datamodel also.

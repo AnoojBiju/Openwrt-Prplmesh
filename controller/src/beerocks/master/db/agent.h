@@ -465,18 +465,20 @@ public:
     struct sNeighbor {
         sMacAddr mac = beerocks::net::network_utils::ZERO_MAC;
         std::string dm_path;
-        bool is_1905 = false;
-        explicit sNeighbor(const sMacAddr &mac_, bool is_1905_) : mac(mac_), is_1905(is_1905_) {}
+        bool ieee1905_flag = false;
+        explicit sNeighbor(const sMacAddr &mac_, bool is_1905_) : mac(mac_), ieee1905_flag(is_1905_)
+        {
+        }
     };
     struct sInterface {
-        sMacAddr mac = beerocks::net::network_utils::ZERO_MAC;
+        sMacAddr m_mac = beerocks::net::network_utils::ZERO_MAC;
         std::string alias;
-        std::string dm_path;
-        ieee1905_1::eMediaType link_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
-        beerocks::mac_map<sNeighbor> neighbors;
+        std::string m_dm_path;
+        ieee1905_1::eMediaType m_media_type = ieee1905_1::eMediaType::UNKNOWN_MEDIA;
+        beerocks::mac_map<struct sNeighbor> m_neighbors;
         explicit sInterface(const sMacAddr &mac_, const std::string &alias_,
                             ieee1905_1::eMediaType link_type_)
-            : mac(mac_), alias(alias_), link_type(link_type_)
+            : m_mac(mac_), alias(alias_), m_media_type(link_type_)
         {
         }
     };
