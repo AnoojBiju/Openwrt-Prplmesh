@@ -2613,11 +2613,11 @@ bool Controller::handle_intel_slave_join(
             database.set_node_type(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
             LOG(ERROR) << "Existing mac node is not TYPE_SLAVE";
         }
-        auto hostap_iface_name = database.get_hostap_iface_name(radio_mac);
+        auto hostap_iface_name = database.get_radio_iface_name(radio_mac);
         if (!hostap_iface_name.empty() &&
             hostap_iface_name.compare(notification->hostap().iface_name)) {
             LOG(ERROR) << "Mac duplication detected between "
-                       << database.get_hostap_iface_name(radio_mac) << " and "
+                       << database.get_radio_iface_name(radio_mac) << " and "
                        << notification->hostap().iface_name;
             return false;
         }
@@ -2637,7 +2637,7 @@ bool Controller::handle_intel_slave_join(
     radio->is_acs_enabled = acs_enabled;
     // Make sure AP is marked as not active. It will be set as active after setting all the
     // radio parameters on the database.
-    son_actions::set_hostap_active(database, m_task_pool, tlvf::mac_to_string(radio_mac), false);
+    son_actions::set_radio_active(database, m_task_pool, tlvf::mac_to_string(radio_mac), false);
     if (backhaul_manager) {
         agent->backhaul.wireless_backhaul_radio = radio;
     }
@@ -2646,12 +2646,12 @@ bool Controller::handle_intel_slave_join(
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                       : beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(bridge_mac, radio_mac, notification->hostap().iface_name);
+    database.set_radio_iface_name(radio_mac, notification->hostap().iface_name);
     database.set_hostap_iface_type(bridge_mac, radio_mac, hostap_iface_type);
 
-    database.set_hostap_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
-    database.set_hostap_ant_gain(bridge_mac, radio_mac, notification->hostap().ant_gain);
-    database.set_hostap_tx_power(bridge_mac, radio_mac, notification->hostap().tx_power);
+    database.set_radio_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
+    database.set_radio_ant_gain(radio_mac, notification->hostap().ant_gain);
+    database.set_radio_tx_power(radio_mac, notification->hostap().tx_power);
 
     database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
 
@@ -2740,7 +2740,7 @@ bool Controller::handle_intel_slave_join(
     // it is required to re-activate the AP in the nodes-map since it is set as not-active
     // when the topology-response not containing it is received by the controller.
     // When it joins the controller we need to activate it if not activated.
-    database.set_hostap_active(radio_mac, true);
+    database.set_radio_active(radio_mac, true);
 
     // Update all (Slaves) last seen timestamp
     if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
@@ -2916,15 +2916,15 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
-    database.set_hostap_iface_name(bridge_mac, radio_mac, "N/A");
+    database.set_radio_iface_name(radio_mac, "N/A");
     database.set_hostap_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
-    database.set_hostap_ant_num(radio_mac, beerocks::eWiFiAntNum::ANT_NONE);
-    database.set_hostap_ant_gain(bridge_mac, radio_mac, 0);
-    database.set_hostap_tx_power(bridge_mac, radio_mac, 0);
-    database.set_hostap_active(radio_mac, true);
+    database.set_radio_ant_num(radio_mac, beerocks::eWiFiAntNum::ANT_NONE);
+    database.set_radio_ant_gain(radio_mac, 0);
+    database.set_radio_tx_power(radio_mac, 0);
+    database.set_radio_active(radio_mac, true);
     // TODO ipv4 will not be set
 
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
@@ -3105,7 +3105,7 @@ bool Controller::handle_cmdu_control_message(
         LOG(ERROR) << "Hostap CSA ERROR for IRE " << backhaul_mac << " hostap mac=" << radio_mac;
 
         // TODO handle CSA error
-        son_actions::set_hostap_active(database, m_task_pool, radio_mac_str, false);
+        son_actions::set_radio_active(database, m_task_pool, radio_mac_str, false);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_CSA_NOTIFICATION: {
@@ -3726,7 +3726,7 @@ bool Controller::handle_cmdu_control_message(
         if (active_client_count > database.config.monitor_min_active_clients &&
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
-            database.settings_load_balancing() && database.is_hostap_active(radio_mac) &&
+            database.settings_load_balancing() && database.is_radio_active(radio_mac) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)

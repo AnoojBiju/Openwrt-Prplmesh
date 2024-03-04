@@ -382,7 +382,7 @@ void channel_selection_task::work()
             if (wireless_utils::is_dfs_channel(hostap_params.channel)) {
                 TASK_LOG(INFO) << "not waiting for CAC completed on static DFS channel "
                                   "configuration, setting CAC completed flag to true";
-                database.set_hostap_cac_completed(radio_mac, true);
+                database.set_radio_cac_completed(radio_mac, true);
             }
         }
 
@@ -705,8 +705,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::ACTIVATE_SLAVE: {
-        if (!son_actions::set_hostap_active(database, tasks, tlvf::mac_to_string(radio_mac),
-                                            true)) {
+        if (!son_actions::set_radio_active(database, tasks, tlvf::mac_to_string(radio_mac), true)) {
             TASK_LOG(ERROR) << "set node hostap active failed, mac=" << radio_mac;
         }
         //the connected looks irelevant for the hostap - adding this line so it would appear on network map
@@ -742,7 +741,7 @@ void channel_selection_task::work()
                                            csa_event->cs_params.bandwidth);
                     if (database.get_hostap_on_dfs_reentry(radio_mac)) {
                         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " DFS reentry flow";
-                        if (database.get_hostap_cac_completed(radio_mac)) {
+                        if (database.get_radio_cac_completed(radio_mac)) {
                             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                                             << " was on reentry back on dfs channel";
                             database.set_hostap_on_dfs_reentry(radio_mac, false);
@@ -774,7 +773,7 @@ void channel_selection_task::work()
             }
         } else {
             // CAC completed will not arrive in passive mode, so set the indication to 'completed'
-            database.set_hostap_cac_completed(radio_mac, true);
+            database.set_radio_cac_completed(radio_mac, true);
         }
         FSM_MOVE_STATE(GOTO_IDLE);
         break;
@@ -784,7 +783,7 @@ void channel_selection_task::work()
         auto it_cac = hostaps_cac_pending.find(tlvf::mac_to_string(radio_mac));
 
         if (it_cac != std::end(hostaps_cac_pending)) {
-            database.set_hostap_cac_completed(tlvf::mac_from_string(it_cac->first), true);
+            database.set_radio_cac_completed(tlvf::mac_from_string(it_cac->first), true);
             it_cac = hostaps_cac_pending.erase(it_cac);
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " cac completed - found in pending cac - erasing, update DB";
@@ -985,7 +984,7 @@ void channel_selection_task::work()
                     LOG(WARNING) << "empty wifi channel of " << hostap_sibling << " in DB";
                 }
                 return (hostap_sibling_wifi_channel.get_freq_type() == eFreqType::FREQ_24G &&
-                        database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
+                        database.is_radio_active(tlvf::mac_from_string(hostap_sibling)));
             });
         if (hostap_mac_2g == std::end(hostaps_sibling)) {
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
@@ -1238,7 +1237,7 @@ void channel_selection_task::ccl_fill_supported_channels()
 {
     TASK_LOG(DEBUG) << "*****************ccl_fill_supported_channels**************************** :";
     //Get the supported channels list from the db
-    auto hostap_supported_channels = database.get_hostap_supported_channels(radio_mac);
+    auto hostap_supported_channels = database.get_radio_supported_channels(radio_mac);
 
     /*1. Fill active channel list with the suppoted channels and
         2. Initialize all the supported channels as available in active list to start with*/
@@ -1258,7 +1257,7 @@ void channel_selection_task::ccl_fill_affected_supported_channels()
 {
     TASK_LOG(DEBUG)
         << "*****************ccl_fill_affected_supported_channels**************************** :";
-    auto hostap_supported_channels = database.get_hostap_supported_channels(radio_mac);
+    auto hostap_supported_channels = database.get_radio_supported_channels(radio_mac);
 
     /*1. Fill active channel list with the radar affected suppoted channels */
     for (auto hostap_channel : hostap_supported_channels) {
@@ -1583,7 +1582,7 @@ bool channel_selection_task::fill_restricted_channels_from_ccl_and_supported(uin
         }
     }
     auto global_restricted_chn = database.get_global_restricted_channels();
-    auto db_restricted         = database.get_hostap_conf_restricted_channels(radio_mac);
+    auto db_restricted         = database.get_radio_conf_restricted_channels(radio_mac);
     auto configured_restricted_chn =
         !global_restricted_chn.empty() ? global_restricted_chn : db_restricted;
     if (!configured_restricted_chn.empty()) {
@@ -1718,7 +1717,7 @@ void channel_selection_task::wait_for_cac_completed(uint8_t channel, uint8_t ban
     //hostap handle the CAC-completed event async pushing to deck.
     TASK_LOG(DEBUG) << "radio_mac - " << radio_mac << " enter to cac pending";
     hostaps_cac_pending.insert({tlvf::mac_to_string(radio_mac), std::chrono::steady_clock::now()});
-    database.set_hostap_cac_completed(radio_mac, false);
+    database.set_radio_cac_completed(radio_mac, false);
 
     // update bml listeners
     bml_task::cac_status_changed_notification_event cac_status_changed_event;
@@ -1758,7 +1757,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
                 LOG(WARNING) << "empty wifi channel of " << hostap_sibling << "in DB";
             }
             return (hostap_sibling_wifi_channel.get_freq_type() == eFreqType::FREQ_24G &&
-                    database.is_hostap_active(tlvf::mac_from_string(hostap_sibling)));
+                    database.is_radio_active(tlvf::mac_from_string(hostap_sibling)));
         });
 
     if (hostap_mac_2g != std::end(hostaps_sibling)) {

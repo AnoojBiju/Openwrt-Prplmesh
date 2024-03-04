@@ -319,7 +319,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             agent.second.status = eAgentStatus::IDLE;
         };
 
-        std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
+        std::set<Agent::sRadio::channel_scan_report::channel_scan_report_key> scan_report_index;
 
         // Helper lambda - Add a new radio to the channel scan request tlv.
         auto add_radio_to_channel_scan_request_tlv =
@@ -903,7 +903,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         const auto &radio_mac          = radio_scan_request_iter.first;
         const auto &radio_scan_request = radio_scan_request_iter.second;
         auto request_scan_report_copy  = radio_scan_request.scan_report_index;
-        node::radio::channel_scan_report_index stored_report_index;
+        Agent::sRadio::channel_scan_report_index stored_report_index;
         // Get the report record according to the given timestamp.
         if (!database.get_channel_report_record(radio_mac, ISO_8601_timestamp,
                                                 stored_report_index)) {
@@ -1045,7 +1045,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
      */
     using radio_preference_tlv_format = std::map<std::pair<uint8_t, uint8_t>, std::set<uint8_t>>;
     auto convert_preference_report_map_to_tlv_format =
-        [](const node::radio::PreferenceReportMap &radio_preference)
+        [](const Agent::sRadio::PreferenceReportMap &radio_preference)
         -> radio_preference_tlv_format {
         radio_preference_tlv_format map;
         for (const auto &iter : radio_preference) {

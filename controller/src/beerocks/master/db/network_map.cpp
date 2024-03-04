@@ -310,7 +310,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 continue;
             }
 
-            auto r = database.get_hostap(radio.first);
+            auto r = database.get_radio_by_uid(radio.first);
             if (!r) {
                 LOG(ERROR) << "No radio for " << radio.first;
                 continue;
@@ -321,7 +321,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
                 // Copy the interface name
                 string_utils::copy_string(
                     node->data.gw_ire.radio[i].iface_name,
-                    database.get_hostap_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
+                    database.get_radio_iface_name(tlvf::mac_from_string(c->mac)).c_str(),
                     BML_NODE_IFACE_NAME_LEN);
 
                 // Radio Vendor
@@ -786,7 +786,7 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
 
     switch (n_type) {
     case beerocks::TYPE_SLAVE: {
-        auto radio = database.get_hostap(tlvf::mac_from_string(n->mac));
+        auto radio = database.get_radio_by_uid(tlvf::mac_from_string(n->mac));
         if (!radio) {
             LOG(ERROR) << "radio " << n->mac << " does not exist";
             return 0;

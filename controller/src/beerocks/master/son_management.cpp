@@ -611,7 +611,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         /*
              * start load balancing
              */
-        if (database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
+        if (database.is_radio_active(tlvf::mac_from_string(hostap_mac)) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
@@ -1189,8 +1189,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (request->params().is_global) {
             database.set_global_restricted_channels(request->params().restricted_channels);
         } else {
-            database.set_hostap_conf_restricted_channels(request->params().hostap_mac,
-                                                         request->params().restricted_channels);
+            database.set_radio_conf_restricted_channels(request->params().hostap_mac,
+                                                        request->params().restricted_channels);
         }
 
         //send restricted channel event to channel selection task
@@ -1235,7 +1235,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto vec_restricted_channels =
             request->params().is_global
                 ? database.get_global_restricted_channels()
-                : database.get_hostap_conf_restricted_channels(request->params().hostap_mac);
+                : database.get_radio_conf_restricted_channels(request->params().hostap_mac);
         std::copy(vec_restricted_channels.begin(), vec_restricted_channels.end(),
                   response->params().restricted_channels);
 
@@ -1273,7 +1273,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             if (dst_mac == network_utils::WILD_MAC_STRING) {
                 auto slaves = database.get_active_hostaps();
                 for (const auto &slave : slaves) {
-                    if (database.is_hostap_active(tlvf::mac_from_string(slave))) {
+                    if (database.is_radio_active(tlvf::mac_from_string(slave))) {
                         auto agent_mac = database.get_node_parent_ire(slave);
                         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, slave);
                     }
