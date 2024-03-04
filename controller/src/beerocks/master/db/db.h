@@ -1252,6 +1252,9 @@ public:
     bool add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
                  const std::string &bssid, const std::string &ssid, bool backhaul);
 
+    std::shared_ptr<Agent::sRadio::sBss>
+    add_bss(Agent::sRadio &radio, const sMacAddr &bssid, const std::string &ssid,
+            int vap_id = beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID);
     /** Update VAP information
      *
      * Add or update the VAP information for the given BSSID on the
@@ -3011,11 +3014,10 @@ private:
      *
      * @param radio_mac mac address of radio on which BSSID exists.
      * @param bssid BSSID of the BSS.
-     * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
      * @param is_vbss Whether this is a Virtual BSS or not
      */
     bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
-                          const std::string &ssid, bool is_vbss = false);
+                          bool is_vbss = false);
 
     /**
      * @brief Set data model path member of a node

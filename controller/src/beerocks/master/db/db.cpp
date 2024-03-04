@@ -2366,6 +2366,23 @@ std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr 
     return n->hostap->vaps_info;
 }
 
+std::shared_ptr<Agent::sRadio::sBss> db::add_bss(Agent::sRadio &radio, const sMacAddr &bssid,
+                                                 const std::string &ssid, int vap_id)
+{
+    std::shared_ptr<Agent::sRadio::sBss> bss = radio.bsses.add(bssid, radio, vap_id);
+    if (bss) {
+        bss->ssid                    = ssid;
+        std::shared_ptr<Agent> agent = get_agent_by_radio_uid(radio.radio_uid);
+        if (agent) {
+            dm_set_radio_bss(agent->al_mac, radio.radio_uid, bssid);
+        }
+    } else {
+        LOG(ERROR) << "Failed to add BSS " << bssid;
+    }
+
+    return bss;
+}
+
 bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
     auto vap_list = get_hostap_vap_list(radio.radio_uid);
@@ -2397,8 +2414,7 @@ bool db::add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_i
     vaps_info[vap_id].ssid         = ssid;
     vaps_info[vap_id].backhaul_vap = backhaul;
 
-    return dm_set_radio_bss(al_mac, tlvf::mac_from_string(radio_mac), tlvf::mac_from_string(bssid),
-                            ssid);
+    return true;
 }
 
 bool db::update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
@@ -2428,7 +2444,7 @@ bool db::update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMa
     }
     it->second.ssid         = ssid;
     it->second.backhaul_vap = backhaul;
-    return dm_set_radio_bss(al_mac, radio_mac, bssid, ssid);
+    return dm_set_radio_bss(al_mac, radio_mac, bssid);
 }
 
 std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
@@ -6649,7 +6665,7 @@ bool db::set_radio_utilization(const sMacAddr &bssid, uint8_t utilization)
 }
 
 bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
-                          const std::string &ssid, bool is_vbss)
+                          bool is_vbss)
 {
     LOG(DEBUG) << "Setting BSS for radio " << radio_mac << " bssid " << bssid << " al_mac "
                << al_mac;
@@ -6693,7 +6709,7 @@ bool db::dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, con
     auto ret_val = true;
 
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BSSID", bssid);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", ssid);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "SSID", bss->ssid);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "Enabled", bss->enabled);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "FronthaulUse", bss->fronthaul);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BackhaulUse", bss->backhaul);

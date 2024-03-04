@@ -1242,9 +1242,8 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
             return false;
         }
 
-        auto bss       = radio->bsses.add(radio->radio_uid, *radio);
+        auto bss       = database.add_bss(*radio, radio->radio_uid, bss_info_conf.ssid);
         bss->enabled   = false;
-        bss->ssid      = bss_info_conf.ssid;
         bss->fronthaul = bss_info_conf.fronthaul;
         bss->backhaul  = bss_info_conf.backhaul;
         if (!database.update_vap(src_mac, ruid, bss->bssid, bss->ssid, bss->backhaul)) {
@@ -3078,13 +3077,12 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        auto bss = radio->bsses.add(bssid, *radio, vap_id);
+        auto bss = database.add_bss(*radio, bssid, ssid, vap_id);
         // update BSS vap_id if still undefined
         bss->update_vap_id(vap_id);
         LOG_IF(bss->get_vap_id() != vap_id, ERROR)
             << "BSS " << bssid << " changed vap_id " << bss->get_vap_id() << " -> " << vap_id;
         bss->enabled   = true;
-        bss->ssid      = ssid;
         bss->fronthaul = notification->vap_info().fronthaul_vap;
         bss->backhaul  = notification->vap_info().backhaul_vap;
 
@@ -3168,11 +3166,11 @@ bool Controller::handle_cmdu_control_message(
              vap_id++) {
             auto vap_mac = tlvf::mac_to_string(notification->params().vaps[vap_id].mac);
             if (vap_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
-                auto bss =
-                    radio->bsses.add(notification->params().vaps[vap_id].mac, *radio, vap_id);
+                auto bss = database.add_bss(
+                    *radio, notification->params().vaps[vap_id].mac,
+                    std::string((char *)notification->params().vaps[vap_id].ssid), vap_id);
                 // update BSS vap_id if still undefined
                 bss->update_vap_id(vap_id);
-                bss->ssid      = std::string((char *)notification->params().vaps[vap_id].ssid);
                 bss->fronthaul = notification->params().vaps[vap_id].fronthaul_vap;
                 bss->backhaul  = notification->params().vaps[vap_id].backhaul_vap;
 
