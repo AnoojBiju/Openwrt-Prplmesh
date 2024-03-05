@@ -653,19 +653,23 @@ public:
     beerocks::eBeaconMeasurementSupportLevel
     get_sta_beacon_measurement_support_level(const std::string &mac);
 
-    bool set_node_name(const std::string &mac, const std::string &name);
+    bool set_device_name(const std::string &mac, const std::string &name,
+                         const bool &is_station = false);
 
-    bool set_node_state(const std::string &mac, beerocks::eNodeState state);
-    beerocks::eNodeState get_node_state(const std::string &mac);
+    bool set_device_state(const std::string &mac, beerocks::eNodeState state,
+                          const bool &is_station = false);
+    beerocks::eNodeState get_device_state(const std::string &mac, const bool &is_station = false);
 
-    std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
+    std::chrono::steady_clock::time_point
+    get_device_last_state_change(const std::string &mac, const bool &is_station = false);
 
     bool set_sta_handoff_flag(Station &station, bool handoff);
     bool get_sta_handoff_flag(const Station &station);
 
-    bool update_node_last_seen(const std::string &mac);
+    bool update_device_last_seen(const std::string &mac, const bool &is_station = false);
 
-    std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
+    std::chrono::steady_clock::time_point get_device_last_seen(const std::string &mac,
+                                                               const bool &is_station = false);
 
     bool set_radio_active(const sMacAddr &mac, const bool active);
     bool is_radio_active(const sMacAddr &mac);
@@ -674,7 +678,7 @@ public:
 
     bool is_node_wireless(const std::string &mac);
 
-    std::string node_to_string(const std::string &mac);
+    std::string device_to_string(const std::string &mac, const bool &is_station = false);
 
     /**
      * @brief Get the link metric database
@@ -1201,10 +1205,12 @@ public:
 
     bool capability_check(const std::string &mac, int channel);
 
-    bool get_node_6ghz_support(const std::string &mac);
-    bool get_node_5ghz_support(
-        const std::string &mac); // TODO: add a real learning algorithm for per-channel support
-    bool get_node_24ghz_support(const std::string &mac);
+    bool is_device_6ghz_supported(const std::string &mac, const bool &is_station = false);
+    bool is_device_5ghz_supported(
+        const std::string &mac,
+        const bool &is_station =
+            false); // TODO: add a real learning algorithm for per-channel support
+    bool is_device_24ghz_supported(const std::string &mac, const bool &is_station = false);
     bool is_node_6ghz(const std::string &mac);
     bool is_node_5ghz(const std::string &mac);
     bool is_node_24ghz(const std::string &mac);

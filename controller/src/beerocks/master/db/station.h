@@ -112,13 +112,21 @@ public:
         uint32_t last_steer_time     = 0;
     } steering_summary_stats;
 
-    class sSteeringAttempt {
+    class band_supported {
+    public:
+        bool supports_24ghz = false;
+        bool supports_5ghz  = false;
+        bool supports_6ghz  = false;
+    };
+    std::shared_ptr<band_supported> supported_bands = std::make_shared<band_supported>();
+
+    class steering_attempt {
     public:
         int failed_6ghz_steer_attemps  = 0;
         int failed_5ghz_steer_attemps  = 0;
         int failed_24ghz_steer_attemps = 0;
     };
-    std::shared_ptr<sSteeringAttempt> steer_attempts = std::make_shared<sSteeringAttempt>();
+    std::shared_ptr<steering_attempt> steer_attempts = std::make_shared<steering_attempt>();
 
     class sta_stats_params {
     public:
@@ -173,6 +181,7 @@ private:
     int m_failed_11v_request_count = 0;
 
     bool m_handoff = false;
+    std::chrono::steady_clock::time_point last_seen;
     std::chrono::steady_clock::time_point last_state_change;
 
     class beacon_measurement;

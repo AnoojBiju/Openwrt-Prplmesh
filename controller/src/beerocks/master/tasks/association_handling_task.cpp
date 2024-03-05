@@ -91,7 +91,7 @@ void association_handling_task::work()
 
         new_hostap_mac = database.get_node_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_device_state(sta_mac, true) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -207,7 +207,7 @@ void association_handling_task::work()
         auto agent_mac         = database.get_node_parent_ire(hostap_mac);
 
         if (hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_device_state(sta_mac, true) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();

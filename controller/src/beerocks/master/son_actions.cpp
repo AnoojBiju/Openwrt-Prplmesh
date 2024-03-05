@@ -37,7 +37,7 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
                                               task_pool &tasks, std::string client_mac)
 {
     LOG(INFO) << "handle_completed_connection client_mac=" << client_mac;
-    if (!database.set_node_state(client_mac, beerocks::STATE_CONNECTED)) {
+    if (!database.set_device_state(client_mac, beerocks::STATE_CONNECTED, true)) {
         LOG(ERROR) << "set node state failed";
     }
 
@@ -103,8 +103,8 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
         return false;
     }
 
-    if (!database.set_node_state(client_mac, beerocks::STATE_CONNECTING)) {
-        LOG(ERROR) << "add_node_to_default_location - set_node_state failed.";
+    if (!database.set_device_state(client_mac, beerocks::STATE_CONNECTING, true)) {
+        LOG(ERROR) << "add_node_to_default_location - set_device_state failed.";
         return false;
     }
 
@@ -261,7 +261,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                                    task_pool &tasks)
 {
     beerocks::eType mac_type = database.get_node_type(mac);
-    auto node_state          = database.get_node_state(mac);
+    auto node_state          = database.get_device_state(mac);
 
     LOG(DEBUG) << "NOTICE: handling dead node " << mac << " type enum " << int(mac_type)
                << " reported by parent " << reported_by_parent;
@@ -282,7 +282,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
     if (reported_by_parent) {
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
-            database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+            database.set_device_state(mac, beerocks::STATE_DISCONNECTED, true);
 
             auto station = database.get_station(tlvf::mac_from_string(mac));
             if (!station) {
@@ -326,7 +326,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
-            database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+            database.set_device_state(mac, beerocks::STATE_DISCONNECTED);
             set_radio_active(database, tasks, mac, false);
         }
 
@@ -368,7 +368,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     }
                 }
 
-                database.set_node_state(node_mac, beerocks::STATE_DISCONNECTED);
+                database.set_device_state(node_mac, beerocks::STATE_DISCONNECTED);
                 set_radio_active(database, tasks, node_mac,
                                  false); //implementation checks for hostap node type
 

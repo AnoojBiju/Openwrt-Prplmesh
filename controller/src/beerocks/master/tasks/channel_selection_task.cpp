@@ -709,7 +709,7 @@ void channel_selection_task::work()
             TASK_LOG(ERROR) << "set node hostap active failed, mac=" << radio_mac;
         }
         //the connected looks irelevant for the hostap - adding this line so it would appear on network map
-        if (!database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED)) {
+        if (!database.set_device_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED)) {
             TASK_LOG(ERROR) << "set node state failed, mac=" << radio_mac;
         }
         if (database.settings_ire_roaming()) {
@@ -928,7 +928,7 @@ void channel_selection_task::work()
                 database.get_node_children(tlvf::mac_to_string(radio_mac), beerocks::TYPE_CLIENT);
             auto it =
                 std::find_if(clients.begin(), clients.end(), [&](const std::string &client_mac) {
-                    auto client_state = (uint8_t)database.get_node_state(client_mac);
+                    auto client_state = (uint8_t)database.get_device_state(client_mac, true);
                     return client_state >= eNodeState::STATE_CONNECTING &&
                            client_state <= STATE_CONNECTED;
                 });

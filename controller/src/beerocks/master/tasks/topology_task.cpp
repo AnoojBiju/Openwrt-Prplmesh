@@ -396,7 +396,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
     bool check_dead_neighbors =
-        (database.get_last_state_change(tlvf::mac_to_string(src_mac)) +
+        (database.get_device_last_state_change(tlvf::mac_to_string(src_mac)) +
              std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
                                   5) <
          std::chrono::steady_clock::now());

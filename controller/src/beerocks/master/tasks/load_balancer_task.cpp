@@ -303,7 +303,7 @@ void load_balancer_task::work()
 
             hostap_params.is_5ghz = database.is_node_5ghz(hostap);
 
-            if (hostap_params.is_5ghz && !database.get_node_5ghz_support(sta_mac)) {
+            if (hostap_params.is_5ghz && !database.is_device_5ghz_supported(sta_mac, true)) {
                 TASK_LOG(DEBUG) << "sta " << sta_mac
                                 << " does not support 5ghz, skipping candidate " << hostap;
                 continue;
