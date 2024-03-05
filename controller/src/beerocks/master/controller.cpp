@@ -512,6 +512,20 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         }
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
+        if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE)
+        {
+            auto time_since_m1 = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now() - cmdu_rx.received_time);
+            if (time_since_m1 >
+                std::chrono::seconds{beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS}) {
+                LOG(INFO) << "Time since M1 was received (" << time_since_m1.count()
+                          << " seconds) is more than "
+                          << beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS
+                          << " seconds, ignoring M1.";
+                database.update_last_contact_time(src_mac);
+                return false;
+            }
+        }
         handle_cmdu_1905_1_message(src_mac, cmdu_rx);
         m_task_pool.handle_ieee1905_1_msg(src_mac, cmdu_rx);
 
@@ -1120,17 +1134,6 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
     auto m1 = WSC::m1::parse(*tlvWsc);
     if (!m1) {
         LOG(INFO) << "Not a valid M1 - Ignoring WSC CMDU";
-        return false;
-    }
-
-    auto time_since_m1 = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now() - cmdu_rx.received_time);
-    if (time_since_m1 >
-        std::chrono::seconds{beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS}) {
-        LOG(INFO) << "Time since M1 was received (" << time_since_m1.count()
-                  << " seconds) is more than "
-                  << beerocks::ieee1905_1_consts::AUTOCONFIG_M2_TIMEOUT_SECONDS
-                  << " seconds, ignoring M1.";
         return false;
     }
 
