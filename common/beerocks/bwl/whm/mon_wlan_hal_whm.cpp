@@ -155,12 +155,19 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
 {
     AmbiorixVariant result;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    LOG(DEBUG) << "sta_beacon_11k_request() - vap_iface_name: " << vap_iface_name
+               << " sta_mac: " << tlvf::mac_to_string(req.sta_mac.oct)
+               << " bssid: " << tlvf::mac_to_string(req.bssid.oct)
+               << " op_class: " << uint8_t(req.op_class) << " channel: " << uint8_t(req.channel)
+               << " ssid: " << std::string((const char *)req.ssid);
+
     args.add_child("mac", tlvf::mac_to_string(req.sta_mac.oct));
     args.add_child("bssid", tlvf::mac_to_string(req.bssid.oct));
     args.add_child("class", uint8_t(req.op_class));
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
+    LOG(DEBUG) << "sta_beacon_11k_request() - wifi_ap_path: " << wifi_ap_path;
     bool ret = m_ambiorix_cl.call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
     if (!ret) {
