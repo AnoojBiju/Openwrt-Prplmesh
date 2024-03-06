@@ -118,6 +118,7 @@ void AgentDB::erase_client(const sMacAddr &client_mac, sMacAddr bssid)
 bool AgentDB::get_mac_by_ssid(const sMacAddr &ruid, const std::string &ssid, sMacAddr &value)
 {
     value      = net::network_utils::ZERO_MAC;
+    auto db    = AgentDB::get();
     auto radio = get_radio_by_mac(ruid, AgentDB::eMacType::RADIO);
     if (!radio) {
         LOG(ERROR) << "No radio with ruid '" << ruid << "' found!";
@@ -129,6 +130,11 @@ bool AgentDB::get_mac_by_ssid(const sMacAddr &ruid, const std::string &ssid, sMa
             value = bssid.mac;
             return true;
         }
+    }
+    if (db->device_conf.certification_mode) {
+        LOG(ERROR) << "SSID " << ssid << " not found on radio " << ruid;
+        value = radio->front.bssids[0].mac;
+        return true;
     }
     return false;
 }
