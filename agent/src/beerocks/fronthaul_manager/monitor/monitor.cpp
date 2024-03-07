@@ -1482,6 +1482,37 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl_request.new_ch_center_freq_seg_1 = request->params().new_ch_center_freq_seg_1;
         bwl_request.reporting_detail         = request->params().reporting_detail;
 
+        LOG(DEBUG) << "ACTION_MONITOR_CLIENT_BEACON_REQUEST:" << std::endl
+                   << std::endl
+                   << "measurement_mode: " << (int)bwl_request.measurement_mode << std::endl
+                   << "channel: " << (int)bwl_request.channel << std::endl
+                   << "op_class: " << (int)bwl_request.op_class << std::endl
+                   << "repeats: " << (int)bwl_request.repeats << std::endl
+                   << "rand_ival: " << (int)bwl_request.rand_ival << std::endl
+                   << "duration: " << (int)bwl_request.duration << std::endl
+                   << "bssid: " << tlvf::mac_from_array(bwl_request.bssid.oct) << std::endl
+                   << "parallel: " << (int)bwl_request.parallel << std::endl
+                   << "enable: " << (int)bwl_request.enable << std::endl
+                   << "report: " << (int)bwl_request.report << std::endl
+                   << "mandatory_duration: "
+                   << (int)bwl_request.mandatory_duration
+                   //Optional:
+                   << std::endl
+                   << "use_optional_ssid: " << (int)bwl_request.use_optional_ssid << std::endl
+                   << "ssid: " << (const char *)bwl_request.ssid << std::endl
+                   << "use_optional_ap_ch_report: " << (int)bwl_request.use_optional_ap_ch_report
+                   << std::endl
+                   << "ap_ch_report: " << (int)bwl_request.ap_ch_report[0] << std::endl
+                   << "use_optional_req_elements: " << (int)bwl_request.use_optional_req_elements
+                   << std::endl
+                   << "req_elements: " << (int)bwl_request.req_elements[0] << std::endl
+                   << "use_optional_wide_band_ch_switch: "
+                   << (int)bwl_request.use_optional_wide_band_ch_switch << std::endl
+                   << "new_ch_width: " << (int)bwl_request.new_ch_width << std::endl
+                   << "new_ch_center_freq_seg_0: " << (int)bwl_request.new_ch_center_freq_seg_0
+                   << std::endl
+                   << "new_ch_center_freq_seg_1: " << (int)bwl_request.new_ch_center_freq_seg_1;
+
         mon_wlan_hal->sta_beacon_11k_request(vap_node->get_iface(), bwl_request, dialog_token);
 
         sEvent11k event_11k = {tlvf::mac_to_string(request->params().sta_mac), dialog_token,
