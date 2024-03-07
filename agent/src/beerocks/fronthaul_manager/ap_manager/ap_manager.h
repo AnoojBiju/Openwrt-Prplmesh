@@ -283,7 +283,11 @@ private:
     void csa_notification_timer_elapsed(
         std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START>
             request);
-    std::atomic<bool> csa_notification_timer_on{false};
+    int csa_notification_timer = beerocks::net::FileDescriptor::invalid_descriptor;
+    bool csa_notification_timer_on() const
+    {
+        return csa_notification_timer != beerocks::net::FileDescriptor::invalid_descriptor;
+    }
 
     /**
      * Factory to create CMDU client instances connected to CMDU server running in slave.
