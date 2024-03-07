@@ -43,7 +43,7 @@ if (NOT BUILD_DATE)
 endif()
 
 if (NOT PRPLMESH_VERSION)
-    set(prplmesh_VERSION "4.2.2")
+    set(prplmesh_VERSION "4.2.3")
 else()
     set(prplmesh_VERSION ${PRPLMESH_VERSION})
 endif()
