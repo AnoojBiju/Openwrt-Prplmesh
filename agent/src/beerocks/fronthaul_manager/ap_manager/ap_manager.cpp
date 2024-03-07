@@ -1374,11 +1374,11 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth) ==
                     request->cs_params().bandwidth) {
                 LOG(DEBUG) << "Setting tx power without channel switch";
-                if (!csa_notification_timer_on) {
-                    // If csa_notification_timer_on is enabled, a color switch event (BSS Color) is going on
+                if (!csa_notification_timer_on()) {
+                    // If csa_notification_timer is enabled, a color switch event (BSS Color) is going on
                     // and the CSA which is required to be sent here will be handled when the timer elapses.
                     LOG(DEBUG)
-                        << "Sending CSA notification since csa_notification_timer_on is disabled";
+                        << "Sending CSA notification since csa_notification_timer is disabled";
                     auto notification = message_com::create_vs_message<
                         beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
                     if (!notification) {
@@ -2237,8 +2237,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             acs_completed_vap_update = true;
 
             send_cmdu(cmdu_tx);
-        } else if (!csa_notification_timer_on) {
-            LOG(DEBUG) << "csa_notification_timer_on isn't enabled. CSA notification can be sent";
+        } else if (!csa_notification_timer_on()) {
+            LOG(DEBUG) << "csa_notification_timer isn't enabled. CSA notification can be sent";
             auto notification = message_com::create_vs_message<
                 beerocks_message::cACTION_APMANAGER_HOSTAP_CSA_NOTIFICATION>(cmdu_tx);
             if (!notification) {
@@ -3420,15 +3420,10 @@ void ApManager::handle_vbss_security_request(ieee1905_1::CmduMessageRx &cmdu_rx)
 void ApManager::csa_notification_timer_elapsed(
     std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
 {
-    if (!csa_notification_timer_on) {
-        // The timer elapsed, but CSA notification is no longer required
-        return;
-    }
-
     struct OnReturn {
-        std::atomic<bool> &csa_notification_timer_on;
-        ~OnReturn() { csa_notification_timer_on = false; }
-    } on_return{csa_notification_timer_on};
+        int &csa_notification_timer;
+        ~OnReturn() { csa_notification_timer = beerocks::net::FileDescriptor::invalid_descriptor; }
+    } on_return{csa_notification_timer};
 
     uint8_t m_tx_buffer[beerocks::message::MESSAGE_BUFFER_LENGTH];
     ieee1905_1::CmduMessageTx cmdu_tx(m_tx_buffer, sizeof(m_tx_buffer));
@@ -3465,14 +3460,12 @@ void ApManager::csa_notification_timer_elapsed(
 void ApManager::start_csa_notification_timer(
     std::shared_ptr<beerocks_message::cACTION_APMANAGER_HOSTAP_CHANNEL_SWITCH_ACS_START> request)
 {
-    // Set a variable to indicate the presence of an ongoing timer for CSA notification
-    csa_notification_timer_on = true;
-
+    using namespace std::chrono_literals;
     // Start a timer for approximately 5 seconds (timer should be configurable based on the CSA count).
     // When the timer elapses, the "csa_notification_timer_elapsed" function will be called
-    std::thread([this, request]() {
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        csa_notification_timer_elapsed(std::move(request));
-    })
-        .detach();
+    csa_notification_timer = m_timer_manager->add_timer(
+        "csa_notification", 5s, 0s, [this, request = std::move(request)](int, auto &) mutable {
+            csa_notification_timer_elapsed(std::move(request));
+            return true;
+        });
 }
