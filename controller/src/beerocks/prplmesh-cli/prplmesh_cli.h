@@ -17,6 +17,10 @@
 #define AMBIORIX_BUS_URI "ubus:"
 #endif // AMBIORIX_BUS_URI
 
+#ifndef BRIDGE_IFACE
+#define BRIDGE_IFACE "br-lan"
+#endif //BRIDGE_IFACE
+
 #include <map>
 #include <string>
 #include <vector>
