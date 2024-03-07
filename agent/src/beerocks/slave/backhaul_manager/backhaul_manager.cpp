@@ -2034,6 +2034,7 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             if (db->device_conf.local_controller && !db->device_conf.local_gw) {
                 FSM_MOVE_STATE(CONNECTED);
             } else {
+                send_slaves_enable();
                 FSM_MOVE_STATE(OPERATIONAL);
             }
         }
