@@ -33,6 +33,51 @@ namespace whm {
 /////////////////////////// Local Module Functions ///////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
+static ap_wlan_hal::Event wpaCtrl_to_bwl_event(const std::string &opcode)
+{
+    if (opcode == "DFS-CAC-START") {
+        return ap_wlan_hal::Event::DFS_CAC_Started;
+    } else if (opcode == "DFS-CAC-COMPLETED") {
+        return ap_wlan_hal::Event::DFS_CAC_Completed;
+    } else if (opcode == "DFS-NOP-FINISHED") {
+        return ap_wlan_hal::Event::DFS_NOP_Finished;
+    } else if (opcode == "CTRL-EVENT-EAP-FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure;
+    } else if (opcode == "CTRL-EVENT-EAP-FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Failure2;
+    } else if (opcode == "CTRL-EVENT-EAP-TIMEOUT-FAILURE") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure;
+    } else if (opcode == "CTRL-EVENT-EAP-TIMEOUT-FAILURE2") {
+        return ap_wlan_hal::Event::WPA_Event_EAP_Timeout_Failure2;
+    } else if (opcode == "CTRL-EVENT-SAE-UNKNOWN-PASSWORD-IDENTIFIER") {
+        return ap_wlan_hal::Event::WPA_Event_SAE_Unknown_Password_Identifier;
+    } else if (opcode == "AP-STA-POSSIBLE-PSK-MISMATCH") {
+        return ap_wlan_hal::Event::AP_Sta_Possible_Psk_Mismatch;
+    }
+
+    return ap_wlan_hal::Event::Invalid;
+}
+
+static uint8_t wpaCtrl_bw_to_beerocks_bw(const uint8_t width)
+{
+    std::map<uint8_t, beerocks::eWiFiBandwidth> bandwidths{
+        {0 /*CHAN_WIDTH_20_NOHT*/, beerocks::BANDWIDTH_20},
+        {1 /*CHAN_WIDTH_20     */, beerocks::BANDWIDTH_20},
+        {2 /*CHAN_WIDTH_40     */, beerocks::BANDWIDTH_40},
+        {3 /*CHAN_WIDTH_80     */, beerocks::BANDWIDTH_80},
+        {4 /*CHAN_WIDTH_80P80  */, beerocks::BANDWIDTH_80_80},
+        {5 /*CHAN_WIDTH_160    */, beerocks::BANDWIDTH_160},
+    };
+
+    auto it = bandwidths.find(width);
+    if (it == bandwidths.end()) {
+        LOG(ERROR) << "Invalid bandwidth value: " << width;
+        return beerocks::BANDWIDTH_UNKNOWN;
+    }
+
+    return it->second;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// Implementation ///////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1165,6 +1210,190 @@ bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);
     }
+    return true;
+}
+
+bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+{
+    std::string event_str;
+    if (!event_data.read_child<>(event_str, "eventData") || event_str.empty()) {
+        LOG(WARNING) << "Unable to retrieve wpaCtrl event data from pwhm notification";
+        return false;
+    }
+    LOG(DEBUG) << "wpaCtrl event: " << event_str;
+
+    std::string interface;
+    if (!event_data.read_child<>(interface, "ifName") || interface.empty()) {
+        LOG(WARNING) << "Unable to retrieve ifName from pwhm notification";
+        return false;
+    }
+    LOG(DEBUG) << "interface: " << interface;
+
+    bwl::parsed_line_t parsed_obj;
+    parse_event(event_str, parsed_obj);
+
+    std::string opcode;
+    if (!(parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_OPCODE) != parsed_obj.end() &&
+          !(opcode = parsed_obj[bwl::EVENT_KEYLESS_PARAM_OPCODE]).empty())) {
+        return false;
+    }
+
+    auto event = wpaCtrl_to_bwl_event(opcode);
+
+    switch (event) {
+
+    case Event::DFS_CAC_Started: {
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION));
+
+        // Channel
+        msg->params.channel = beerocks::string_utils::stoi(parsed_obj["chan"]);
+
+        // Secondary Channel
+        std::string tmp_string = parsed_obj["sec_chan"];
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        msg->params.secondary_channel = beerocks::string_utils::stoi(tmp_string);
+
+        // Bandwidth
+        tmp_string = parsed_obj["width"];
+        beerocks::string_utils::rtrim(tmp_string, ",");
+        msg->params.bandwidth = beerocks::eWiFiBandwidth(
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(tmp_string)));
+
+        // CAC Duration
+        tmp_string = parsed_obj["cac_time"];
+        beerocks::string_utils::rtrim(tmp_string, "s");
+        msg->params.cac_duration_sec = beerocks::string_utils::stoi(tmp_string);
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_CAC_Started, msg_buff);
+        break;
+    }
+    case Event::DFS_CAC_Completed: {
+        if (!get_radio_info().is_5ghz) {
+            LOG(WARNING) << "interface: " << interface << " not 5GHz radio!";
+            return true;
+        }
+
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sACTION_APMANAGER_HOSTAP_DFS_CAC_COMPLETED_NOTIFICATION));
+
+        // CAC Status
+        std::string success = parsed_obj["cac_status"];
+        if (success.empty()) {
+            // Some wpaCtrl_events still received with "success" parameter and we should support it as well
+            success = parsed_obj["success"];
+            if (success.empty()) {
+                LOG(ERROR) << "Failed reading cac finished success parameter!";
+                return false;
+            }
+        }
+        msg->params.success = beerocks::string_utils::stoi(success);
+
+        // Frequency
+        msg->params.frequency = beerocks::string_utils::stoi(parsed_obj["freq"]);
+
+        // Center frequency 1
+        msg->params.center_frequency1 = beerocks::string_utils::stoi(parsed_obj["cf1"]);
+
+        // Center frequency 2
+        msg->params.center_frequency2 = beerocks::string_utils::stoi(parsed_obj["cf2"]);
+
+        // Channel
+        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+        // Timeout
+        std::string timeout = parsed_obj["timeout"];
+        if (!timeout.empty()) {
+            msg->params.timeout = beerocks::string_utils::stoi(timeout);
+        }
+
+        // Bandwidth
+        msg->params.bandwidth =
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(parsed_obj["chan_width"]));
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_CAC_Completed, msg_buff);
+        break;
+    }
+    case Event::DFS_NOP_Finished: {
+        auto msg_buff =
+            ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+        auto msg = reinterpret_cast<sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(
+            msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0,
+               sizeof(sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION));
+
+        // Frequency
+        msg->params.frequency = beerocks::string_utils::stoi(parsed_obj["freq"]);
+
+        // Channel
+        msg->params.channel = son::wireless_utils::freq_to_channel(msg->params.frequency);
+
+        // Bandwidth
+        msg->params.bandwidth =
+            wpaCtrl_bw_to_beerocks_bw(beerocks::string_utils::stoi(parsed_obj["chan_width"]));
+
+        // Center frequency
+        msg->params.vht_center_frequency = beerocks::string_utils::stoi(parsed_obj["cf1"]);
+
+        // Add the message to the queue
+        event_queue_push(Event::DFS_NOP_Finished, msg_buff);
+        break;
+    }
+    case Event::WPA_Event_EAP_Failure:
+    case Event::WPA_Event_EAP_Failure2:
+    case Event::WPA_Event_EAP_Timeout_Failure:
+    case Event::WPA_Event_EAP_Timeout_Failure2:
+    case Event::WPA_Event_SAE_Unknown_Password_Identifier:
+    case Event::AP_Sta_Possible_Psk_Mismatch: {
+        auto vap_id    = get_vap_id_with_bss(interface);
+        auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
+        if ((vap_id < 0) && (iface_ids.vap_id != beerocks::IFACE_RADIO_ID)) {
+            LOG(DEBUG) << "Unknown vap_id " << vap_id;
+        }
+
+        LOG(DEBUG) << "STA Connection Failure";
+        auto msg_buff = ALLOC_SMART_BUFFER(sizeof(sStaConnectionFail));
+        auto msg      = reinterpret_cast<sStaConnectionFail *>(msg_buff.get());
+        LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+        // Initialize the message
+        memset(msg_buff.get(), 0, sizeof(sStaConnectionFail));
+
+        // STA Mac Address
+        msg->sta_mac = tlvf::mac_from_string(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
+        LOG(DEBUG) << "STA connection failure: offending Sta MAC: " << msg->sta_mac;
+
+        // BSSID
+        msg->bssid = tlvf::mac_from_string(m_radio_info.available_vaps[vap_id].mac);
+        LOG(DEBUG) << "STA connection failure: interface BSSID: " << msg->bssid;
+
+        // Add the message to the queue
+        event_queue_push(event, msg_buff);
+        break;
+    }
+    // Unhandled events
+    default:
+        LOG(ERROR) << "Unhandled event received: " << int(event);
+        break;
+    }
+
     return true;
 }
 

@@ -50,6 +50,22 @@ base_wlan_hal_whm::~base_wlan_hal_whm() { base_wlan_hal_whm::detach(); }
 
 void base_wlan_hal_whm::subscribe_to_radio_events()
 {
+    // subscribe to radio wpaCtrlEvents notifications
+    auto wpaCtrl_Event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    wpaCtrl_Event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
+    wpaCtrl_Event_handler->callback_fn = [this](AmbiorixVariant &event_data,
+                                                void *context) -> void {
+        std::string data;
+        if (!event_data || !event_data.read_child(data, "eventData")) {
+            return;
+        }
+        process_wpaCtrl_events(event_data);
+    };
+    std::string wpaCtrl_filter =
+        "(path matches '" + m_radio_path + "$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+
     // subscribe to the WiFi.Radio.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
     event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
@@ -129,7 +145,24 @@ void base_wlan_hal_whm::subscribe_to_radio_channel_change_events()
 
 void base_wlan_hal_whm::subscribe_to_ap_events()
 {
-    std::string wifi_ap_path   = wbapi_utils::search_path_ap();
+    std::string wifi_ap_path = wbapi_utils::search_path_ap();
+    // subscribe to accesspoint wpaCtrlEvents notifications
+    auto wpaCtrl_Event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    wpaCtrl_Event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
+    wpaCtrl_Event_handler->callback_fn = [this](AmbiorixVariant &event_data,
+                                                void *context) -> void {
+        std::string data;
+        if (!event_data || !event_data.read_child(data, "eventData")) {
+            return;
+        }
+        process_wpaCtrl_events(event_data);
+    };
+    std::string wpaCtrl_filter = "(path matches '" + wifi_ap_path +
+                                 "[0-9]+.$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(wifi_ap_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+
+    // subscribe to the WiFi.Accesspoint.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
     event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
@@ -323,6 +356,11 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
 }
 
 bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
+bool base_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+{
+    return true;
+}
 
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 

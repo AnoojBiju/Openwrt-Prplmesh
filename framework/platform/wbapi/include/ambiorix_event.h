@@ -23,6 +23,7 @@ constexpr char AMX_CL_WPS_PAIRING_DONE[]     = "pairingDone";
 constexpr char AMX_CL_SCAN_COMPLETE_EVT[]    = "ScanComplete";
 constexpr char AMX_CL_BSS_TM_RESPONSE_EVT[]  = "BSS-TM-RESP";
 constexpr char AMX_CL_CHANNEL_CHANGE_EVT[]   = "Channel change event";
+constexpr char AMX_CL_WPA_CTRL_EVT[]         = "wpaCtrlEvents";
 
 namespace beerocks {
 namespace wbapi {
