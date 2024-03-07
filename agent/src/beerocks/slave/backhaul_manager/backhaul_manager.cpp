@@ -2029,13 +2029,8 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             FSM_MOVE_STATE(CONNECTED);
         } else if (FSM_IS_IN_STATE(WIRELESS_WAIT_FOR_RECONNECT)) {
             LOG(DEBUG) << "reconnected successfully, continuing";
-
-            // IRE running controller
-            if (db->device_conf.local_controller && !db->device_conf.local_gw) {
+		send_slaves_enable();
                 FSM_MOVE_STATE(CONNECTED);
-            } else {
-                FSM_MOVE_STATE(OPERATIONAL);
-            }
         }
     } break;
 
