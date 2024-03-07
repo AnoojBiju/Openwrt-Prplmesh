@@ -2381,9 +2381,9 @@ public:
     /**
      * @brief Clears CACCapability data model object.
      *
-     * Remove all indexes in CACCapability object for given Radio UID.
+     * Remove all indexes in CACCapability.CACMethod object for given Radio UID.
      *
-     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability."
+     * Data model path : "Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.CACCapability.CACMethod.{i}."
      *
      * @param[in] radio Radio DB object.
      * @return True on success, otherwise false.
