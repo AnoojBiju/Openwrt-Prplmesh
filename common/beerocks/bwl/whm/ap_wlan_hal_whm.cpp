@@ -100,6 +100,7 @@ ap_wlan_hal_whm::ap_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t c
     subscribe_to_ap_events();
     subscribe_to_sta_events();
     subscribe_to_ap_bss_tm_events();
+    subscribe_to_ap_mgmt_frame_events();
 }
 
 ap_wlan_hal_whm::~ap_wlan_hal_whm() {}
@@ -145,6 +146,39 @@ void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
                          "[0-9]+.$')"
                          " && (notification == '" +
                          AMX_CL_BSS_TM_RESPONSE_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
+}
+
+void ap_wlan_hal_whm::subscribe_to_ap_mgmt_frame_events()
+{
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_MGMT_ACT_FRAME_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string ap_path;
+        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+            return;
+        }
+        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
+        auto &vapsExtInfo    = hal->m_vapsExtInfo;
+        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
+                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
+                                       return element.second.path == ap_path;
+                                   });
+        if (vap_it == vapsExtInfo.end()) {
+            LOG(DEBUG) << "vap_it not found";
+            return;
+        }
+        LOG(DEBUG) << "event from iface " << vap_it->first;
+
+        hal->process_ap_bss_event(vap_it->first, &event_data);
+    };
+    event_handler->context = this;
+
+    std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
+                         "[0-9]+.$')"
+                         " && (notification == '" +
+                         AMX_CL_MGMT_ACT_FRAME_EVT + "')";
 
     m_ambiorix_cl.subscribe_to_object_event(wbapi_utils::search_path_ap(), event_handler, filter);
 }
@@ -1209,6 +1243,19 @@ bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
 
         // Add the message to the queue
         event_queue_push(Event::BSS_TM_Response, msg_buff);
+    } else if (name_notification == AMX_CL_MGMT_ACT_FRAME_EVT) {
+
+        std::string frame_body_str;
+        if (!event_data->read_child<>(frame_body_str, "frame") || frame_body_str.empty()) {
+            LOG(WARNING) << "Unable to retrieve MGMT Frame from pwhm notification";
+        }
+
+        auto management_frame = create_mgmt_frame_notification(frame_body_str.c_str());
+        if (management_frame) {
+            event_queue_push(Event::MGMT_Frame, management_frame);
+        } else {
+            LOG(ERROR) << "creage_mgmt_frame_notification failed";
+        }
     }
     return true;
 }
