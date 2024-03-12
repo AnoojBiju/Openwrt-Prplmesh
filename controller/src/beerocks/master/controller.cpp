@@ -218,7 +218,6 @@ bool Controller::start()
         database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
         database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
-        database.set_node_manufacturer(eth_switch_mac_str, agent->device_info.manufacturer);
     }
 
     // Create a timer to run internal tasks periodically
@@ -2508,8 +2507,6 @@ bool Controller::handle_intel_slave_join(
         database.set_node_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
-
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
         database.set_node_name(backhaul_mac, slave_name + "_BH");
@@ -2525,7 +2522,6 @@ bool Controller::handle_intel_slave_join(
         database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_node_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
-        database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
         //run locating task on ire
         if (!database.is_node_wireless(backhaul_mac)) {
@@ -2883,14 +2879,12 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
     database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
     database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
-    database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
     // An AP Capability Report will always be received after the M1, and thus
     // this OS Version value will be overriden by the more complete
     // SoftwareVersion value from the Device Inventory TLV if present
