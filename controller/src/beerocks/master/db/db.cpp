@@ -6772,49 +6772,34 @@ bool db::set_estimated_service_param(const sMacAddr &bssid, const std::string &p
 bool db::add_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                        uint16_t media_type, const std::string &status, const std::string &name)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->add_interface(interface_mac);
-    if (!iface) {
-        LOG(ERROR) << "Failed to add interface with mac: " << interface_mac;
-        return false;
-    }
-
     std::shared_ptr<Agent> agent = m_agents.get(device_mac);
-    if (agent) {
-        agent->interfaces.add(interface_mac, name, (ieee1905_1::eMediaType)media_type);
+    if (!agent) {
+        LOG(ERROR) << "No Agent found with mac " << device_mac;
+        return false;
     }
+
+    agent->interfaces.add(interface_mac, name, (ieee1905_1::eMediaType)media_type);
 
     return dm_add_interface_element(device_mac, interface_mac, media_type, status, name);
 }
 
-std::shared_ptr<prplmesh::controller::db::Interface>
-db::get_interface_node(const sMacAddr &device_mac, const sMacAddr &interface_mac)
+std::shared_ptr<Agent::sInterface> db::get_interface_on_agent(const sMacAddr &device_mac,
+                                                              const sMacAddr &interface_mac)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+    std::shared_ptr<Agent> agent = get_agent(device_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get agent with mac: " << device_mac;
         return nullptr;
     }
 
-    return device->get_interface(interface_mac);
+    return agent->interfaces.get(interface_mac);
 }
 
 bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                                   uint16_t media_type, const std::string &status,
                                   const std::string &name)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->get_interface(interface_mac);
+    std::shared_ptr<Agent::sInterface> iface = get_interface_on_agent(device_mac, interface_mac);
     if (!iface) {
         LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
         return false;
@@ -6822,26 +6807,26 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
 
     // Empty data path refers for newly created object, so add instance to data model.
     if (iface->m_dm_path.empty()) {
-        // Prepare path to the Interface object, like Device.WiFi.DataElements.Network.Device.{i}.Interface
-        auto agent = m_agents.get(device_mac);
+
+        // Disabled NBAPI error prevention
+        std::shared_ptr<Agent> agent = get_agent(device_mac);
         if (!agent) {
-            LOG(ERROR) << "No agent found for al_mac " << device_mac;
             return false;
         }
+        if (agent->dm_path.empty()) {
+            return true;
+        }
+
+        // Prepare path to the Interface object, like Device.WiFi.DataElements.Network.Device.{i}.Interface
         auto interface_path = agent->dm_path + ".Interface";
 
-        auto interface_instance = m_ambiorix_datamodel->add_instance(interface_path);
-        if (interface_instance.empty()) {
+        iface->m_dm_path = m_ambiorix_datamodel->add_instance(interface_path);
+        if (iface->m_dm_path.empty()) {
             LOG(ERROR) << "Failed to add " << interface_path
                        << ". Interface MAC: " << interface_mac;
             return false;
         }
 
-        iface->m_dm_path = interface_instance;
-        auto interface   = agent->interfaces.get(interface_mac);
-        if (interface) {
-            interface->m_dm_path = interface_instance;
-        }
         // Prepare path to the Interface object MACAddress, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MACAddress
         m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress", interface_mac);
     }
@@ -6883,14 +6868,7 @@ std::shared_ptr<beerocks::nbapi::Ambiorix> db::get_ambiorix_obj() { return m_amb
 
 bool db::remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_mac)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
     dm_remove_interface_element(device_mac, interface_mac);
-    device->remove_interface(interface_mac);
 
     auto agent = m_agents.get(device_mac);
     if (agent) {
@@ -6902,13 +6880,7 @@ bool db::remove_interface(const sMacAddr &device_mac, const sMacAddr &interface_
 
 bool db::dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr &interface_mac)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->get_interface(interface_mac);
+    std::shared_ptr<Agent::sInterface> iface = get_interface_on_agent(device_mac, interface_mac);
     if (!iface) {
         LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
         return false;
@@ -6931,13 +6903,20 @@ bool db::dm_remove_interface_element(const sMacAddr &device_mac, const sMacAddr 
 bool db::dm_update_interface_elements(const sMacAddr &device_mac,
                                       const std::vector<sMacAddr> &interface_macs)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+    std::shared_ptr<Agent> agent = get_agent(device_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get agent node with mac: " << device_mac;
         return false;
     }
 
-    std::vector<sMacAddr> erase_mac_list = device->get_unused_interfaces(interface_macs);
+    std::vector<sMacAddr> erase_mac_list;
+    for (const auto &interface : agent->interfaces) {
+        erase_mac_list.emplace_back(interface.first);
+    }
+    for (const auto &interface : interface_macs) {
+        erase_mac_list.erase(std::remove(erase_mac_list.begin(), erase_mac_list.end(), interface),
+                             erase_mac_list.end());
+    }
     for (const auto &iface_mac : erase_mac_list) {
         remove_interface(device_mac, iface_mac);
     }
@@ -6947,13 +6926,13 @@ bool db::dm_update_interface_elements(const sMacAddr &device_mac,
 bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                                       uint64_t packets_sent, uint32_t errors_sent)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+    std::shared_ptr<Agent> agent = get_agent(device_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get Agent with mac: " << device_mac;
         return false;
     }
 
-    auto iface = device->get_interface(interface_mac);
+    std::shared_ptr<Agent::sInterface> iface = agent->interfaces.get(interface_mac);
     if (!iface) {
         LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
         return false;
@@ -6984,13 +6963,13 @@ bool db::dm_update_interface_tx_stats(const sMacAddr &device_mac, const sMacAddr
 bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                                       uint64_t packets_received, uint32_t errors_received)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
+    std::shared_ptr<Agent> agent = get_agent(device_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get Agent with mac: " << device_mac;
         return false;
     }
 
-    auto iface = device->get_interface(interface_mac);
+    std::shared_ptr<Agent::sInterface> iface = agent->interfaces.get(interface_mac);
     if (!iface) {
         LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
         return false;
@@ -7021,40 +7000,26 @@ bool db::dm_update_interface_rx_stats(const sMacAddr &device_mac, const sMacAddr
 bool db::add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
                       const sMacAddr &neighbor_mac, bool is_IEEE1905)
 {
-    auto device = get_node(device_mac);
-    if (!device) {
-        LOG(ERROR) << "Failed to get device node with mac: " << device_mac;
-        return false;
-    }
-
-    auto iface = device->get_interface(interface_mac);
-    if (!iface) {
+    std::shared_ptr<Agent::sInterface> interface =
+        get_interface_on_agent(device_mac, interface_mac);
+    if (!interface) {
         LOG(ERROR) << "Failed to get interface with mac: " << interface_mac;
         return false;
     }
 
-    auto neighbor = device->add_neighbor(interface_mac, neighbor_mac, is_IEEE1905);
+    std::shared_ptr<Agent::sNeighbor> neighbor =
+        interface->m_neighbors.add(neighbor_mac, is_IEEE1905);
     if (!neighbor) {
         LOG(ERROR) << "Failed to add neighbor with mac: " << neighbor_mac;
         return false;
     }
 
-    auto agent = m_agents.get(device_mac);
-    if (agent) {
-        auto interface = agent->interfaces.get(interface_mac);
-        if (interface) {
-            interface->m_neighbors.add(neighbor_mac, is_IEEE1905);
-        }
-    }
-
-    return dm_add_interface_neighbor(iface, neighbor);
+    return dm_add_interface_neighbor(interface, neighbor);
 }
 
-bool db::dm_add_interface_neighbor(
-    const std::shared_ptr<prplmesh::controller::db::Interface> &interface,
-    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor)
+bool db::dm_add_interface_neighbor(const std::shared_ptr<Agent::sInterface> &interface,
+                                   std::shared_ptr<Agent::sNeighbor> &neighbor)
 {
-
     if (!interface) {
         LOG(ERROR) << "Failed because of nullptr interface.";
         return false;
@@ -7083,16 +7048,6 @@ bool db::dm_add_interface_neighbor(
         }
 
         neighbor->dm_path = neighbor_instance;
-        auto agent        = m_agents.get(tlvf::mac_from_string(interface->m_node.mac));
-        if (agent) {
-            auto agent_interface = agent->interfaces.get(interface->m_mac);
-            if (agent_interface) {
-                auto neighbor_device = agent_interface->m_neighbors.get(neighbor->mac);
-                if (neighbor_device) {
-                    neighbor_device->dm_path = neighbor_instance;
-                }
-            }
-        }
     }
 
     // Set value for the path as Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.Neighbor.{i}.ID

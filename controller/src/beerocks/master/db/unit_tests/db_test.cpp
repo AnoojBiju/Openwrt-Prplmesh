@@ -40,6 +40,8 @@ constexpr auto g_client_mac                 = "46:55:66:77:00:31";
 constexpr auto g_vap_id_1                   = 1;
 constexpr auto g_bssid_1                    = "46:55:66:77:00:03";
 constexpr auto g_ssid_1                     = "dummy_ssid";
+constexpr auto g_interface_mac_1            = "46:55:66:77:00:41";
+constexpr auto g_interface_mac_2            = "46:55:66:77:00:42";
 const std::string g_device_path_multiapcaps = std::string(g_device_path) + ".1.MultiAPCapabilities";
 const std::string g_radio_path_1            = std::string(g_device_path) + ".1.Radio.1";
 const std::string g_radio_path_2            = std::string(g_device_path) + ".1.Radio.2";
@@ -49,6 +51,8 @@ const std::string g_radio_2_bss_path_1      = std::string(g_radio_path_2) + ".BS
 const std::string g_radio_2_bss_path_2      = std::string(g_radio_path_2) + ".BSS.2";
 const std::string g_sta_path_1              = std::string(g_radio_1_bss_path_1) + ".STA.1";
 const std::string g_assoc_event_path_1      = std::string(g_assoc_event_path) + ".1";
+const std::string g_interface_path_1        = std::string(g_device_path) + ".1.Interface.1";
+const std::string g_interface_path_2        = std::string(g_device_path) + ".1.Interface.2";
 
 class DbTest : public ::testing::Test {
 
@@ -252,6 +256,67 @@ protected:
                   m_db->get_station_data_model_path(tlvf::mac_from_string(g_client_mac)));
 
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(1));
+    }
+};
+
+class DbTestInterface1 : public ::DbTest {
+
+protected:
+    void SetUp() override
+    {
+        DbTest::SetUp();
+
+        // expectations for interface creation
+        EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Interface"))
+            .WillOnce(Return(std::string(g_interface_path_1)))
+            .WillOnce(Return(std::string(g_interface_path_2)));
+
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_interface_path_1), "MACAddress",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_interface_mac_1))))
+            .WillRepeatedly(Return(true));
+
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_interface_path_2), "MACAddress",
+                        Matcher<const sMacAddr &>(tlvf::mac_from_string(g_interface_mac_2))))
+            .WillRepeatedly(Return(true));
+
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_interface_path_1), "Status",
+                                     Matcher<const std::string &>(std::string("Up"))))
+            .WillOnce(Return(true));
+
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_interface_path_2), "Status",
+                                     Matcher<const std::string &>(std::string("Up"))))
+            .WillOnce(Return(true));
+
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_interface_path_1), "Name",
+                                     Matcher<const std::string &>(std::string("eth0"))))
+            .WillOnce(Return(true));
+        ;
+
+        EXPECT_CALL(*m_ambiorix, set(std::string(g_interface_path_2), "Name",
+                                     Matcher<const std::string &>(std::string("eth1"))))
+            .WillOnce(Return(true));
+        ;
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_interface_path_1), "MediaType",
+                        Matcher<const std::string &>(std::string("IEEE_802_3AB_GIGABIT_ETHERNET"))))
+            .WillOnce(Return(true));
+        ;
+
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_interface_path_2), "MediaType",
+                        Matcher<const std::string &>(std::string("IEEE_802_3AB_GIGABIT_ETHERNET"))))
+            .WillOnce(Return(true));
+        ;
+
+        //prepare scenario
+        EXPECT_TRUE(m_db->add_interface(
+            tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_interface_mac_1),
+            ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET, "Up", "eth0"));
+        EXPECT_TRUE(m_db->add_interface(
+            tlvf::mac_from_string(g_bridge_mac), tlvf::mac_from_string(g_interface_mac_2),
+            ieee1905_1::eMediaType::IEEE_802_3AB_GIGABIT_ETHERNET, "Up", "eth1"));
     }
 };
 
@@ -1094,6 +1159,28 @@ TEST_F(DbTestRadio1Sta1, test_dhcp_v6_lease_sta)
     //execute test
     EXPECT_TRUE(
         m_db->set_sta_dhcp_v6_lease(tlvf::mac_from_string(g_client_mac), host_name, ip_addr));
+}
+
+TEST_F(DbTestInterface1, test_interface_1_creation)
+{
+    EXPECT_TRUE(m_db->get_interface_on_agent(tlvf::mac_from_string(g_bridge_mac),
+                                             tlvf::mac_from_string(g_interface_mac_1)));
+
+    EXPECT_TRUE(m_db->get_interface_on_agent(tlvf::mac_from_string(g_bridge_mac),
+                                             tlvf::mac_from_string(g_interface_mac_2)));
+
+    // Remove Interface.1
+    std::vector<sMacAddr> remaining_interfaces = {tlvf::mac_from_string(g_interface_mac_2)};
+    EXPECT_CALL(*m_ambiorix, remove_instance(std::string(g_device_path) + ".1.Interface", 1))
+        .WillOnce(Return(true));
+    EXPECT_TRUE(m_db->dm_update_interface_elements(tlvf::mac_from_string(g_bridge_mac),
+                                                   remaining_interfaces));
+
+    EXPECT_TRUE(m_db->get_interface_on_agent(tlvf::mac_from_string(g_bridge_mac),
+                                             tlvf::mac_from_string(g_interface_mac_2)));
+
+    EXPECT_FALSE(m_db->get_interface_on_agent(tlvf::mac_from_string(g_bridge_mac),
+                                              tlvf::mac_from_string(g_interface_mac_1)));
 }
 
 } // namespace
