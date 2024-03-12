@@ -167,6 +167,14 @@ private:
                               const beerocks::wbapi::AmbiorixVariant *value);
 
     /**
+    * @brief Process event "RssiUpdate"
+    */
+    void process_rssi_eventing_event(const std::string &interface,
+                                     beerocks::wbapi::AmbiorixVariant *value) override;
+
+    std::unordered_set<std::string> m_unassociated_stations;
+
+    /**
      * @brief Process event "wpaCtrlEvents"
      */
     bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data) override;

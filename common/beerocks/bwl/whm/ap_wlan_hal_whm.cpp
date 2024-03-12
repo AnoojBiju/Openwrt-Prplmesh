@@ -576,7 +576,12 @@ bool ap_wlan_hal_whm::sta_unassoc_rssi_measurement(const std::string &mac, int c
                                                    int vht_center_frequency, int delay,
                                                    int window_size)
 {
-    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+
+    if (m_unassociated_stations.empty()) {
+        subscribe_to_rssi_eventing_events();
+    }
+    m_unassociated_stations.insert(mac);
+
     return true;
 }
 
@@ -1690,6 +1695,59 @@ bool ap_wlan_hal_whm::get_spatial_reuse_config(
               << " string_bss_color_bitmap: " << string_bss_color_bitmap
               << " string_partial_bssid_bitmap: " << string_partial_bssid_bitmap;
     return true;
+}
+
+void ap_wlan_hal_whm::process_rssi_eventing_event(const std::string &interface,
+                                                  beerocks::wbapi::AmbiorixVariant *updates)
+{
+    auto vap_id = get_vap_id_with_bss(interface);
+
+    if (updates == nullptr || updates->empty()) {
+        return;
+    }
+    auto updates_list = updates->read_children<AmbiorixVariantListSmartPtr>();
+    if (!updates_list) {
+        return;
+    }
+
+    // list of hash_tables
+    for (auto &update : *updates_list) { //update is a map
+        auto station_map = update.read_children<AmbiorixVariantMapSmartPtr>();
+        if (!station_map) {
+            continue;
+        }
+
+        auto real_map = *station_map;
+
+        std::string mac_address = real_map["MACAddress"];
+
+        if (m_unassociated_stations.find(mac_address) != m_unassociated_stations.end()) {
+
+            auto msg_buff =
+                ALLOC_SMART_BUFFER(sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
+            auto msg = reinterpret_cast<sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE *>(
+                msg_buff.get());
+            LOG_IF(!msg, FATAL) << "Memory allocation failed!";
+
+            // Initialize the message
+            memset(msg_buff.get(), 0,
+                   sizeof(sACTION_APMANAGER_CLIENT_RX_RSSI_MEASUREMENT_RESPONSE));
+
+            msg->params.rx_rssi = real_map["SignalStrength"];
+
+            msg->params.rx_snr     = beerocks::SNR_INVALID;
+            msg->params.result.mac = tlvf::mac_from_string(mac_address);
+            msg->params.vap_id     = vap_id;
+
+            event_queue_push(Event::STA_Unassoc_RSSI, msg_buff);
+
+            //Rssi consumed --> lets remove the unassociated station
+            m_unassociated_stations.erase(mac_address);
+        }
+    }
+    if (m_unassociated_stations.empty()) {
+        m_ambiorix_cl.unsubscribe_from_object_event(m_rssi_event_handler);
+    }
 }
 
 } // namespace whm
