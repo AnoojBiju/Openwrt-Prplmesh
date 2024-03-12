@@ -2625,7 +2625,7 @@ bool Controller::handle_intel_slave_join(
     }
 
     //reset/init radio stats when adding slave's radio node
-    database.clear_hostap_stats_info(bridge_mac, radio_mac);
+    database.clear_radio_stats_info(bridge_mac, radio_mac);
 
     auto radio = database.get_radio(bridge_mac, radio_mac);
     if (!radio) {
@@ -2646,7 +2646,7 @@ bool Controller::handle_intel_slave_join(
                                           is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                       : beerocks::IFACE_TYPE_BRIDGE);
     database.set_radio_iface_name(radio_mac, notification->hostap().iface_name);
-    database.set_hostap_iface_type(bridge_mac, radio_mac, hostap_iface_type);
+    database.set_radio_iface_type(bridge_mac, radio_mac, hostap_iface_type);
 
     database.set_radio_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_radio_ant_gain(radio_mac, notification->hostap().ant_gain);
@@ -2656,13 +2656,12 @@ bool Controller::handle_intel_slave_join(
 
     if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
         if (notification->low_pass_filter_on()) {
-            database.set_hostap_band_capability(bridge_mac, radio_mac, beerocks::LOW_SUBBAND_ONLY);
+            database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
         } else {
-            database.set_hostap_band_capability(bridge_mac, radio_mac, beerocks::BOTH_SUBBAND);
+            database.set_radio_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
         }
     } else {
-        database.set_hostap_band_capability(bridge_mac, radio_mac,
-                                            beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+        database.set_radio_band_capability(radio_mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     }
     autoconfig_wsc_parse_radio_caps(radio_mac, radio_caps);
 
@@ -2908,7 +2907,7 @@ bool Controller::handle_non_intel_slave_join(
     }
 
     //reset/init radio stats when adding slave's radio node
-    database.clear_hostap_stats_info(bridge_mac, radio_mac);
+    database.clear_radio_stats_info(bridge_mac, radio_mac);
 
     // TODO Assume no backhaul manager
 
@@ -2916,7 +2915,7 @@ bool Controller::handle_non_intel_slave_join(
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
     database.set_radio_iface_name(radio_mac, "N/A");
-    database.set_hostap_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+    database.set_radio_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
     // TODO number of antennas comes from HT/VHT capabilities (implicit from NxM)
     // TODO ant_gain and tx_power will not be set
@@ -2932,13 +2931,12 @@ bool Controller::handle_non_intel_slave_join(
     // TODO
     //        if (database.get_node_5ghz_support(radio_mac)) {
     //            if (notification->low_pass_filter_on()) {
-    //                database.set_hostap_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
+    //                database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
     //            } else {
-    //                database.set_hostap_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
+    //                database.set_radio_band_capability(radio_mac, beerocks::BOTH_SUBBAND);
     //            }
     //        } else {
-    database.set_hostap_band_capability(bridge_mac, radio_mac,
-                                        beerocks::SUBBAND_CAPABILITY_UNKNOWN);
+    database.set_radio_band_capability(radio_mac, beerocks::SUBBAND_CAPABILITY_UNKNOWN);
     //        }
 
     // update bml listeners
@@ -3699,7 +3697,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
         auto &ap_stats = std::get<1>(ap_stats_tuple);
-        database.set_hostap_stats_info(radio_mac, &ap_stats);
+        database.set_radio_stats_info(radio_mac, &ap_stats);
         break;
     }
     case beerocks_message::ACTION_CONTROL_HOSTAP_LOAD_MEASUREMENT_NOTIFICATION: {
@@ -3880,7 +3878,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        database.set_hostap_activity_mode(
+        database.set_radio_activity_mode(
             radio_mac, beerocks::eApActiveMode(notification->params().ap_activity_mode));
         if (notification->params().ap_activity_mode == beerocks::AP_IDLE_MODE) {
             LOG(DEBUG) << "CS_task,sending AP_ACTIVITY_IDLE_EVENT for mac " << radio_mac;

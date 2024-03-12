@@ -24,13 +24,6 @@
 #include <unordered_set>
 
 namespace son {
-typedef struct {
-    uint8_t channel;
-    uint8_t bandwidth;
-    int8_t channel_ext_above_secondary;
-    std::chrono::steady_clock::time_point csa_exit_timestamp;
-    std::chrono::steady_clock::time_point csa_enter_timestamp;
-} sWifiChannelRadarStats;
 
 typedef struct {
     std::string mac;
@@ -113,34 +106,7 @@ public:
 
     class radio {
     public:
-        beerocks::eIfaceType iface_type;
         uint8_t operating_class = 0;
-        std::string ssid;
-        beerocks::eRadioBandCapability capability = beerocks::SUBBAND_CAPABILITY_UNKNOWN;
-        bool on_dfs_reentry                       = false;
-        std::set<std::string> dfs_reentry_clients;
-        beerocks::eApActiveMode ap_activity_mode = beerocks::AP_ACTIVE_MODE;
-
-        std::list<sWifiChannelRadarStats> Radar_stats;
-
-        class ap_stats_params {
-        public:
-            int active_sta_count                 = 0;
-            uint32_t rx_packets                  = 0;
-            uint32_t tx_packets                  = 0;
-            uint32_t rx_bytes                    = 0;
-            uint32_t tx_bytes                    = 0;
-            uint32_t errors_sent                 = 0;
-            uint32_t errors_received             = 0;
-            uint32_t retrans_count               = 0;
-            int8_t noise                         = 0;
-            uint8_t channel_load_percent         = 0;
-            uint8_t total_client_tx_load_percent = 0;
-            uint8_t total_client_rx_load_percent = 0;
-            uint16_t stats_delta_ms              = 0;
-            std::chrono::steady_clock::time_point timestamp;
-        };
-        std::shared_ptr<ap_stats_params> stats_info = std::make_shared<ap_stats_params>();
         std::unordered_map<int8_t, sVapElement> vaps_info;
     };
     std::shared_ptr<radio> hostap = std::make_shared<radio>();

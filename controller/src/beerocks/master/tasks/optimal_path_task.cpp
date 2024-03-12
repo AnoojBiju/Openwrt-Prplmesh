@@ -2114,7 +2114,7 @@ bool optimal_path_task::is_hostap_on_cs_process(const std::string &hostap_mac)
         LOG(WARNING) << "Empty wifi channel";
     }
 
-    if (database.get_hostap_on_dfs_reentry(tlvf::mac_from_string(hostap_mac)) ||
+    if (database.get_radio_on_dfs_reentry(tlvf::mac_from_string(hostap_mac)) ||
         (wifi_channel.get_freq_type() == eFreqType::FREQ_5G && wifi_channel.is_dfs_channel() &&
          !database.get_radio_cac_completed(tlvf::mac_from_string(hostap_mac)))) {
         TASK_LOG(DEBUG) << "is_hostap_on_cs_process return true";
