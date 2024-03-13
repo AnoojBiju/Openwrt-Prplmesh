@@ -23,7 +23,15 @@
 
 namespace son {
 class db;
-}
+
+/**
+ * @brief Extended boolean parameter to support "not configured" value for configuration.
+ * For persistent data, it is important to differ between configured (true/false) to unconfigured value.
+ */
+enum class eTriStateBool : int8_t { NOT_CONFIGURED = -1, FALSE = 0, TRUE = 1 };
+
+std::ostream &operator<<(std::ostream &os, eTriStateBool value);
+} // namespace son
 
 namespace prplmesh {
 namespace controller {

@@ -92,8 +92,7 @@ private:
      * @return None.
      */
     static void print_link_metric_map(
-        std::unordered_map<sMacAddr,
-                           std::unordered_map<sMacAddr, son::node::link_metrics_data>> const
+        std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>> const
             &link_metric_data);
 };
 

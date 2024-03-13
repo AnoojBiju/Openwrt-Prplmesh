@@ -158,7 +158,7 @@ bool LinkMetricsTask::handle_cmdu_1905_link_metric_response(const sMacAddr &src_
 
     // Neighbor related new metric data. The link metric information is collected in this structure
     // to be stored in the database link_metric_data_map.
-    std::unordered_map<sMacAddr, son::node::link_metrics_data> new_link_metrics;
+    std::unordered_map<sMacAddr, son::db::link_metrics_data> new_link_metrics;
 
     // Interface related metric data. The link metric information is collected in this structure
     // per reporting device's interface, to be stored in the device interface stats.
@@ -455,7 +455,7 @@ bool LinkMetricsTask::handle_cmdu_1905_unassociated_station_link_metric_response
 }
 
 void LinkMetricsTask::print_link_metric_map(
-    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>> const
+    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>> const
         &link_metric_data)
 {
     LOG(DEBUG) << "Printing Link Metrics data map";
