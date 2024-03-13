@@ -508,6 +508,7 @@ public:
 
     // General set/get
     bool has_node(const sMacAddr &mac);
+    bool has_station(const sMacAddr &mac);
 
     bool add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac);
 
@@ -616,8 +617,8 @@ public:
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
-    add_node_station(const sMacAddr &al_mac, const sMacAddr &mac,
-                     const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    add_station(const sMacAddr &al_mac, const sMacAddr &mac,
+                const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
 
@@ -643,8 +644,8 @@ public:
 
     int get_radio_operating_class(const sMacAddr &mac);
 
-    bool set_node_vap_id(const std::string &mac, int8_t vap_id);
-    int8_t get_node_vap_id(const std::string &mac);
+    bool set_sta_vap_id(const std::string &mac, int8_t vap_id);
+    int8_t get_sta_vap_id(const std::string &mac);
 
     bool set_sta_beacon_measurement_support_level(
         const std::string &mac,
@@ -659,8 +660,8 @@ public:
 
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
-    bool set_node_handoff_flag(Station &station, bool handoff);
-    bool get_node_handoff_flag(const Station &station);
+    bool set_sta_handoff_flag(Station &station, bool handoff);
+    bool get_sta_handoff_flag(const Station &station);
 
     bool update_node_last_seen(const std::string &mac);
 
@@ -1155,12 +1156,12 @@ public:
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_current_capabilities(const std::string &mac);
+    get_sta_current_capabilities(const std::string &mac);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
-    bool set_station_capabilities(const std::string &client_mac,
-                                  const beerocks::message::sRadioCapabilities &sta_cap);
+    get_sta_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
+    bool set_sta_capabilities(const std::string &client_mac,
+                              const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
      * @brief Set ClientCapabilities values for Station and AssocEvent object
@@ -1207,9 +1208,9 @@ public:
     bool is_node_6ghz(const std::string &mac);
     bool is_node_5ghz(const std::string &mac);
     bool is_node_24ghz(const std::string &mac);
-    bool update_node_failed_6ghz_steer_attempt(const std::string &mac);
-    bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
-    bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
+    bool update_sta_failed_6ghz_steer_attempt(const std::string &mac);
+    bool update_sta_failed_5ghz_steer_attempt(const std::string &mac);
+    bool update_sta_failed_24ghz_steer_attempt(const std::string &mac);
 
     /**
      * @brief Checks if it's possible to initiate client steering.
@@ -1288,6 +1289,7 @@ public:
      */
     std::string get_node_data_model_path(const std::string &mac);
     std::string get_node_data_model_path(const sMacAddr &mac);
+    std::string get_sta_data_model_path(const std::string &mac);
 
     int8_t get_hostap_vap_id(const sMacAddr &mac);
 
@@ -1772,8 +1774,8 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
-                                  bool save_to_persistent_db = true);
+    bool set_sta_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
+                               bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's selected-bands.
@@ -1783,8 +1785,8 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_selected_bands(Station &client, int8_t selected_bands,
-                                   bool save_to_persistent_db = true);
+    bool set_sta_selected_bands(Station &client, int8_t selected_bands,
+                                bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's unfriendly status.
@@ -1881,8 +1883,8 @@ public:
      * @param reason_code Reason code of clients failed association/connection.
      * @param bssid String with left bss mac.
      */
-    bool notify_disconnection(const std::string &mac, const uint16_t reason_code,
-                              const std::string &bssid);
+    bool notify_sta_disconnection(const std::string &mac, const uint16_t reason_code,
+                                  const std::string &bssid);
 
     /**
      * @brief Update the node stats info
@@ -1892,14 +1894,14 @@ public:
      *
      * @return true on success, otherwise false.
      */
-    bool set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
+    bool set_sta_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
 
     /**
      * @brief Clear any existing node stats info
      *
      * @param[in] mac MAC address of the given node
      */
-    void clear_node_stats_info(const sMacAddr &mac);
+    void clear_sta_stats_info(const sMacAddr &mac);
 
     /**
      * @brief Set virtual AP metrics info
@@ -1923,17 +1925,17 @@ public:
     int get_radio_stats_measurement_duration(const sMacAddr &mac);
     std::chrono::steady_clock::time_point get_radio_stats_info_timestamp(const sMacAddr &mac);
 
-    uint32_t get_node_rx_bytes(const std::string &mac);
-    uint32_t get_node_tx_bytes(const std::string &mac);
+    uint32_t get_sta_rx_bytes(const std::string &mac);
+    uint32_t get_sta_tx_bytes(const std::string &mac);
 
-    double get_node_rx_bitrate(const std::string &mac);
-    double get_node_tx_bitrate(const std::string &mac);
+    double get_sta_rx_bitrate(const std::string &mac);
+    double get_sta_tx_bitrate(const std::string &mac);
 
-    bool set_node_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
-    bool set_node_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
+    bool set_sta_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
+    bool set_sta_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
 
-    uint16_t get_node_rx_phy_rate_100kb(const std::string &mac);
-    uint16_t get_node_tx_phy_rate_100kb(const std::string &mac);
+    uint16_t get_sta_rx_phy_rate_100kb(const std::string &mac);
+    uint16_t get_sta_tx_phy_rate_100kb(const std::string &mac);
 
     int get_radio_channel_load_percent(const sMacAddr &mac);
 
@@ -1943,12 +1945,12 @@ public:
     int get_radio_total_client_tx_load_percent(const sMacAddr &mac);
     int get_radio_total_client_rx_load_percent(const sMacAddr &mac);
 
-    int get_node_rx_load_percent(const std::string &mac);
-    int get_node_tx_load_percent(const std::string &mac);
+    int get_sta_rx_load_percent(const std::string &mac);
+    int get_sta_tx_load_percent(const std::string &mac);
 
-    int8_t get_load_rx_rssi(const std::string &sta_mac);
-    uint16_t get_load_rx_phy_rate_100kb(const std::string &sta_mac);
-    uint16_t get_load_tx_phy_rate_100kb(const std::string &sta_mac);
+    int8_t get_sta_load_rx_rssi(const std::string &sta_mac);
+    uint16_t get_sta_load_rx_phy_rate_100kb(const std::string &sta_mac);
+    uint16_t get_sta_load_tx_phy_rate_100kb(const std::string &sta_mac);
 
     bool set_measurement_delay(const std::string &mac, int measurement_delay);
     int get_measurement_delay(const std::string &mac);
