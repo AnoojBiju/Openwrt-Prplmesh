@@ -872,13 +872,13 @@ std::chrono::steady_clock::time_point db::get_node_last_seen(const std::string &
     return n->last_seen;
 }
 
-std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>> &
+std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>> &
 db::get_link_metric_data_map()
 {
     return m_link_metric_data;
 }
 
-std::unordered_map<sMacAddr, son::node::ap_metrics_data> &db::get_ap_metric_data_map()
+std::unordered_map<sMacAddr, son::db::ap_metrics_data> &db::get_ap_metric_data_map()
 {
     return m_ap_metric_data;
 }
@@ -8698,4 +8698,73 @@ db::get_unassociated_stations_stats() const
         stats.push_back(std::make_pair(tlvf::mac_to_string(station.first), stat));
     }
     return stats;
+}
+
+bool db::link_metrics_data::add_transmitter_link_metric(
+    std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> tx_link_metric_data)
+{
+    //  interface_pair_info_length() returns the length in bytes (number of elements * sizeof(sInterfacePairInfo).
+    size_t info_size = tx_link_metric_data->interface_pair_info_length() /
+                       sizeof(ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo);
+
+    for (size_t i = 0; i < info_size; i++) {
+        auto info_tuple = tx_link_metric_data->interface_pair_info(i);
+
+        if (!std::get<0>(info_tuple)) {
+            LOG(ERROR) << "add_transmitter_link_metric getting operating class entry has failed!";
+            return false;
+        }
+        auto &InterfacePairInfo = std::get<1>(info_tuple);
+        transmitterLinkMetrics.push_back(InterfacePairInfo);
+
+        LOG(DEBUG) << "adding tlvTransmitterLinkMetric data to list"
+                   << " phy_rate = " << int(InterfacePairInfo.link_metric_info.phy_rate);
+    }
+    return true;
+}
+
+bool db::link_metrics_data::add_receiver_link_metric(
+    std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData)
+{
+    //  interface_pair_info_length() returns the length in bytes (number of elements * sizeof(sInterfacePairInfo).
+    size_t info_size = RxLinkMetricData->interface_pair_info_length() /
+                       sizeof(ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo);
+
+    for (size_t i = 0; i < info_size; i++) {
+        auto info_tuple = RxLinkMetricData->interface_pair_info(i);
+
+        if (!std::get<0>(info_tuple)) {
+            LOG(ERROR) << "add_receiver_link_metric getting operating class entry has failed!";
+            return false;
+        }
+        auto &InterfacePairInfo = std::get<1>(info_tuple);
+        receiverLinkMetrics.push_back(InterfacePairInfo);
+
+        LOG(DEBUG) << "adding tlvReceiverLinkMetric data to list"
+                   << " rssi_db = " << int(InterfacePairInfo.link_metric_info.rssi_db);
+    }
+    return true;
+}
+
+bool db::ap_metrics_data::add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData)
+{
+    bssid                               = ApMetricData->bssid();
+    channel_utilization                 = ApMetricData->channel_utilization();
+    number_of_stas_currently_associated = ApMetricData->number_of_stas_currently_associated();
+
+    //copy all fields to database vector
+    estimated_service_info_fields.clear();
+    std::copy_n(ApMetricData->estimated_service_info_field(),
+                ApMetricData->estimated_service_info_field_length(),
+                std::back_inserter(estimated_service_info_fields));
+    if (ApMetricData->estimated_service_parameters().include_ac_bk) {
+        include_ac_bk = true;
+    }
+    if (ApMetricData->estimated_service_parameters().include_ac_vo) {
+        include_ac_vo = true;
+    }
+    if (ApMetricData->estimated_service_parameters().include_ac_vi) {
+        include_ac_vi = true;
+    }
+    return true;
 }

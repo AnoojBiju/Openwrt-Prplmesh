@@ -12,6 +12,21 @@
 #include <chrono>
 #include <easylogging++.h>
 
+namespace son {
+std::ostream &operator<<(std::ostream &os, eTriStateBool value)
+{
+    if (value == eTriStateBool::FALSE) {
+        os << "False";
+    } else if (value == eTriStateBool::TRUE) {
+        os << "True";
+    } else {
+        os << "Not-Configured";
+    }
+    return os;
+}
+
+} // namespace son
+
 namespace prplmesh {
 namespace controller {
 namespace db {

@@ -285,6 +285,37 @@ public:
 
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
 
+    class link_metrics_data {
+    public:
+        link_metrics_data(){};
+        ~link_metrics_data(){};
+
+        std::vector<ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo>
+            transmitterLinkMetrics;
+        std::vector<ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo> receiverLinkMetrics;
+
+        bool add_transmitter_link_metric(
+            std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> TxLinkMetricData);
+        bool add_receiver_link_metric(
+            std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData);
+    };
+
+    class ap_metrics_data {
+    public:
+        ap_metrics_data(){};
+        ~ap_metrics_data(){};
+
+        sMacAddr bssid                               = beerocks::net::network_utils::ZERO_MAC;
+        uint8_t channel_utilization                  = 0;
+        uint16_t number_of_stas_currently_associated = 0;
+        std::vector<uint8_t> estimated_service_info_fields;
+        bool include_ac_vo = false;
+        bool include_ac_bk = false;
+        bool include_ac_vi = false;
+
+        bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
+    };
+
     // Unassoc sta link metrics variables
     bool m_measurement_done = false;
     int m_opclass;
@@ -678,14 +709,14 @@ public:
      * @brief Get the link metric database
      * @return reference to the map that holds link metric data of all agents.
      */
-    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>> &
+    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>> &
     get_link_metric_data_map();
 
     /**
      * @brief Get the ap metric database
      * @return reference to the map that holds ap metric data of all agents.
      */
-    std::unordered_map<sMacAddr, son::node::ap_metrics_data> &get_ap_metric_data_map();
+    std::unordered_map<sMacAddr, son::db::ap_metrics_data> &get_ap_metric_data_map();
 
     /**
      * @brief Get the unassoc sta link metrics map
@@ -3079,7 +3110,7 @@ private:
      * Map created empty in all other nodes.
      */
     //TODO: This map should be moved to the agent nodes instead of being a separate map.
-    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>>
+    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>>
         m_link_metric_data;
 
     /**
@@ -3088,7 +3119,7 @@ private:
      * Map created empty in all other nodes.
      */
     //TODO: This map should be moved to the BSS nodes (which currently don't exist) instead of being a separate map.
-    std::unordered_map<sMacAddr, son::node::ap_metrics_data> m_ap_metric_data;
+    std::unordered_map<sMacAddr, son::db::ap_metrics_data> m_ap_metric_data;
 
     // certification
     std::shared_ptr<uint8_t> certification_tx_buffer;
