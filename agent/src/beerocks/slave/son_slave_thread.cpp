@@ -351,26 +351,26 @@ bool slave_thread::thread_init()
     // Create a timer to run internal tasks periodically
     constexpr auto tasks_timer_period = std::chrono::milliseconds(300);
 
-    m_tasks_timer = m_timer_manager->add_timer(
-        "Agent Tasks", tasks_timer_period, tasks_timer_period,
-        [&, tasks_timer_period](int fd, beerocks::EventLoop &loop) {
-            // Allow tasks to execute up to 80% of the timer period
-            m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
-            return true;
-        });
+    // m_tasks_timer = m_timer_manager->add_timer(
+    //     "Agent Tasks", tasks_timer_period, tasks_timer_period,
+    //     [&, tasks_timer_period](int fd, beerocks::EventLoop &loop) {
+    //         // Allow tasks to execute up to 80% of the timer period
+    //         m_task_pool.run_tasks(int(double(tasks_timer_period.count()) * 0.8));
+    //         return true;
+    //     });
 
-    if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
-        LOG(FATAL) << "Failed to create the tasks timer";
-        return false;
-    }
+    // if (m_tasks_timer == beerocks::net::FileDescriptor::invalid_descriptor) {
+    //     LOG(FATAL) << "Failed to create the tasks timer";
+    //     return false;
+    // }
 
-    m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<VbssTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<LinkMetricsCollectionTask>(*this, cmdu_tx));
+    // m_task_pool.add_task(std::make_shared<VbssTask>(*this, cmdu_tx));
 
     m_agent_state = STATE_INIT;
     LOG(DEBUG) << "Agent Started";
@@ -4026,7 +4026,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         auto response_out_backhaul = message_com::create_vs_message<
             beerocks_message::cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE>(cmdu_tx);
         if (!response_out_backhaul) {
-            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE";
+            LOG(ERROR) << "Failed building cACTION_BACKHAUL_CHANNEL_SCAN_ABORT_RESPONSE!!";
             return false;
         }
 
