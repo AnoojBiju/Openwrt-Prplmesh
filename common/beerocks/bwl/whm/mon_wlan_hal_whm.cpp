@@ -160,6 +160,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("class", uint8_t(req.op_class));
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
+    args.add_child("mode", 1);
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
     bool ret = m_ambiorix_cl.call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
