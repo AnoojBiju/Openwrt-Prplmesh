@@ -1551,7 +1551,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         [&](const uint8_t channel, const beerocks::eWiFiBandwidth bandwidth,
             const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
         const auto beacon_channels =
-            son::wireless_utils::center_channel_5g_to_beacon_channels(channel, bandwidth);
+            son::wireless_utils::center_channel_to_beacon_channels(channel, bandwidth, freq_type);
 
         uint8_t best_bcn_pref = 0;
         uint8_t best_bcn_chan = 0;
