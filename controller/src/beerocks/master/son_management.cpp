@@ -1614,7 +1614,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         std::string sta_parent = database.get_node_parent(client_mac);
 
         auto sta_parent_wifi_channel =
-            database.get_radio_wifi_channel(tlvf::mac_to_string(sta_parent));
+            database.get_radio_wifi_channel(tlvf::mac_from_string(sta_parent));
         if (sta_parent_wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << sta_parent_wifi_channel << " in DB";
             break;
@@ -2222,9 +2222,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto client_mac = request->sta_mac();
 
         // If client doesn't have node in runtime DB - add node to runtime DB.
-        if (!database.has_node(client_mac)) {
+        if (!database.has_station(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
-            if (!database.add_node_station(network_utils::ZERO_MAC, client_mac)) {
+            if (!database.add_station(network_utils::ZERO_MAC, client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
                 send_response(false);
                 break;
@@ -2272,7 +2272,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Set selected_bands if requested.
         if (request->client_config().selected_bands != PARAMETER_NOT_CONFIGURED) {
             auto selected_bands = eClientSelectedBands(request->client_config().selected_bands);
-            if (!database.set_client_selected_bands(*client, selected_bands, false)) {
+            if (!database.set_sta_selected_bands(*client, selected_bands, false)) {
                 LOG(ERROR) << " Failed to set selected-bands to " << selected_bands
                            << " for client " << client_mac;
                 send_response(false);

@@ -97,8 +97,8 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
         gw_lan_switch = *gw_lan_switches.begin();
     }
 
-    if (!database.add_node_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
-                                   tlvf::mac_from_string(gw_lan_switch))) {
+    if (!database.add_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
+                              tlvf::mac_from_string(gw_lan_switch))) {
         LOG(ERROR) << "add_node_to_default_location - add_node failed";
         return false;
     }
@@ -303,7 +303,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             if (tasks.is_task_running(btm_request_task))
                 tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
 
-            if (database.get_node_handoff_flag(*station)) {
+            if (database.get_sta_handoff_flag(*station)) {
                 LOG(DEBUG) << "handoff_flag == true, mac " << mac;
                 // We're in the middle of steering, don't mark as disconnected (yet).
                 return;

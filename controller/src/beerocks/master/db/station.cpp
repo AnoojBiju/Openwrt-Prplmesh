@@ -126,6 +126,8 @@ void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 
+void Station::clear_sta_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
+
 } // namespace db
 } // namespace controller
 } // namespace prplmesh
