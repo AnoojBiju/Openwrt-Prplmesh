@@ -29,10 +29,6 @@ class URXOSP(GenericPrplOS):
     reboot_time = 240
     """The time (in seconds) the device needs to initialize after reboot"""
 
-    needs_reboot_new_mac = True
-    """Defines if the device needs to reboot after inital flash to apply
-    the interface MAC addresses in the datamodel (workaround)"""
-
     bootloader_prompt = r"Lightning # "
     """The u-boot prompt on the target."""
 
