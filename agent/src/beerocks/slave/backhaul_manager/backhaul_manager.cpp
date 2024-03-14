@@ -3027,9 +3027,9 @@ void BackhaulManager::handle_dev_reset_default(
         LOG(INFO) << "The wired interface " << eth_iface << " is not up, lets try to enable it";
         beerocks::net::network_utils::set_interface_state(eth_iface, true);
 
-        UTILS_SLEEP_MSEC(1000);
+        UTILS_SLEEP_MSEC(7000);
         if (!beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
-            LOG(ERROR) << "The wired interface is not yet running after 1 sec";
+            LOG(ERROR) << "The wired interface is not yet running after 7 sec";
             m_agent_ucc_listener->send_reply(
                 fd, beerocks::beerocks_ucc_listener::command_failed_error_string);
             return;
