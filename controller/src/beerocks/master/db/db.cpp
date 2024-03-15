@@ -6789,7 +6789,7 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
         iface->m_dm_path = interface_instance;
         auto interface   = agent->interfaces.get(interface_mac);
         if (interface) {
-            interface->dm_path = interface_instance;
+            interface->m_dm_path = interface_instance;
         }
         // Prepare path to the Interface object MACAddress, like Device.WiFi.DataElements.Network.Device.{i}.Interface.{i}.MACAddress
         m_ambiorix_datamodel->set(iface->m_dm_path, "MACAddress", interface_mac);
@@ -6992,7 +6992,7 @@ bool db::add_neighbor(const sMacAddr &device_mac, const sMacAddr &interface_mac,
     if (agent) {
         auto interface = agent->interfaces.get(interface_mac);
         if (interface) {
-            interface->neighbors.add(neighbor_mac, is_IEEE1905);
+            interface->m_neighbors.add(neighbor_mac, is_IEEE1905);
         }
     }
 
@@ -7036,7 +7036,7 @@ bool db::dm_add_interface_neighbor(
         if (agent) {
             auto agent_interface = agent->interfaces.get(interface->m_mac);
             if (agent_interface) {
-                auto neighbor_device = agent_interface->neighbors.get(neighbor->mac);
+                auto neighbor_device = agent_interface->m_neighbors.get(neighbor->mac);
                 if (neighbor_device) {
                     neighbor_device->dm_path = neighbor_instance;
                 }
