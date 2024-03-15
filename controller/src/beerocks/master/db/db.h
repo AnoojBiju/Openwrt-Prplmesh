@@ -637,7 +637,6 @@ public:
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
-    bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 

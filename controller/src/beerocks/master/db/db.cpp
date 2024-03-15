@@ -641,16 +641,6 @@ std::string db::get_node_ipv4(const std::string &mac)
     return n->ipv4;
 }
 
-bool db::set_node_manufacturer(const std::string &mac, const std::string &manufacturer)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->manufacturer = manufacturer;
-    return true;
-}
-
 bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer)
 {
