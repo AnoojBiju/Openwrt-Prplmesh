@@ -304,28 +304,6 @@ bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eTy
     return true;
 }
 
-bool db::set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path)
-{
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "Failed to add set data model path, node " << mac << " does not exist";
-        return false;
-    }
-
-    node->dm_path = data_model_path;
-    return true;
-}
-
-std::string db::get_node_data_model_path(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return {};
-    }
-    return n->dm_path;
-}
-
 std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
 {
     auto agent = m_agents.add(mac);
@@ -343,7 +321,6 @@ std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
         return agent;
     }
 
-    set_node_data_model_path(mac, data_model_path);
     agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
@@ -376,7 +353,6 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
         return agent;
     }
 
-    set_node_data_model_path(mac, data_model_path);
     agent->dm_path = data_model_path;
 
     if (!dm_set_device_multi_ap_capabilities(tlvf::mac_to_string(mac))) {
@@ -442,9 +418,6 @@ bool db::dm_add_radio_element(Agent::sRadio &radio, Agent &agent)
             return false;
         }
     }
-
-    // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
-    set_node_data_model_path(radio.radio_uid, radio.dm_path);
 
     return m_ambiorix_datamodel->set(radio.dm_path, "ID", radio.radio_uid);
 }
@@ -1796,6 +1769,12 @@ bool db::set_station_capabilities(const std::string &client_mac,
         return false;
     }
 
+    std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(client_mac));
+    if (!pSta) {
+        LOG(ERROR) << "station " << client_mac << " not found";
+        return false;
+    }
+
     auto parent_radio = get_node_parent_radio(client_mac);
 
     if (parent_radio.empty()) {
@@ -1819,7 +1798,7 @@ bool db::set_station_capabilities(const std::string &client_mac,
 
     // Prepare path to the STA
     // Example: Device.WiFi.DataElements.Network.Device.1.Radio.1.BSS.1.STA.1
-    std::string path_to_sta = n->dm_path;
+    std::string path_to_sta = pSta->dm_path;
 
     if (path_to_sta.empty()) {
         return true;
@@ -2566,9 +2545,34 @@ std::string db::get_node_parent_radio(const std::string &mac)
     return n->mac;
 }
 
-std::string db::get_node_data_model_path(const sMacAddr &mac)
+std::string db::get_agent_data_model_path(const sMacAddr &al_mac)
 {
-    return get_node_data_model_path(tlvf::mac_to_string(mac));
+    std::shared_ptr<Agent> agent = get_agent(al_mac);
+    if (!agent) {
+        return {};
+    }
+
+    return agent->dm_path;
+}
+
+std::string db::get_station_data_model_path(const sMacAddr &mac)
+{
+    std::shared_ptr<Station> station = get_station(mac);
+    if (!station) {
+        return {};
+    }
+
+    return station->dm_path;
+}
+
+std::string db::get_radio_data_model_path(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        return {};
+    }
+
+    return radio->dm_path;
 }
 
 int8_t db::get_hostap_vap_id(const sMacAddr &mac)
@@ -3704,7 +3708,7 @@ bool db::dm_add_scan_result(const sMacAddr &ruid, const uint8_t &operating_class
         return false;
     }
 
-    std::string radio_path = get_node_data_model_path(ruid);
+    std::string radio_path = get_radio_data_model_path(ruid);
 
     if (radio_path.empty()) {
         LOG(DEBUG) << "Missing path to NBAPI radio: " << ruid;
@@ -6054,9 +6058,9 @@ bool db::set_ap_ht_capabilities(const sMacAddr &radio_mac,
 
 bool db::dm_set_device_multi_ap_capabilities(const std::string &device_mac)
 {
-    auto device_node        = get_node(device_mac);
-    std::string path_to_obj = device_node->dm_path;
-    bool return_val         = true;
+    std::shared_ptr<Agent> agent = get_agent(tlvf::mac_from_string(device_mac));
+    std::string path_to_obj      = agent->dm_path;
+    bool return_val              = true;
 
     if (path_to_obj.empty()) {
         return true;
@@ -6134,9 +6138,6 @@ bool db::dm_add_sta_element(const sMacAddr &al_mac, const sMacAddr &bssid, Stati
         dm_restore_sta_steering_event(station);
     }
     dm_restore_steering_summary_stats(station);
-
-    // TODO: This method will be removed after old node architecture is deprecated (PPM-1057).
-    set_node_data_model_path(station.mac, station.dm_path);
 
     LOG(DEBUG) << "Station is added with data model " << station.dm_path;
 
@@ -6769,12 +6770,6 @@ bool db::dm_add_interface_element(const sMacAddr &device_mac, const sMacAddr &in
 
     // Empty data path refers for newly created object, so add instance to data model.
     if (iface->m_dm_path.empty()) {
-
-        // Disabled NBAPI error prevention
-        if (device->dm_path.empty()) {
-            return true;
-        }
-
         // Prepare path to the Interface object, like Device.WiFi.DataElements.Network.Device.{i}.Interface
         auto agent = m_agents.get(device_mac);
         if (!agent) {

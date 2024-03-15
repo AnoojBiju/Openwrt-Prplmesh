@@ -97,7 +97,8 @@ protected:
             .WillOnce(Return(true));
 
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
-        EXPECT_EQ(std::string(g_device_path) + ".1", m_db->get_node_data_model_path(g_bridge_mac));
+        EXPECT_EQ(std::string(g_device_path) + ".1",
+                  m_db->get_agent_data_model_path(tlvf::mac_from_string(g_bridge_mac)));
         EXPECT_CALL(*m_ambiorix, set_current_time(_, _)).WillRepeatedly(Return(true));
     }
 };
@@ -128,7 +129,7 @@ protected:
                                          tlvf::mac_from_string(g_bridge_mac)));
         EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
         EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
-                  m_db->get_node_data_model_path(g_radio_mac_1));
+                  m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
     }
 };
 
@@ -248,7 +249,7 @@ protected:
                                            tlvf::mac_from_string(g_bssid_1)));
         EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
         EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
-                  m_db->get_node_data_model_path(g_client_mac));
+                  m_db->get_station_data_model_path(tlvf::mac_from_string(g_client_mac)));
 
         EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_client_mac)).WillRepeatedly(Return(1));
     }
@@ -279,7 +280,8 @@ TEST_F(DbTest, test_add_node_radio)
 
     //radio node and path must exist
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
-    EXPECT_EQ(std::string(radio_path) + ".1", m_db->get_node_data_model_path(g_radio_mac_1));
+    EXPECT_EQ(std::string(radio_path) + ".1",
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 }
 
 TEST_F(DbTest, test_add_vap)
@@ -309,7 +311,8 @@ TEST_F(DbTest, test_add_vap)
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
-    EXPECT_EQ(std::string(radio_path) + ".1", m_db->get_node_data_model_path(g_radio_mac_1));
+    EXPECT_EQ(std::string(radio_path) + ".1",
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     //expectations for add_vap
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
@@ -402,10 +405,10 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
-              m_db->get_node_data_model_path(g_radio_mac_1));
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_2)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.2",
-              m_db->get_node_data_model_path(g_radio_mac_2));
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_2)));
 
     // expectations for set_ap_ht_capabilities
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(capabilities1, "HTCapabilities"))
@@ -474,7 +477,7 @@ TEST_F(DbTest, test_add_hostap_supported_operating_class)
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
-              m_db->get_node_data_model_path(g_radio_mac_1));
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     //expectations for add_hostap_supported_operating_class
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(operating_classes)))
@@ -528,7 +531,7 @@ TEST_F(DbTest, test_set_ap_he_capabilities)
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
-              m_db->get_node_data_model_path(g_radio_mac_1));
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     //expectations for set_ap_he_capabilities
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "WiFi6Capabilities"))
@@ -609,7 +612,7 @@ TEST_F(DbTest, test_add_current_op_class)
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_EQ(std::string(g_device_path) + ".1.Radio.1",
-              m_db->get_node_data_model_path(g_radio_mac_1));
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     //expectations for add_current_op_class
     EXPECT_CALL(*m_ambiorix, add_instance(radio_path_1_operating_classes))
@@ -715,7 +718,8 @@ TEST_F(DbTest, test_set_vap_stats_info)
     EXPECT_TRUE(m_db->add_node_radio(tlvf::mac_from_string(g_radio_mac_1),
                                      tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_radio_mac_1)));
-    EXPECT_EQ(std::string(radio_path) + ".1", m_db->get_node_data_model_path(g_radio_mac_1));
+    EXPECT_EQ(std::string(radio_path) + ".1",
+              m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     //expectations for add_vap
     EXPECT_CALL(*m_ambiorix, add_instance(bss_path)).WillOnce(Return(bss_path + ".1"));
@@ -1043,7 +1047,7 @@ TEST_F(DbTestRadio1Sta1, test_add_sta_twice_with_same_mac)
                                        tlvf::mac_from_string(g_radio_mac_1)));
     EXPECT_TRUE(m_db->has_node(tlvf::mac_from_string(g_client_mac)));
     EXPECT_EQ(std::string(g_radio_1_bss_path_1) + ".STA.1",
-              m_db->get_node_data_model_path(g_client_mac));
+              m_db->get_station_data_model_path(tlvf::mac_from_string(g_client_mac)));
 }
 
 TEST_F(DbTestRadio1Sta1, test_remove_sta)
