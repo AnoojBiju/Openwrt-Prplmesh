@@ -343,7 +343,7 @@ private:
     const int WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT     = 30;
     const int RSSI_POLL_INTERVAL_MS                   = 1000;
     const int STATE_WAIT_ENABLE_TIMEOUT_SECONDS       = 600;
-    const int STATE_WAIT_WPS_TIMEOUT_SECONDS          = 600;
+    const int STATE_WAIT_WPS_TIMEOUT_SECONDS          = 10;
     const int AP_BLACK_LIST_TIMEOUT_SECONDS           = 120;
     const int AP_BLACK_LIST_FAILED_ATTEMPTS_THRESHOLD = 2;
     const int INTERFACE_BRING_UP_TIMEOUT_SECONDS      = 600;

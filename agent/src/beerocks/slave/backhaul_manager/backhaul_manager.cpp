@@ -973,7 +973,23 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                                 radio_info->sta_wlan_hal->process_int_events();
                                 return true;
                             },
+                        .on_write = nullptr,
+                        .on_disconnect =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_int_events disconnected! on fd " << fd;
+                                radio_info->sta_hal_int_events =
+                                    beerocks::net::FileDescriptor::invalid_descriptor;
+                                return false;
+                            },
+                        .on_error =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_int_events error! on fd " << fd;
+                                radio_info->sta_hal_int_events =
+                                    beerocks::net::FileDescriptor::invalid_descriptor;
+                                return false;
+                            },
                     };
+
                     if (!m_event_loop->register_handlers(int_events_fd, int_events_handlers)) {
                         LOG(ERROR) << "Unable to register handlers for internal events queue!";
                         return false;
@@ -3119,7 +3135,7 @@ void BackhaulManager::clear_radio_handlers(
     const std::shared_ptr<beerocks::BackhaulManager::sRadioInfo> &radio_info)
 {
     for (auto &fd : radio_info->sta_hal_ext_events) {
-        LOG(DEBUG) << "fd: " << fd;
+        LOG(DEBUG) << "Removing handlers for fd: " << fd;
         if (fd > 0) {
             m_event_loop->remove_handlers(fd);
         }
