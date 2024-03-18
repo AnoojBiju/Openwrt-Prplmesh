@@ -124,7 +124,7 @@ void association_handling_task::work()
         }
 
         auto radio_mac = database.get_bss_parent_radio(new_hostap_mac);
-        auto agent_mac = database.get_node_parent_ire(radio_mac);
+        auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
 
         add_pending_mac(radio_mac,
@@ -139,7 +139,7 @@ void association_handling_task::work()
                         << sta_mac;
         std::string bssid     = database.get_node_parent(sta_mac);
         std::string radio_mac = database.get_bss_parent_radio(bssid);
-        auto agent_mac        = database.get_node_parent_ire(bssid);
+        auto agent_mac        = database.get_bss_parent_agent(tlvf::mac_from_string(bssid));
 
         auto measurement_request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_BEACON_11K_REQUEST>(cmdu_tx, id);
@@ -204,7 +204,7 @@ void association_handling_task::work()
          */
         TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
         std::string hostap_mac = database.get_node_parent(sta_mac);
-        auto agent_mac         = database.get_node_parent_ire(hostap_mac);
+        auto agent_mac         = database.get_bss_parent_agent(tlvf::mac_from_string(hostap_mac));
 
         if (hostap_mac != original_parent_mac ||
             database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {

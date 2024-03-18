@@ -118,6 +118,9 @@ public:
     uint8_t unsuccessful_assoc_max_reporting_rate;
 
     beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+    std::chrono::steady_clock::time_point last_state_change;
+    std::string name;
+    std::string ipv4;
 
     /** Stations for which local steering is disallowed */
     beerocks::mac_map<Station> disallowed_local_steering_stations;
@@ -135,6 +138,8 @@ public:
         std::array<uint8_t, beerocks::message::DSCP_MAPPING_LIST_LENGTH> dscp_mapping_table;
     } service_prioritization;
 
+    sMacAddr parent_mac = beerocks::net::network_utils::ZERO_MAC;
+
     struct sRadio {
         sRadio()               = delete;
         sRadio(const sRadio &) = delete;
@@ -147,6 +152,9 @@ public:
 
         /** MAC of the Backhaul STA */
         sMacAddr backhaul_station_mac;
+
+        beerocks::eNodeState state = beerocks::STATE_CONNECTED;
+        std::chrono::steady_clock::time_point last_state_change;
 
         bool is_acs_enabled = false;
 
@@ -485,6 +493,15 @@ public:
     };
     beerocks::mac_map<sInterface> interfaces;
 
+    struct sEthSwitch {
+        sEthSwitch() = delete;
+        explicit sEthSwitch(const sMacAddr &mac_) : mac(mac_) {}
+        const sMacAddr mac;
+        std::string name;
+        std::string ipv4;
+        beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
+    };
+
     friend class ::son::db;
 
 private:
@@ -492,6 +509,8 @@ private:
      * @brief The last time that the Agent was contacted via the Multi-AP control protocol.
      */
     std::chrono::system_clock::time_point last_contact_time;
+
+    beerocks::mac_map<sEthSwitch> eth_switches;
 };
 
 } // namespace db

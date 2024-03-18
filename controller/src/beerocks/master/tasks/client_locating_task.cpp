@@ -103,7 +103,8 @@ void client_locating_task::work()
             auto backhaul_manager_hostap =
                 tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
 
-            auto agent_mac = database.get_node_parent_ire(backhaul_manager_hostap);
+            auto agent_mac =
+                database.get_radio_parent_agent(agent->backhaul.wireless_backhaul_radio->radio_uid);
 
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_hostap);
 

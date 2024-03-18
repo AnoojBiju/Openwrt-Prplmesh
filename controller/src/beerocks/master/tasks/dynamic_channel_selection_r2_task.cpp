@@ -330,8 +330,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 [&](std::shared_ptr<wfa_map::cRadiosToScan> radio_list_entry,
                     sMacAddr radio_mac) -> bool {
                 // Get parent agent mac from radio mac
-                auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-                auto ire           = database.get_node_parent_ire(radio_mac_str);
+                auto ire = database.get_radio_parent_agent(radio_mac);
                 if (ire == beerocks::net::network_utils::ZERO_MAC) {
                     LOG(ERROR) << "Failed to get node_parent_ire!";
                     return false;
@@ -590,8 +589,7 @@ bool dynamic_channel_selection_r2_task::is_scan_triggered_for_radio(const sMacAd
                                                                     bool is_single_scan)
 {
     // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    auto ire = database.get_radio_parent_agent(radio_mac);
     if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
@@ -628,8 +626,7 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
     const auto &radio_mac = scan_request_event.radio_mac;
 
     // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto ire_mac       = database.get_node_parent_ire(radio_mac_str);
+    auto ire_mac = database.get_radio_parent_agent(radio_mac);
     if (ire_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
@@ -687,8 +684,7 @@ bool dynamic_channel_selection_r2_task::handle_on_demand_channel_selection_reque
     const auto csa_count       = channel_selection_event.csa_count;
 
     // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    auto agent_mac = database.get_radio_parent_agent(radio_mac);
     if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
@@ -759,8 +755,7 @@ bool dynamic_channel_selection_r2_task::handle_preference_request_event(
     const auto &radio_mac = preference_request_event.radio_mac;
 
     // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    auto agent_mac = database.get_radio_parent_agent(radio_mac);
 
     if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
@@ -785,8 +780,7 @@ bool dynamic_channel_selection_r2_task::handle_continuous_scan_request_event(
     const auto &radio_mac = scan_request_event.radio_mac;
 
     // Get parent agent mac from radio mac
-    auto radio_mac_str = tlvf::mac_to_string(radio_mac);
-    auto agent_mac     = database.get_node_parent_ire(radio_mac_str);
+    auto agent_mac = database.get_radio_parent_agent(radio_mac);
     if (agent_mac == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return false;
