@@ -577,7 +577,7 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
                 if (radio_info->sta_wlan_hal) {
                     radio_info->sta_wlan_hal.reset();
                 }
-                
+
                 clear_radio_handlers(radio_info);
             }
         }
@@ -872,11 +872,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             // Clear the backhaul interface mac.
             radio->back.iface_mac = beerocks::net::network_utils::ZERO_MAC;
 
+            clear_radio_handlers(radio_info);
+
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-
-            clear_radio_handlers(radio_info);
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves
@@ -3135,7 +3135,7 @@ void BackhaulManager::clear_radio_handlers(
     const std::shared_ptr<beerocks::BackhaulManager::sRadioInfo> &radio_info)
 {
     for (auto &fd : radio_info->sta_hal_ext_events) {
-        LOG(DEBUG) << "Removing handlers for fd: " << fd;
+        LOG(DEBUG) << "Removing handlers for external events. Fd: " << fd;
         if (fd > 0) {
             m_event_loop->remove_handlers(fd);
         }
@@ -3144,6 +3144,8 @@ void BackhaulManager::clear_radio_handlers(
     radio_info->sta_hal_ext_events.clear();
 
     if (radio_info->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "Removing handlers for internal events. Fd: "
+                   << radio_info->sta_hal_int_events;
         m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
         radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     }
