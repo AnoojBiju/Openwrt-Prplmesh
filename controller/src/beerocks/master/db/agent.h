@@ -53,6 +53,7 @@ public:
     const sMacAddr al_mac;
 
     std::string dm_path; /**< data model path */
+    std::string name;
 
     /**
      * @brief Agents supported profile information.
@@ -491,6 +492,8 @@ private:
      * @brief The last time that the Agent was contacted via the Multi-AP control protocol.
      */
     std::chrono::system_clock::time_point last_contact_time;
+    std::chrono::steady_clock::time_point last_seen;
+    std::chrono::steady_clock::time_point last_state_change;
 };
 
 } // namespace db

@@ -358,6 +358,7 @@ enum eNodeState : uint8_t {
     STATE_CONNECTING,
     STATE_CONNECTED,
     STATE_ANY,
+    STATE_INVALID,
     STATE_MAX,
 };
 

@@ -55,7 +55,7 @@ void network_health_check_task::work()
             auto backhaul_manager_hostap =
                 tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
 
-            auto last_seen = database.get_node_last_seen(backhaul_manager_hostap);
+            auto last_seen = database.get_device_last_seen(backhaul_manager_hostap, true);
             auto now       = std::chrono::steady_clock::now();
             auto last_seen_delta =
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();
@@ -75,9 +75,9 @@ void network_health_check_task::work()
     case CLIENT_HEALTH_CHECK: {
         auto clients = database.get_nodes(beerocks::TYPE_CLIENT);
         for (auto &client : clients) {
-            auto last_seen = database.get_node_last_seen(client);
+            auto last_seen = database.get_device_last_seen(client, true);
             if (!database.is_node_wireless(client) &&
-                (database.get_node_state(client) == beerocks::STATE_CONNECTED)) {
+                (database.get_device_state(client, true) == beerocks::STATE_CONNECTED)) {
                 auto now = std::chrono::steady_clock::now();
                 auto last_seen_delta =
                     std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();
@@ -132,7 +132,7 @@ void network_health_check_task::handle_response(std::string mac,
                         << "   arp_state=" << int(response->params().state)
                         << " arp_source=" << int(response->params().source);
 
-        database.update_node_last_seen(arp_mac);
+        database.update_device_last_seen(arp_mac);
 
         if (suspected_dis_clients.find(arp_mac) != suspected_dis_clients.end()) {
             TASK_LOG(DEBUG) << "arp_mac = " << arp_mac
@@ -171,7 +171,7 @@ bool network_health_check_task::send_arp_query(std::string mac)
 
     auto agent_mac = database.get_node_parent_ire(parent_radio);
 
-    if (database.get_node_state(parent_radio) != beerocks::STATE_CONNECTED) {
+    if (database.get_device_state(parent_radio) != beerocks::STATE_CONNECTED) {
         LOG(WARNING) << "parent_mac not connected , parent_mac = " << parent_radio;
         return false;
     }

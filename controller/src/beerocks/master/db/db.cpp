@@ -829,45 +829,90 @@ db::get_sta_beacon_measurement_support_level(const std::string &mac)
     return pSta->supports_beacon_measurement;
 }
 
-bool db::set_node_name(const std::string &mac, const std::string &name)
+bool db::set_device_name(const std::string &mac, const std::string &name, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        pSta->name = name;
+        return true;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        agent->name = name;
+        return true;
     }
-    n->name = name;
-    return true;
+    return false;
 }
 
-bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
+bool db::set_device_state(const std::string &mac, beerocks::eNodeState state,
+                          const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        pSta->state             = state;
+        pSta->last_state_change = std::chrono::steady_clock::now();
+        return true;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        agent->state             = state;
+        agent->last_state_change = std::chrono::steady_clock::now();
+        return true;
     }
-    n->state             = state;
-    n->last_state_change = std::chrono::steady_clock::now();
-    return true;
+    return false;
 }
 
-beerocks::eNodeState db::get_node_state(const std::string &mac)
+beerocks::eNodeState db::get_device_state(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::STATE_MAX;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return beerocks::eNodeState::STATE_INVALID;
+        }
+        return pSta->state;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return beerocks::eNodeState::STATE_INVALID;
+        }
+        return agent->state;
     }
-    return n->state;
 }
 
-std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
+std::chrono::steady_clock::time_point db::get_device_last_state_change(const std::string &mac,
+                                                                       const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return std::chrono::steady_clock::time_point();
+        }
+        return pSta->last_state_change;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return std::chrono::steady_clock::time_point();
+        }
+        return agent->last_state_change;
     }
-    return n->last_state_change;
 }
 
 bool db::set_sta_handoff_flag(Station &station, bool handoff)
@@ -891,26 +936,46 @@ bool db::get_sta_handoff_flag(const Station &station)
     return pSta->m_handoff;
 }
 
-bool db::update_node_last_seen(const std::string &mac)
+bool db::update_device_last_seen(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        pSta->last_seen = std::chrono::steady_clock::now();
+        return true;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        agent->last_seen = std::chrono::steady_clock::now();
+        return true;
     }
-    n->last_seen = std::chrono::steady_clock::now();
-    return true;
+    return false;
 }
 
-std::chrono::steady_clock::time_point db::get_node_last_seen(const std::string &mac)
+std::chrono::steady_clock::time_point db::get_device_last_seen(const std::string &mac,
+                                                               const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::chrono::steady_clock::now();
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return std::chrono::steady_clock::time_point();
+        }
+        return pSta->last_seen;
+    } else {
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return std::chrono::steady_clock::time_point();
+        }
+        return agent->last_seen;
     }
-
-    return n->last_seen;
 }
 
 std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>> &
@@ -998,14 +1063,25 @@ bool db::is_node_wireless(const std::string &mac)
     return utils::is_node_wireless(n->iface_type);
 }
 
-std::string db::node_to_string(const std::string &mac)
+std::string db::device_to_string(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
     std::ostringstream os;
-    if (n != nullptr) {
-        os << n;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            os << "";
+        } else {
+            os << pSta;
+        }
     } else {
-        os << "";
+        auto agent = m_agents.get(tlvf::mac_from_string(mac));
+        if (!agent) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            os << "";
+        } else {
+            os << agent;
+        }
     }
     return os.str();
 }
@@ -2173,31 +2249,64 @@ bool db::capability_check(const std::string &mac, int channel)
     return false;
 }
 
-bool db::get_node_6ghz_support(const std::string &mac)
+bool db::is_device_6ghz_supported(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        return pSta->supported_bands->supports_6ghz;
+    } else {
+        auto radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+        if (!radio) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        return radio->supports_6ghz;
     }
-    return n->supports_6ghz;
+    return false;
 }
 
-bool db::get_node_5ghz_support(const std::string &mac)
+bool db::is_device_5ghz_supported(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        return pSta->supported_bands->supports_5ghz;
+    } else {
+        auto radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+        if (!radio) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        return radio->supports_5ghz;
     }
-    return n->supports_5ghz;
+    return false;
 }
 
-bool db::get_node_24ghz_support(const std::string &mac)
+bool db::is_device_24ghz_supported(const std::string &mac, const bool &is_station)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
+    if (is_station) {
+        std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+        if (!pSta) {
+            LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+            return false;
+        }
+        return pSta->supported_bands->supports_24ghz;
+    } else {
+        auto radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+        if (!radio) {
+            LOG(WARNING) << "Agent with mac is not found in database mac=" << mac;
+            return false;
+        }
+        return radio->supports_24ghz;
     }
-    return n->supports_24ghz;
+    return false;
 }
 
 bool db::is_node_24ghz(const std::string &mac)
@@ -2327,16 +2436,18 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     bool hostap_is_5ghz = is_node_5ghz(target_bssid);
 
     //TODO: Refactor Station object to cover band support (PPM-1057)
-    if ((hostap_is_5ghz && !get_node_5ghz_support(sta_mac))) {
+    if ((hostap_is_5ghz && !is_device_5ghz_supported(sta_mac, true))) {
         LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
                    << "  hostap_is_5ghz = " << hostap_is_5ghz << std::endl
                    << "  sta_is_5ghz = " << is_node_5ghz(sta_mac) << std::endl;
         return false;
     }
-    if (!hostap_is_5ghz && !get_node_24ghz_support(sta_mac)) {
+    if (!hostap_is_5ghz && !is_device_24ghz_supported(sta_mac, true)) {
         LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
-                   << "  node_5ghz_support = " << get_node_5ghz_support(sta_mac) << std::endl
-                   << "  node_24ghz_support = " << get_node_24ghz_support(sta_mac) << std::endl;
+                   << "  node_5ghz_support = " << is_device_5ghz_supported(sta_mac, true)
+                   << std::endl
+                   << "  node_24ghz_support = " << is_device_24ghz_supported(sta_mac, true)
+                   << std::endl;
         return false;
     }
     return true;
@@ -2704,7 +2815,7 @@ std::string db::get_5ghz_sibling_hostap(const std::string &mac)
 {
     auto siblings = get_node_siblings(mac, beerocks::TYPE_SLAVE);
     for (auto &hostap : siblings) {
-        if (get_node_5ghz_support(hostap)) {
+        if (is_device_5ghz_supported(hostap)) {
             auto n = get_node(hostap);
             if (!n) {
                 LOG(ERROR) << "node " << hostap << " does not exist";

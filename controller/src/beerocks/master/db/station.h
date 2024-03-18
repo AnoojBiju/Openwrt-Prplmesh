@@ -112,13 +112,20 @@ public:
         uint32_t last_steer_time     = 0;
     } steering_summary_stats;
 
+    class band_supported {
+    public:
+        bool supports_24ghz = false;
+        bool supports_5ghz  = false;
+        bool supports_6ghz  = false;
+    };
+    std::shared_ptr<band_supported> supported_bands = std::make_shared<band_supported>();
+
     class steering_attempt {
     public:
         int failed_6ghz_steer_attemps  = 0;
         int failed_5ghz_steer_attemps  = 0;
         int failed_24ghz_steer_attemps = 0;
     };
-
     std::shared_ptr<steering_attempt> steer_attempts = std::make_shared<steering_attempt>();
 
     class sta_stats_params {
@@ -157,6 +164,8 @@ public:
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
+    beerocks::eType get_type();
+    bool set_type(beerocks::eType type_);
     void clear_sta_stats_info();
 
     friend class ::son::db;
@@ -172,6 +181,7 @@ private:
     int m_failed_11v_request_count = 0;
 
     bool m_handoff = false;
+    std::chrono::steady_clock::time_point last_seen;
     std::chrono::steady_clock::time_point last_state_change;
 
     class beacon_measurement;
@@ -181,6 +191,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
     std::vector<uint8_t> m_assoc_frame;
+    beerocks::eType type;
 };
 
 } // namespace db

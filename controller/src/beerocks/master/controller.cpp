@@ -216,8 +216,8 @@ bool Controller::start()
             database.get_local_bridge_mac());
         auto eth_switch_mac_str = tlvf::mac_to_string(eth_switch_mac);
         database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
-        database.set_node_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
-        database.set_node_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
+        database.set_device_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
+        database.set_device_name(eth_switch_mac_str, "GW_CONTROLLER_ETH");
         database.set_node_manufacturer(eth_switch_mac_str, agent->device_info.manufacturer);
     }
 
@@ -2405,7 +2405,7 @@ bool Controller::handle_intel_slave_join(
             // rejecting join if gw haven't joined yet
             if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) &&
                 (!database.has_node(parent_bssid_mac) ||
-                 (database.get_node_state(tlvf::mac_to_string(parent_bssid_mac)) !=
+                 (database.get_device_state(tlvf::mac_to_string(parent_bssid_mac)) !=
                   beerocks::STATE_CONNECTED))) {
                 LOG(DEBUG) << "sending back join reject!";
                 LOG(DEBUG) << "reject_debug: parent_bssid_has_node="
@@ -2418,7 +2418,7 @@ bool Controller::handle_intel_slave_join(
 
         // sending to BML listeners, client disconnect notification on ire backhaul before changing it type from TYPE_CLIENT to TYPE_IRE_BACKHAUL
         if (database.get_node_type(backhaul_mac) == beerocks::TYPE_CLIENT &&
-            database.get_node_state(backhaul_mac) == beerocks::STATE_CONNECTED) {
+            database.get_device_state(backhaul_mac, true) == beerocks::STATE_CONNECTED) {
             LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << backhaul_mac
                        << ", FORCING DISCONNECT NOTIFICATION!";
             bml_task::connection_change_event new_event;
@@ -2435,7 +2435,7 @@ bool Controller::handle_intel_slave_join(
                        << ", parent_bssid_mac = " << parent_bssid_mac;
             database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
                                                 parent_bssid_mac);
-        } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
+        } else if (database.get_device_state(backhaul_mac, true) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
             */
@@ -2461,7 +2461,7 @@ bool Controller::handle_intel_slave_join(
                        << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
             database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
                                                 tlvf::mac_from_string(gw_lan_switch));
-            database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
+            database.set_device_state(backhaul_mac, beerocks::STATE_CONNECTED, true);
         }
     } else {
         backhaul_mac.clear();
@@ -2473,7 +2473,7 @@ bool Controller::handle_intel_slave_join(
         database.get_node_type(previous_backhaul) == beerocks::TYPE_IRE_BACKHAUL) {
         LOG(DEBUG) << "marking previous backhaul " << previous_backhaul << " for IRE " << bridge_mac
                    << " as disconnected";
-        database.set_node_state(previous_backhaul, beerocks::STATE_DISCONNECTED);
+        database.set_device_state(previous_backhaul, beerocks::STATE_DISCONNECTED);
     }
 
     // bridge_mac node may have been created from DHCP/ARP event, if so delete it
@@ -2491,7 +2491,7 @@ bool Controller::handle_intel_slave_join(
         database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
     }
 
-    database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
+    database.set_device_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     agent->state = beerocks::STATE_CONNECTED;
 
     /*
@@ -2512,8 +2512,8 @@ bool Controller::handle_intel_slave_join(
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
 
-        database.set_node_name(backhaul_mac, slave_name + "_BH");
-        database.set_node_name(bridge_mac_str, slave_name);
+        database.set_device_name(backhaul_mac, slave_name + "_BH", true);
+        database.set_device_name(bridge_mac_str, slave_name);
 
         //TODO slave should include eth switch mac in the message
         //until then, generate eth address from bridge address
@@ -2522,8 +2522,8 @@ bool Controller::handle_intel_slave_join(
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
         database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
-        database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-        database.set_node_name(eth_switch_mac, slave_name + "_ETH");
+        database.set_device_state(eth_switch_mac, beerocks::STATE_CONNECTED);
+        database.set_device_name(eth_switch_mac, slave_name + "_ETH");
         database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
         database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
 
@@ -2641,7 +2641,7 @@ bool Controller::handle_intel_slave_join(
         agent->backhaul.wireless_backhaul_radio = radio;
     }
 
-    database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
+    database.set_device_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
                                                       : beerocks::IFACE_TYPE_BRIDGE);
@@ -2654,7 +2654,7 @@ bool Controller::handle_intel_slave_join(
 
     database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
 
-    if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
+    if (database.is_device_5ghz_supported(tlvf::mac_to_string(radio_mac))) {
         if (notification->low_pass_filter_on()) {
             database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
         } else {
@@ -2742,7 +2742,7 @@ bool Controller::handle_intel_slave_join(
 
     // Update all (Slaves) last seen timestamp
     if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
+        database.update_device_last_seen(tlvf::mac_to_string(radio_mac));
     }
 
     return true;
@@ -2860,7 +2860,7 @@ bool Controller::handle_non_intel_slave_join(
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
     database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
                                         tlvf::mac_from_string(gw_lan_switch));
-    database.set_node_state(backhaul_mac, beerocks::STATE_CONNECTED);
+    database.set_device_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
     // Assume repeater
@@ -2880,16 +2880,16 @@ bool Controller::handle_non_intel_slave_join(
     database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
 
     agent->state = beerocks::STATE_CONNECTED;
-    database.set_node_state(bridge_mac_str, beerocks::STATE_CONNECTED);
+    database.set_device_state(bridge_mac_str, beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
     database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
     database.set_node_manufacturer(backhaul_mac, agent->device_info.manufacturer);
     database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
-    database.set_node_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
-    database.set_node_name(bridge_mac_str, agent->device_info.manufacturer);
+    database.set_device_name(backhaul_mac, agent->device_info.manufacturer + "_BH", true);
+    database.set_device_name(bridge_mac_str, agent->device_info.manufacturer);
     database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
-    database.set_node_state(eth_switch_mac, beerocks::STATE_CONNECTED);
-    database.set_node_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
+    database.set_device_state(eth_switch_mac, beerocks::STATE_CONNECTED);
+    database.set_device_name(eth_switch_mac, agent->device_info.manufacturer + "_ETH");
     database.set_node_manufacturer(eth_switch_mac, agent->device_info.manufacturer);
     // An AP Capability Report will always be received after the M1, and thus
     // this OS Version value will be overriden by the more complete
@@ -2911,7 +2911,7 @@ bool Controller::handle_non_intel_slave_join(
 
     // TODO Assume no backhaul manager
 
-    database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
+    database.set_device_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
     database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
                                           beerocks::IFACE_TYPE_BRIDGE);
     database.set_radio_iface_name(radio_mac, "N/A");
@@ -2929,7 +2929,7 @@ bool Controller::handle_non_intel_slave_join(
     // TODO assume SSIDs are not hidden
 
     // TODO
-    //        if (database.get_node_5ghz_support(radio_mac)) {
+    //       if (database.is_device_5ghz_supported(radio_mac)) {
     //            if (notification->low_pass_filter_on()) {
     //                database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
     //            } else {
@@ -2978,7 +2978,7 @@ bool Controller::handle_cmdu_control_message(
 
     //Update all (Slaves) last seen timestamp
     if (database.get_node_type(radio_mac_str) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(radio_mac_str);
+        database.update_device_last_seen(radio_mac_str);
     }
 
     switch (beerocks_header->action_op()) {
@@ -3301,7 +3301,7 @@ bool Controller::handle_cmdu_control_message(
         } else {
 
             // Client NOT connected
-            if (database.get_node_state(client_mac) == beerocks::STATE_DISCONNECTED) {
+            if (database.get_device_state(client_mac, true) == beerocks::STATE_DISCONNECTED) {
                 LOG(DEBUG) << "node_state = DISCONNECTED client_mac = " << client_mac
                            << " client_ipv4 =" << client_ipv4;
 
@@ -3317,7 +3317,7 @@ bool Controller::handle_cmdu_control_message(
 
         // Update the last-seen timestamp
         // Handled at this point to make sure the client was added to the DB
-        database.update_node_last_seen(client_mac);
+        database.update_device_last_seen(client_mac, true);
 
         // Run client locating task for reachable or stale client/IRE nodes only if on ETH_FRONT port
         // or WIRELESS_FRONT (in case of eth devices connected to IREs and arp notf was send from GW)
@@ -3481,7 +3481,7 @@ bool Controller::handle_cmdu_control_message(
                     << " | " << int(notification->params().tx_phy_rate_100kb));
 
         if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
-            (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) &&
+            (database.get_device_state(client_mac, true) == beerocks::STATE_CONNECTED) &&
             (!database.get_sta_handoff_flag(*client)) && is_parent) {
 
             client->set_cross_rx_rssi(radio_mac_str, notification->params().rx_rssi,
@@ -3542,7 +3542,7 @@ bool Controller::handle_cmdu_control_message(
         if (!database.has_station(tlvf::mac_from_string(client_mac))) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
             database.add_station(src_mac, tlvf::mac_from_string(client_mac));
-            database.update_node_last_seen(client_mac);
+            database.update_device_last_seen(client_mac, true);
         }
 
         if (database.get_node_type(client_mac) != beerocks::TYPE_CLIENT) {
@@ -3552,8 +3552,9 @@ bool Controller::handle_cmdu_control_message(
         }
 
         database.set_node_ipv4(client_mac, ipv4);
-        database.set_node_name(
-            client_mac, std::string(notification_in->name(beerocks::message::NODE_NAME_LENGTH)));
+        database.set_device_name(
+            client_mac, std::string(notification_in->name(beerocks::message::NODE_NAME_LENGTH)),
+            true);
 
         if (database.is_node_wireless(client_mac)) {
             auto notification_out = beerocks::message_com::create_vs_message<
@@ -3669,7 +3670,7 @@ bool Controller::handle_cmdu_control_message(
             if (!database.has_station(tlvf::mac_from_string(client_mac))) {
                 LOG(ERROR) << "sta " << client_mac << " is not in DB!";
                 continue;
-            } else if (database.get_node_state(client_mac) != beerocks::STATE_CONNECTED) {
+            } else if (database.get_device_state(client_mac, true) != beerocks::STATE_CONNECTED) {
                 LOG(DEBUG) << "sta " << client_mac << " is not connected to hostap " << radio_mac
                            << ", update is invalid!";
                 continue;
@@ -3723,7 +3724,7 @@ bool Controller::handle_cmdu_control_message(
             client_load_percent >
                 database.config.monitor_total_ch_load_notification_hi_th_percent &&
             database.settings_load_balancing() && database.is_radio_active(radio_mac) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
+            database.get_device_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                 * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                 * therefore, we need to create a load balancing task to optimize the network
@@ -3762,7 +3763,7 @@ bool Controller::handle_cmdu_control_message(
                         /*
                             * launch optimal path task
                             */
-                        if (database.get_node_state(sta) == beerocks::STATE_CONNECTED) {
+                        if (database.get_device_state(sta, true) == beerocks::STATE_CONNECTED) {
                             if (m_task_pool.is_task_running(station->roaming_task_id)) {
                                 LOG(DEBUG) << "roaming task already running for " << sta;
                             } else {
