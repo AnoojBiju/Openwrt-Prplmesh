@@ -512,8 +512,8 @@ bool Controller::handle_cmdu(int fd, uint32_t iface_index, const sMacAddr &dst_m
         }
     } else {
         LOG(DEBUG) << "received 1905.1 cmdu message";
-        if (cmdu_rx.getMessageType() == ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE)
-        {
+        if (cmdu_rx.getMessageType() ==
+            ieee1905_1::eMessageType::AP_AUTOCONFIGURATION_WSC_MESSAGE) {
             auto time_since_m1 = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::system_clock::now() - cmdu_rx.received_time);
             if (time_since_m1 >
