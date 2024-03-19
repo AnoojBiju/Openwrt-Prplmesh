@@ -97,7 +97,8 @@ public:
      */
     uint8_t max_total_number_of_vids = 0;
 
-    bool is_gateway = false;
+    bool is_gateway  = false;
+    bool is_prplmesh = false;
 
     bool does_support_vbss = false;
 
