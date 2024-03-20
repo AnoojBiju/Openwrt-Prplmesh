@@ -685,35 +685,25 @@ bool TopologyTask::add_supported_service_tlv()
 
     auto db = AgentDB::get();
 
-    size_t number_of_supported_services = 1;
-    if (db->device_conf.local_controller) {
-        number_of_supported_services++;
-    }
+    // only agent or controller+agent
+    const size_t number_of_supported_services = db->device_conf.local_controller ? 2 : 1;
 
     if (!tlvSupportedService->alloc_supported_service_list(number_of_supported_services)) {
         LOG(ERROR) << "alloc_supported_service_list failed";
         return false;
     }
 
-    auto supportedServiceTuple = tlvSupportedService->supported_service_list(0);
-    if (!std::get<0>(supportedServiceTuple)) {
-        LOG(ERROR) << "Failed accessing supported_service_list(0)";
-        return false;
-    }
-
-    std::get<1>(supportedServiceTuple) =
-        wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT;
-
-    if (db->device_conf.local_controller) {
-        supportedServiceTuple = tlvSupportedService->supported_service_list(1);
+    for (size_t i = 0; i < number_of_supported_services; ++i) {
+        auto supportedServiceTuple = tlvSupportedService->supported_service_list(i);
         if (!std::get<0>(supportedServiceTuple)) {
-            LOG(ERROR) << "Failed accessing supported_service_list(1)";
+            LOG(ERROR) << "Failed accessing supported_service_list(" << i << ")";
             return false;
         }
-
         std::get<1>(supportedServiceTuple) =
-            wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
+            (i == 0) ? wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_AGENT
+                     : wfa_map::tlvSupportedService::eSupportedService::MULTI_AP_CONTROLLER;
     }
+
     return true;
 }
 
