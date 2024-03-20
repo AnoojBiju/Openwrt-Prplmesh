@@ -14,6 +14,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <string>
 
 #include <linux/if_ether.h>
 
