@@ -321,17 +321,7 @@ void BackhaulManager::on_thread_stop()
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-            for (auto &fd : radio_info->sta_hal_ext_events) {
-                if (fd > 0) {
-                    m_event_loop->remove_handlers(fd);
-                }
-            }
-            radio_info->sta_hal_ext_events.clear();
-            if (radio_info->sta_hal_int_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
+            clear_radio_handlers(radio_info);
         }
         m_radios_info.pop_back();
     }
@@ -438,17 +428,7 @@ void BackhaulManager::handle_disconnected(int fd)
                 LOG(INFO) << "dereferencing sta_wlan_hal";
                 radio_info->sta_wlan_hal.reset();
             }
-            for (auto &fd_ext : radio_info->sta_hal_ext_events) {
-                if (fd_ext > 0) {
-                    m_event_loop->remove_handlers(fd_ext);
-                }
-            }
-            radio_info->sta_hal_ext_events.clear();
-            if (radio_info->sta_hal_int_events !=
-                beerocks::net::FileDescriptor::invalid_descriptor) {
-                m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
-            }
+            clear_radio_handlers(radio_info);
 
             if (!m_agent_ucc_listener) {
                 LOG(INFO) << "sending platform_notify: Agent disconnected";
@@ -597,18 +577,8 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
                 if (radio_info->sta_wlan_hal) {
                     radio_info->sta_wlan_hal.reset();
                 }
-                for (auto &fd : radio_info->sta_hal_ext_events) {
-                    if (fd > 0) {
-                        m_event_loop->remove_handlers(fd);
-                    }
-                }
-                radio_info->sta_hal_ext_events.clear();
-                if (radio_info->sta_hal_int_events !=
-                    beerocks::net::FileDescriptor::invalid_descriptor) {
-                    m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
-                    radio_info->sta_hal_int_events =
-                        beerocks::net::FileDescriptor::invalid_descriptor;
-                }
+
+                clear_radio_handlers(radio_info);
             }
         }
 
@@ -902,11 +872,11 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             // Clear the backhaul interface mac.
             radio->back.iface_mac = beerocks::net::network_utils::ZERO_MAC;
 
+            clear_radio_handlers(radio_info);
+
             if (radio_info->sta_wlan_hal) {
                 radio_info->sta_wlan_hal.reset();
             }
-
-            clear_radio_handlers(*radio_info);
         }
 
         finalize_slaves_connect_state(false); //send disconnect to all connected slaves
@@ -945,7 +915,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
     case EState::INIT_HAL: {
         skip_select = true;
         for (auto &radio_info : m_radios_info) {
-            clear_radio_handlers(*radio_info);
+            clear_radio_handlers(radio_info);
         }
         state_time_stamp_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(WPA_ATTACH_TIMEOUT_SECONDS);
@@ -1003,7 +973,23 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                                 radio_info->sta_wlan_hal->process_int_events();
                                 return true;
                             },
+                        .on_write = nullptr,
+                        .on_disconnect =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_int_events disconnected! on fd " << fd;
+                                radio_info->sta_hal_int_events =
+                                    beerocks::net::FileDescriptor::invalid_descriptor;
+                                return false;
+                            },
+                        .on_error =
+                            [radio_info](int fd, EventLoop &loop) {
+                                LOG(ERROR) << "sta_hal_int_events error! on fd " << fd;
+                                radio_info->sta_hal_int_events =
+                                    beerocks::net::FileDescriptor::invalid_descriptor;
+                                return false;
+                            },
                     };
+
                     if (!m_event_loop->register_handlers(int_events_fd, int_events_handlers)) {
                         LOG(ERROR) << "Unable to register handlers for internal events queue!";
                         return false;
@@ -3145,20 +3131,23 @@ bool BackhaulManager::handle_dev_set_config(
     return true;
 }
 
-void BackhaulManager::clear_radio_handlers(beerocks::BackhaulManager::sRadioInfo &radio_info)
+void BackhaulManager::clear_radio_handlers(
+    const std::shared_ptr<beerocks::BackhaulManager::sRadioInfo> &radio_info)
 {
-    for (auto &fd : radio_info.sta_hal_ext_events) {
-        LOG(DEBUG) << "fd: " << fd;
+    for (auto &fd : radio_info->sta_hal_ext_events) {
+        LOG(DEBUG) << "Removing handlers for external events. Fd: " << fd;
         if (fd > 0) {
             m_event_loop->remove_handlers(fd);
         }
     }
 
-    radio_info.sta_hal_ext_events.clear();
+    radio_info->sta_hal_ext_events.clear();
 
-    if (radio_info.sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
-        m_event_loop->remove_handlers(radio_info.sta_hal_int_events);
-        radio_info.sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
+    if (radio_info->sta_hal_int_events != beerocks::net::FileDescriptor::invalid_descriptor) {
+        LOG(DEBUG) << "Removing handlers for internal events. Fd: "
+                   << radio_info->sta_hal_int_events;
+        m_event_loop->remove_handlers(radio_info->sta_hal_int_events);
+        radio_info->sta_hal_int_events = beerocks::net::FileDescriptor::invalid_descriptor;
     }
 }
 } // namespace beerocks

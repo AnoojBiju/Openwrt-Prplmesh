@@ -37,7 +37,12 @@ base_wlan_hal::~base_wlan_hal()
 {
     // Close the eventfd used for internal events
     if (m_fd_int_events != -1) {
-        close(m_fd_int_events);
+        if (close(m_fd_int_events) == -1) {
+            LOG(ERROR) << "Failed to close internal event descriptor: " << m_fd_int_events
+                       << " with error: " << strerror(errno);
+        } else {
+            LOG(DEBUG) << "Closed internal event descriptor: " << m_fd_int_events;
+        }
         m_fd_int_events = -1;
     }
 }
