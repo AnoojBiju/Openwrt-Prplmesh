@@ -3113,30 +3113,30 @@ bool BackhaulManager::handle_dev_set_config(
         m_selected_backhaul = tlvf::mac_to_string(backhaul_radio_uid);
 
         // remove wired (ethernet) interface from the bridge
-        auto db            = AgentDB::get();
-        auto bridge        = db->bridge.iface_name;
-        auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
-        auto eth_iface     = db->ethernet.wan.iface_name;
-        if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
-            bridge_ifaces.end()) {
-            if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
-                LOG(ERROR) << "Failed to remove interface '" << eth_iface << "' from bridge '"
-                           << bridge << "' !";
-                return false;
-            }
-        } else {
-            LOG(INFO) << "Interface '" << eth_iface << "' not found in bridge '" << bridge << "' !";
-        }
+        // auto db            = AgentDB::get();
+        // auto bridge        = db->bridge.iface_name;
+        // auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
+        // auto eth_iface     = db->ethernet.wan.iface_name;
+        // if (std::find(bridge_ifaces.begin(), bridge_ifaces.end(), eth_iface) !=
+        //     bridge_ifaces.end()) {
+        //     if (!beerocks::net::network_utils::linux_remove_iface_from_bridge(bridge, eth_iface)) {
+        //         LOG(ERROR) << "Failed to remove interface '" << eth_iface << "' from bridge '"
+        //                    << bridge << "' !";
+        //         return false;
+        //     }
+        // } else {
+        //     LOG(INFO) << "Interface '" << eth_iface << "' not found in bridge '" << bridge << "' !";
+        // }
 
         // Disable wired interface for wireless backhaul connection.
         // It will be enabled back if in case we want to establish wired bh connection.
-        beerocks::net::network_utils::set_interface_state(eth_iface, false);
+        // beerocks::net::network_utils::set_interface_state(eth_iface, false);
 
-        UTILS_SLEEP_MSEC(1000);
-        if (beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
-            LOG(ERROR) << "The wired interface is not yet down after 1 sec";
-            return false;
-        }
+        // UTILS_SLEEP_MSEC(1000);
+        // if (beerocks::net::network_utils::linux_iface_is_up_and_running(eth_iface)) {
+        //     LOG(ERROR) << "The wired interface is not yet down after 1 sec";
+        //     return false;
+        // }
     }
 
     // Signal to backhaul manager that it can continue onboarding.
