@@ -661,7 +661,7 @@ bool dynamic_channel_selection_r2_task::handle_single_scan_request_event(
 
     int32_t dwell_time_msec = database.get_channel_scan_dwell_time_msec(radio_mac, true);
     if (dwell_time_msec < 0) {
-        LOG(TRACE) << "single scan cannot proceed without dwell_time value";
+        LOG(TRACE) << "Single Scan cannot proceed without dwell_time value and hence returning false";
         return false;
     }
 
