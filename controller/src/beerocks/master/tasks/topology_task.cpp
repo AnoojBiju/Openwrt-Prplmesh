@@ -342,7 +342,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 }
 
                 // Remove the vap from DB
-                LOG(DEBUG) << "Removing BSS with path " << bss->dm_path << " from DB";
+                LOG(DEBUG) << "Removing BSS with bssid " << bss->bssid << " from DB";
                 database.remove_vap(*radio, *bss);
             }
         }
@@ -630,7 +630,12 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         LOG(INFO) << "client connected, al_mac=" << src_mac << " mac=" << client_mac_str
                   << ", bssid=" << bssid_str;
 
-        auto wifi_channel = database.get_node_wifi_channel(bssid_str);
+        std::shared_ptr<Agent::sRadio> radio = database.get_radio_by_bssid(bssid);
+        if (!radio) {
+            LOG(ERROR) << "No radio found hosting BSS " << bssid;
+            return false;
+        }
+        auto wifi_channel = database.get_radio_wifi_channel(radio->radio_uid);
         if (wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
         }

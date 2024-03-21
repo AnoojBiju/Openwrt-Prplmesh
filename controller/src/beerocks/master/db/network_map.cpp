@@ -227,8 +227,9 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 
     if (n_type == beerocks::TYPE_IRE &&
         database.is_node_wireless(database.get_node_parent(n->mac))) {
-        auto parent_backhaul_mac          = database.get_node_parent_backhaul(n->mac);
-        auto parent_backhaul_wifi_channel = database.get_node_wifi_channel(parent_backhaul_mac);
+        auto parent_backhaul_mac = database.get_node_parent_backhaul(n->mac);
+        auto parent_backhaul_wifi_channel =
+            database.get_radio_wifi_channel(tlvf::mac_from_string(parent_backhaul_mac));
         if (parent_backhaul_wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << parent_backhaul_mac;
         }

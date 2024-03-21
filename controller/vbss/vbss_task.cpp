@@ -667,20 +667,20 @@ vbss_task::get_matching_active_move(const sMacAddr vbssid, const eMoveProcessSta
 bool vbss_task::should_trigger_channel_switch(const sMacAddr src_ruid, const sMacAddr dest_ruid,
                                               uint8_t &out_channel, uint8_t &out_opclass)
 {
-    auto src_wifi_channel = m_database.get_node_wifi_channel(tlvf::mac_to_string(src_ruid));
+    auto src_wifi_channel = m_database.get_radio_wifi_channel(src_ruid);
     if (src_wifi_channel.is_empty()) {
         LOG(WARNING) << "empty wifi channel of " << src_ruid << " in DB";
     }
     uint8_t src_channel  = src_wifi_channel.get_channel();
-    uint8_t src_op_class = m_database.get_hostap_operating_class(src_ruid);
+    uint8_t src_op_class = m_database.get_radio_operating_class(src_ruid);
 
-    auto dest_wifi_channel = m_database.get_node_wifi_channel(tlvf::mac_to_string(dest_ruid));
+    auto dest_wifi_channel = m_database.get_radio_wifi_channel(dest_ruid);
     if (dest_wifi_channel.is_empty()) {
         LOG(WARNING) << "empty wifi channel of " << dest_ruid << " in DB";
     }
 
     uint8_t dest_channel  = dest_wifi_channel.get_channel();
-    uint8_t dest_op_class = m_database.get_hostap_operating_class(dest_ruid);
+    uint8_t dest_op_class = m_database.get_radio_operating_class(dest_ruid);
 
     LOG(DEBUG) << "Checking if channel switch is needed: Source " << src_ruid << " is on channel "
                << src_channel << " op_class " << src_op_class << " - destination " << dest_ruid

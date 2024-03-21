@@ -621,18 +621,14 @@ bool db::set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
     return true;
 }
 
-int db::get_hostap_operating_class(const sMacAddr &mac)
+int db::get_radio_operating_class(const sMacAddr &mac)
 {
-    auto mac_str = tlvf::mac_to_string(mac);
-    auto n       = get_node(mac_str);
-    if (!n) {
-        LOG(WARNING) << "node " << mac_str << " does not exist!";
-        return 0;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || !n->hostap) {
-        LOG(WARNING) << "node " << mac_str << " is not a valid hostap!";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << "radio " << mac << " does not exist!";
         return 0;
     }
-    return n->hostap->operating_class;
+    return radio->operating_class;
 }
 
 bool db::set_node_vap_id(const std::string &mac, int8_t vap_id)
@@ -938,7 +934,7 @@ bool db::is_ap_out_of_band(const std::string &mac, const std::string &sta_mac)
     }
     bool client_on_5ghz = (sta_wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 
-    auto wifi_channel = get_node_wifi_channel(mac);
+    auto wifi_channel = get_radio_wifi_channel(tlvf::mac_from_string(mac));
     if (wifi_channel.is_empty()) {
         LOG(ERROR) << "empty wifi channel of " << mac << " in DB";
         return false;
@@ -1782,11 +1778,11 @@ bool db::set_station_capabilities(const std::string &client_mac,
         return false;
     }
 
-    if (is_node_5ghz(parent_radio)) {
+    if (is_radio_5ghz(tlvf::mac_from_string(parent_radio))) {
         n->m_sta_5ghz_capabilities       = sta_cap;
         n->m_sta_5ghz_capabilities.valid = true;
         n->capabilities                  = &n->m_sta_5ghz_capabilities;
-    } else if (is_node_6ghz(parent_radio)) {
+    } else if (is_radio_6ghz(tlvf::mac_from_string(parent_radio))) {
         n->m_sta_6ghz_capabilities       = sta_cap;
         n->m_sta_6ghz_capabilities.valid = true;
         n->capabilities                  = &n->m_sta_6ghz_capabilities;
@@ -2155,6 +2151,16 @@ bool db::get_node_5ghz_support(const std::string &mac)
     return n->supports_5ghz;
 }
 
+bool db::get_radio_5ghz_support(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        return false;
+    }
+
+    return radio->supports_5ghz;
+}
+
 bool db::get_node_24ghz_support(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -2164,15 +2170,15 @@ bool db::get_node_24ghz_support(const std::string &mac)
     return n->supports_24ghz;
 }
 
-bool db::is_node_24ghz(const std::string &mac)
+bool db::is_radio_24ghz(const sMacAddr &radio_mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio " << radio_mac << " does not exist! return false as default";
         return false;
     }
 
-    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_24G);
+    return (radio->wifi_channel.get_freq_type() == eFreqType::FREQ_24G);
 }
 
 bool db::is_node_5ghz(const std::string &mac)
@@ -2186,15 +2192,26 @@ bool db::is_node_5ghz(const std::string &mac)
     return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 }
 
-bool db::is_node_6ghz(const std::string &mac)
+bool db::is_radio_5ghz(const sMacAddr &radio_mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio " << radio_mac << " does not exist! return false as default";
         return false;
     }
 
-    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_6G);
+    return (radio->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
+}
+
+bool db::is_radio_6ghz(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio " << radio_mac << " does not exist! return false as default";
+        return false;
+    }
+
+    return (radio->wifi_channel.get_freq_type() == eFreqType::FREQ_6G);
 }
 
 bool db::update_node_failed_6ghz_steer_attempt(const std::string &mac)
@@ -2264,7 +2281,7 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     }
 
     //TODO: Refactor BSS object to cover radio band support (PPM-1057)
-    bool hostap_is_5ghz = is_node_5ghz(target_bssid);
+    bool hostap_is_5ghz = is_radio_5ghz(target_bss->radio.radio_uid);
 
     //TODO: Refactor Station object to cover band support (PPM-1057)
     if ((hostap_is_5ghz && !get_node_5ghz_support(sta_mac))) {
@@ -2669,7 +2686,7 @@ std::string db::get_5ghz_sibling_hostap(const std::string &mac)
 {
     auto siblings = get_node_siblings(mac, beerocks::TYPE_SLAVE);
     for (auto &hostap : siblings) {
-        if (get_node_5ghz_support(hostap)) {
+        if (get_radio_5ghz_support(tlvf::mac_from_string(hostap))) {
             auto n = get_node(hostap);
             if (!n) {
                 LOG(ERROR) << "node " << hostap << " does not exist";
@@ -3602,7 +3619,7 @@ const std::vector<sChannelScanResults> db::get_channel_scan_report(const sMacAdd
         return empty_report;
     }
 
-    auto wifi_Channel = get_node_wifi_channel(tlvf::mac_to_string(RUID));
+    auto wifi_Channel = get_radio_wifi_channel(RUID);
     if (wifi_Channel.is_empty()) {
         LOG(ERROR) << "wifi channel is empty";
         return empty_report;
@@ -4137,8 +4154,8 @@ bool db::clear_client_persistent_db(const sMacAddr &mac)
 
 bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sMacAddr &hostap)
 {
-    auto hostap_wifi_channel = get_node_wifi_channel(tlvf::mac_to_string(hostap));
-    if (hostap_wifi_channel.is_empty()) {
+    auto radio_wifi_channel = get_radio_wifi_channel(hostap);
+    if (radio_wifi_channel.is_empty()) {
         LOG(ERROR) << "empty wifi channel of " << tlvf::mac_to_string(hostap) << " in DB";
         return false;
     }
@@ -4155,7 +4172,7 @@ bool db::is_hostap_on_client_selected_bands(const sMacAddr &client_mac, const sM
         return false;
     }
 
-    auto freq_type = hostap_wifi_channel.get_freq_type();
+    auto freq_type = radio_wifi_channel.get_freq_type();
     switch (freq_type) {
     case beerocks::eFreqType::FREQ_24G:
         return (selected_bands & eClientSelectedBands::eSelectedBands_24G);
@@ -4959,80 +4976,91 @@ uint16_t db::get_load_tx_phy_rate_100kb(const std::string &sta_mac)
 
 bool db::set_measurement_delay(const std::string &mac, int measurement_delay)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return false;
     }
-    n->measurement_delay = measurement_delay;
+    radio->measurement_delay = measurement_delay;
     LOG(DEBUG) << "set_measurement_delay: mac " << mac
-               << " n->measurement_delay = " << int(n->measurement_delay);
+               << " n->measurement_delay = " << int(radio->measurement_delay);
     return true;
 }
 
 int db::get_measurement_delay(const std::string &mac)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return -1;
     }
-    //LOG(DEBUG) << "get_measurement_delay: mac " << mac << " n->measurement_delay = " << int(n->measurement_delay);
-    return n->measurement_delay;
+    return radio->measurement_delay;
 }
 
 bool db::set_measurement_sent_timestamp(const std::string &mac)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return false;
     }
-    n->measurement_sent_timestamp = std::chrono::steady_clock::now();
+    radio->measurement_sent_timestamp = std::chrono::steady_clock::now();
     LOG(DEBUG) << "set_measurement_sent_timestamp: mac " << mac;
     return true;
 }
 
 int db::get_measurement_recv_delta(const std::string &mac)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return -1;
     }
     LOG(DEBUG) << "get_measurement_recv_delta: mac " << mac
-               << " n->measurement_recv_delta = " << int(n->measurement_recv_delta)
-               << " actual delay = " << int((n->measurement_recv_delta / 2));
-    return n->measurement_recv_delta;
+               << " radio->measurement_recv_delta = " << int(radio->measurement_recv_delta)
+               << " actual delay = " << int((radio->measurement_recv_delta / 2));
+    return radio->measurement_recv_delta;
 }
 
 bool db::set_measurement_recv_delta(const std::string &mac)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return false;
     }
     auto measurement_recv_timestamp = std::chrono::steady_clock::now();
-    n->measurement_recv_delta       = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    measurement_recv_timestamp - n->measurement_sent_timestamp)
-                                    .count();
-    //LOG(DEBUG) << "set_measurement_recv_delta: mac " << mac << " n->measurement_recv_delta = " << int(n->measurement_recv_delta);
+    radio->measurement_recv_delta =
+        std::chrono::duration_cast<std::chrono::milliseconds>(measurement_recv_timestamp -
+                                                              radio->measurement_sent_timestamp)
+            .count();
     return true;
 }
 
 int db::get_measurement_window_size(const std::string &mac)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return -1;
     }
-    return n->measurement_window_size;
+    return radio->measurement_window_size;
 }
 
 bool db::set_measurement_window_size(const std::string &mac, int window_size)
 {
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
         return false;
     }
-    n->measurement_window_size = window_size;
+    radio->measurement_window_size = window_size;
     return true;
+}
+
+beerocks::WifiChannel db::get_radio_wifi_channel(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "No Radio found with MAC " << radio_mac;
+        return {};
+    }
+    LOG(DEBUG) << "Get Radio wifiChannel channel " << radio->wifi_channel.get_channel()
+               << " bandwidth " << radio->wifi_channel.get_bandwidth();
+    return radio->wifi_channel;
 }
 
 beerocks::WifiChannel db::get_node_wifi_channel(const std::string &mac)
@@ -5044,24 +5072,48 @@ beerocks::WifiChannel db::get_node_wifi_channel(const std::string &mac)
     return n->wifi_channel;
 }
 
+bool db::set_radio_wifi_channel(const sMacAddr &radio_mac,
+                                const beerocks::WifiChannel &wifi_channel)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        return false;
+    }
+
+    LOG(INFO) << "Set Radio " << radio_mac << ", previous wifiChannel: " << radio->wifi_channel
+              << ", current wifiChannel: " << wifi_channel;
+    radio->wifi_channel = wifi_channel;
+
+    radio->operating_class = son::wireless_utils::get_operating_class_by_channel(wifi_channel);
+    if (radio->operating_class == 0) {
+        LOG(ERROR) << "failed to get operating class of " << wifi_channel;
+    }
+
+    switch (radio->wifi_channel.get_freq_type()) {
+    case eFreqType::FREQ_24G: {
+        radio->supports_24ghz = true;
+    } break;
+    case eFreqType::FREQ_5G: {
+        radio->supports_5ghz = true;
+    } break;
+    case eFreqType::FREQ_6G: {
+        radio->supports_6ghz = true;
+    } break;
+    default:
+        LOG(ERROR) << "frequency type unknown, channel=" << radio->wifi_channel.get_channel();
+        break;
+    }
+
+    // Temporary
+    return set_node_wifi_channel(radio_mac, wifi_channel);
+}
+
 bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel)
 {
     std::shared_ptr<node> n = get_node(mac);
     if (!n) {
         LOG(ERROR) << "node " << mac << " does not exist ";
         return false;
-    }
-    if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap != nullptr) {
-            n->hostap->operating_class =
-                son::wireless_utils::get_operating_class_by_channel(wifi_channel);
-            if (n->hostap->operating_class == 0) {
-                LOG(ERROR) << "failed to get operating class of " << wifi_channel;
-            }
-        } else {
-            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
-            return false;
-        }
     }
 
     LOG(INFO) << "set node " << mac;
@@ -8404,11 +8456,10 @@ bool db::add_unassociated_station(sMacAddr const &new_station_mac_add, uint8_t c
             //The channel is not accepted/available for any radios! --> lets revert to the active channel in one radio
             // and warn the user!
             // NOTE: We do this "overwride" because the Specs allow the agent to use its active channel instead of the preferrred one received by the command!
-            agent_radio = agent->radios.begin()->second;
-            uint8_t channel_overwrite =
-                get_node(agent_radio->radio_uid)->wifi_channel.get_channel();
-            beerocks::message::sWifiChannel local(
-                channel_overwrite, get_node(agent_radio->radio_uid)->wifi_channel.get_bandwidth());
+            agent_radio               = agent->radios.begin()->second;
+            uint8_t channel_overwrite = agent_radio->wifi_channel.get_channel();
+            beerocks::message::sWifiChannel local(channel_overwrite,
+                                                  agent_radio->wifi_channel.get_bandwidth());
             uint8_t operating_class_overwrite =
                 wireless_utils::get_operating_class_by_channel(local);
             LOG(WARNING) << "add_unassociated_station : channel " << channel << ",operating_class "
