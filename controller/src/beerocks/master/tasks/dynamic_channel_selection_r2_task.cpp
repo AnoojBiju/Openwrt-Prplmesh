@@ -368,7 +368,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Convert channels list to operating_class: channels list
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
-                auto wifi_channel = database.get_node_wifi_channel(tlvf::mac_to_string(radio_mac));
+                auto wifi_channel = database.get_radio_wifi_channel(radio_mac);
                 if (wifi_channel.is_empty()) {
                     LOG(ERROR) << "WifiChannel is empty";
                 }

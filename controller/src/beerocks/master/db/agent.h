@@ -159,11 +159,17 @@ public:
         std::vector<uint8_t> conf_restricted_channels;
         bool active = false;
         std::string iface_name;
+        uint8_t operating_class = 0;
         std::vector<beerocks::WifiChannel> supported_channels;
         bool cac_completed  = false;
         bool supports_24ghz = true;
         bool supports_5ghz  = true;
         bool supports_6ghz  = true;
+        beerocks::WifiChannel wifi_channel;
+        std::chrono::steady_clock::time_point measurement_sent_timestamp;
+        int measurement_recv_delta  = 0;
+        int measurement_delay       = 0;
+        int measurement_window_size = 60;
 
         /* The channel_scan_report structure holds channel scan report information
          * The channel_scan_report_key is comprised of an operating-class & channel-number pair

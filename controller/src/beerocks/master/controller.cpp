@@ -2653,7 +2653,7 @@ bool Controller::handle_intel_slave_join(
 
     database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
 
-    if (database.get_node_5ghz_support(tlvf::mac_to_string(radio_mac))) {
+    if (database.get_radio_5ghz_support(radio_mac)) {
         if (notification->low_pass_filter_on()) {
             database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
         } else {
@@ -2926,7 +2926,7 @@ bool Controller::handle_non_intel_slave_join(
     // TODO assume SSIDs are not hidden
 
     // TODO
-    //        if (database.get_node_5ghz_support(radio_mac)) {
+    //        if (database.get_radio_5ghz_support(radio_mac)) {
     //            if (notification->low_pass_filter_on()) {
     //                database.set_radio_band_capability(radio_mac, beerocks::LOW_SUBBAND_ONLY);
     //            } else {
@@ -3619,8 +3619,8 @@ bool Controller::handle_cmdu_control_message(
             notification->params().channel, notification->params().center_frequency1,
             static_cast<beerocks::eWiFiBandwidth>(notification->params().bandwidth),
             channel_ext_above);
-        if (!database.set_node_wifi_channel(radio_mac, wifi_channel)) {
-            LOG(ERROR) << "set node wifi channel failed, mac=" << radio_mac;
+        if (!database.set_radio_wifi_channel(radio_mac, wifi_channel)) {
+            LOG(ERROR) << "set radio wifi channel failed, mac=" << radio_mac;
         }
 
         break;

@@ -257,7 +257,7 @@ bool client_association_task::dm_add_sta_association_event_caps(const sMacAddr &
         return false;
     }
 
-    auto wifi_channel = m_database.get_node_wifi_channel(parent_radio);
+    auto wifi_channel = m_database.get_radio_wifi_channel(tlvf::mac_from_string(parent_radio));
     if (wifi_channel.is_empty()) {
         LOG(ERROR) << "WifiChannel is empty";
         return false;

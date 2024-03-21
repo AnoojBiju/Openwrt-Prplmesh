@@ -762,8 +762,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto wifi_channel =
-                m_database.get_node_wifi_channel(m_database.get_node_parent_radio(client_mac));
+            auto wifi_channel = m_database.get_radio_wifi_channel(
+                tlvf::mac_from_string(m_database.get_node_parent_radio(client_mac)));
             if (wifi_channel.is_empty()) {
                 TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_node_parent_radio(client_mac)
                                 << " is empty";
@@ -1246,8 +1246,10 @@ bool pre_association_steering_task::check_ap_cfgs_are_valid(
                 << vap_bssid << " is empty";
             return false;
         }
-        if (!(m_database.is_node_24ghz(radio_mac) || m_database.is_node_5ghz(radio_mac) ||
-              m_database.is_node_6ghz(radio_mac))) {
+        sMacAddr radio_mac_addr = tlvf::mac_from_string(radio_mac);
+        if (!(m_database.is_radio_24ghz(radio_mac_addr) ||
+              m_database.is_radio_5ghz(radio_mac_addr) ||
+              m_database.is_radio_6ghz(radio_mac_addr))) {
             TASK_LOG(ERROR) << "STEERING_SET_GROUP_REQUEST event: radio mac " << radio_mac
                             << " is not 2.4GHz, 5GHz, or 6GHz";
             return false;
