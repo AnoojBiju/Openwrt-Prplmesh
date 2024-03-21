@@ -1280,13 +1280,14 @@ public:
     std::string get_node_parent_radio(const std::string &mac);
 
     /**
-     * @brief Get data model path of node
+     * @brief Get data model path of Station
      *
-     * @param[in] mac node mac address.
-     * @return Data model path of node on success or empty string otherwise.
+     * @param[in] mac Station mac address.
+     * @return Data model path of Station on success or empty string otherwise.
      */
-    std::string get_node_data_model_path(const std::string &mac);
-    std::string get_node_data_model_path(const sMacAddr &mac);
+    std::string get_station_data_model_path(const sMacAddr &mac);
+    std::string get_radio_data_model_path(const sMacAddr &radio_mac);
+    std::string get_agent_data_model_path(const sMacAddr &al_mac);
 
     int8_t get_hostap_vap_id(const sMacAddr &mac);
 
@@ -3018,15 +3019,6 @@ private:
      */
     bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
                           bool is_vbss = false);
-
-    /**
-     * @brief Set data model path member of a node
-     *
-     * @param mac mac address of node
-     * @param data_model_path data model path
-     * @return true on success, false otherwise.
-     */
-    bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;

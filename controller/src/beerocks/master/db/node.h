@@ -50,7 +50,6 @@ public:
     int8_t vap_id = beerocks::IFACE_ID_INVALID;
     const std::string mac;           // client
     std::string parent_mac;          // hostap
-    std::string dm_path;             // data model path without dot in the end
     std::string previous_parent_mac; //hostap
 
     beerocks::WifiChannel wifi_channel;
