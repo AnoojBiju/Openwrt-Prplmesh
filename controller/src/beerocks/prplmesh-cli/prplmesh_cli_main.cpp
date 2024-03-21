@@ -12,6 +12,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 beerocks::prplmesh_api::prplmesh_cli prpl_cli;
@@ -64,6 +65,26 @@ bool set_security(int argc, char *argv[])
     return ap and mode and prpl_cli.set_security(ap, mode, passphrase ?: "");
 }
 
+int start_scan(int argc, char *argv[])
+{
+    prpl_cli.connect();
+    return prpl_cli.start_dcs_single_scan(argv[3], 103, argv[5]);
+}
+
+int scan_results(int argc, char *argv[])
+{
+    prpl_cli.connect();
+    bool single_scan = true;
+    return prpl_cli.get_dcs_scan_results(argv[3], 200, single_scan);
+}
+
+int operational_radios(int argc, char *argv[])
+{
+    prpl_cli.connect();
+    std::cout << "Inside the operational radios";
+    return prpl_cli.get_device_operational_radios(argv[3]);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -83,6 +104,12 @@ int main(int argc, char *argv[])
                 prpl_cli.show_ap();
             } else if (command_string == "set_ssid") {
                 return !set_ssid(argc, argv);
+            } else if (command_string == "bml_start_dcs_single_scan") {
+                return !start_scan(argc, argv);
+            } else if (command_string == "bml_get_dcs_scan_results") {
+                return !scan_results(argc, argv);
+            } else if (command_string == "bml_get_device_operational_radios") {
+                return !operational_radios(argc, argv);
             } else if (command_string == "set_security") {
                 return !set_security(argc, argv);
             } else if (command_string == "version") {

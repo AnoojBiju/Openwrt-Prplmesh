@@ -9,6 +9,16 @@
 #include "prplmesh_cli.h"
 #include "prplmesh_amx_client.h"
 
+#include "bml_utils.h"
+
+#include <bcl/beerocks_string_utils.h>
+#include <bcl/beerocks_utils.h>
+#include <bcl/network/network_utils.h>
+#include <bcl/son/son_wireless_utils.h>
+#include <beerocks/tlvf/beerocks_message.h>
+#include <easylogging++.h>
+#include <mapf/common/utils.h>
+
 #include <arpa/inet.h>
 #include <iostream>
 #include <iterator>
@@ -61,6 +71,143 @@ bool prplmesh_cli::get_ip_from_iface(const std::string &iface, std::string &ip)
 
     return true;
 }
+
+int prplmesh_cli::start_dcs_single_scan(const std::string &radio_mac, int32_t dwell_time,
+                                        const std::string &channel_pool)
+{
+    std::cout << "start_dcs_single_scan, mac=" << radio_mac << ", dwell_time=" << dwell_time
+              << ", channel_pool=" << channel_pool << std::endl;
+
+    if (dwell_time < 0) {
+        std::cout << __func__ << ", invalid input: dwell_time='" << dwell_time << "'."
+                  << " Only positive values are supported!" << std::endl;
+        return -1;
+    }
+
+    if (channel_pool.length() == 0) {
+        std::cout << __func__
+                  << "invalid channel_pool input: channel_pool.length()==" << channel_pool.length()
+                  << std::endl;
+        return -1;
+    }
+
+    auto channels      = string_utils::str_split(channel_pool, ',');
+    auto channels_size = channels.size();
+
+    if (channels_size > BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE) {
+        std::cout << "size of channel_pool is too big. size=" << channels_size << std::endl;
+        return -1;
+    }
+
+    unsigned int channel_pool_arr[BML_CHANNEL_SCAN_MAX_CHANNEL_POOL_SIZE] = {0};
+
+    for (size_t i = 0; i < channels_size; i++) {
+        channel_pool_arr[i] = beerocks::string_utils::stoi(channels[i]);
+    }
+
+    bml_start_dcs_single_scan(ctx, radio_mac.c_str(), dwell_time, uint32_t(channels_size),
+                              channel_pool_arr);
+    return 0;
+}
+
+int prplmesh_cli::get_dcs_scan_results(const std::string &radio_mac, uint32_t max_results_size,
+                                       bool is_single_scan)
+{
+    std::cout << __func__ << ", mac=" << radio_mac << ", max_results_size=" << max_results_size
+              << ", is_single_scan=" << string_utils::bool_str(is_single_scan) << std::endl;
+
+    if (max_results_size == 0) {
+        std::cout << __func__ << "invalid input, max_results_size==0" << std::endl;
+        return -1;
+    }
+
+    BML_NEIGHBOR_AP results[max_results_size];
+
+    uint8_t status             = 0;
+    unsigned int results_count = max_results_size;
+    int ret = bml_get_dcs_scan_results(ctx, radio_mac.c_str(), results, &results_count, &status,
+                                       is_single_scan);
+
+    if (ret == BML_RET_OK) {
+        if (results_count > max_results_size) {
+            std::cout << __func__ << "ERROR: results_count(" << results_count << ")"
+                      << " > max_results_size(" << max_results_size << ")" << std::endl;
+        } else if ((status == 0) && (results_count > 0)) {
+            for (size_t i = 0; i < results_count; i++) {
+                auto res = results[i];
+                std::cout << "result[" << i << "]:" << std::endl
+                          << "  ssid=" << res.ap_SSID << std::endl
+                          << "  bssid=" << tlvf::mac_to_string(res.ap_BSSID) << std::endl
+                          << "  mode=" << int(res.ap_Mode) << std::endl
+                          << "  channel=" << int(res.ap_Channel) << std::endl
+                          << "  signal_strength_dbm=" << res.ap_SignalStrength << std::endl
+                          << "  security_mode_enabled="
+                          << string_from_int_array(res.ap_SecurityModeEnabled,
+                                                   BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
+                          << std::endl
+                          << "  encryption_mode="
+                          << string_from_int_array(res.ap_EncryptionMode,
+                                                   BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
+                          << std::endl
+                          << "  operating_frequency_band=" << int(res.ap_OperatingFrequencyBand)
+                          << std::endl
+                          << "  supported_standards="
+                          << string_from_int_array(res.ap_SupportedStandards,
+                                                   BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
+                          << std::endl
+                          << "  operating_standards=" << int(res.ap_OperatingStandards) << std::endl
+                          << "  operating_channel_bandwidth="
+                          << int(res.ap_OperatingChannelBandwidth) << std::endl
+                          << "  beacon_period_ms=" << int(res.ap_BeaconPeriod) << std::endl
+                          << "  noise_dbm=" << int(res.ap_Noise) << std::endl
+                          << "  basic_data_transfer_rates_kbps="
+                          << string_from_int_array(res.ap_BasicDataTransferRates,
+                                                   BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
+                          << std::endl
+                          << "  supported_data_transfer_rates_kbps="
+                          << string_from_int_array(res.ap_SupportedDataTransferRates,
+                                                   BML_CHANNEL_SCAN_ENUM_LIST_SIZE)
+                          << std::endl
+                          << "  dtim_period=" << int(res.ap_DTIMPeriod) << std::endl
+                          << "  channel_utilization=" << int(res.ap_ChannelUtilization) << std::endl
+                          << "  station_count=" << int(res.ap_StationCount) << std::endl;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int prplmesh_cli::get_device_operational_radios(const std::string &al_mac)
+{
+    BML_DEVICE_DATA device_data = {};
+    device_data.al_mac          = al_mac.c_str();
+
+    int ret = bml_device_oper_radios_query(ctx, &device_data);
+
+    // Main agent
+    std::cout << ((ret == BML_RET_OK) ? "OK" : "FAIL") << " Main radio agent operational"
+              << std::endl;
+    for (const auto &radio : device_data.radios) {
+        if (radio.is_connected) {
+            // wlan radio agents
+            std::cout << (radio.is_operational ? "OK " : "FAIL ") << radio.iface_name
+                      << " radio agent operational" << std::endl;
+        }
+    }
+
+    return 0;
+}
+
+bool prplmesh_cli::connect()
+{
+    beerocks_conf_path = mapf::utils::get_install_path() + "config";
+    const char *c      = beerocks_conf_path.c_str();
+    bml_connect(&ctx, c, this);
+    return true;
+}
+
+void prplmesh_cli::disconnect() {}
 
 float prplmesh_cli::get_freq_from_class(const uint32_t oper_class)
 {
@@ -434,6 +581,18 @@ bool prplmesh_cli::set_security(const std::string &ap, const std::string &mode,
     }
 
     return status == AMXB_STATUS_OK;
+}
+
+template <typename T>
+const std::string prplmesh_cli::string_from_int_array(T *arr, size_t arr_max_size)
+{
+    std::stringstream ss;
+    if (arr) {
+        for (size_t i = 0; i < arr_max_size; i++) {
+            ss << ((i != 0) ? ", " : "") << (unsigned int)(arr[i]);
+        }
+    }
+    return ss.str();
 }
 
 } // namespace prplmesh_api

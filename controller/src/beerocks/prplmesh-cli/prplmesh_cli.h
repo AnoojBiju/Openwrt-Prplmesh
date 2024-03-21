@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "bml.h"
 #include "prplmesh_amx_client.h"
 
 namespace beerocks {
@@ -28,11 +29,15 @@ namespace prplmesh_api {
 
 class prplmesh_cli {
 public:
+    std::string beerocks_conf_path;
     prplmesh_cli();
     bool get_ip_from_iface(const std::string &iface, std::string &ip);
     bool prpl_conn_map();
     void print_help();
     void print_version();
+
+    bool connect();
+    void disconnect();
 
     /**
      * @brief Get an AP path by index or SSID
@@ -61,6 +66,14 @@ public:
      */
     bool set_security(const std::string &ap, const std::string &mode,
                       const std::string &passphrase);
+
+    int start_dcs_single_scan(const std::string &radio_mac, int32_t dwell_time,
+                              const std::string &channel_pool);
+
+    int get_dcs_scan_results(const std::string &radio_mac, uint32_t max_results_size,
+                             bool is_single_scan = false);
+
+    int get_device_operational_radios(const std::string &al_mac);
 
     /**
     * @brief Recursive function that prints the topology of agents.
@@ -111,6 +124,8 @@ public:
     } conn_map_t;
 
 private:
+    BML_CTX ctx = nullptr;
+    template <typename T> const std::string string_from_int_array(T *arr, size_t arr_max_size);
 };
 
 } // namespace prplmesh_api
