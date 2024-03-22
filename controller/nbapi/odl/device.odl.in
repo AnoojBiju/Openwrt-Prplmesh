@@ -122,8 +122,9 @@
             }
         }
 
-        %read-only object SSIDtoVIDMapping {
+        %read-only object SSIDtoVIDMapping [] {
             /* The Service Set Identifier (SSID) to VLAN ID mapping for EasyMesh traffic separation */
+            counted with SSIDtoVIDMappingNumberOfEntries;
             %read-only string SSID;
             %read-only uint64 VID = 0 {
                 on action validate call check_range [0, 4095];
@@ -246,6 +247,7 @@
 
         /* IEEE 1905 security capabilities. */
         %read-only object IEEE1905Security [] {
+            counted with IEEE1905SecurityNumberOfEntries;
             %read-only uint32 OnboardingProtocol = 0;
             %read-only uint32 IntegrityAlgorithm = 0;
             %read-only uint32 EncryptionAlgorithm = 0;
@@ -253,6 +255,7 @@
 
         /* The default 802.1Q settings for EasyMesh service prioritization */
         object Default8021Q [] {
+            counted with Default8021QNumberOfEntries;
             bool Enable;
             uint32 PrimaryVID = 0 {
                 on action validate call check_range [0, 4095];
