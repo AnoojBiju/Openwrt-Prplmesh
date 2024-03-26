@@ -928,7 +928,7 @@ void channel_selection_task::work()
                 database.get_node_children(tlvf::mac_to_string(radio_mac), beerocks::TYPE_CLIENT);
             auto it =
                 std::find_if(clients.begin(), clients.end(), [&](const std::string &client_mac) {
-                    auto client_state = (uint8_t)database.get_node_state(client_mac);
+                    auto client_state = (uint8_t)database.get_sta_state(client_mac);
                     return client_state >= eNodeState::STATE_CONNECTING &&
                            client_state <= STATE_CONNECTED;
                 });
@@ -1208,7 +1208,7 @@ void channel_selection_task::get_hostap_params()
                         << " slave_joined_event->low_pass_filter_on = "
                         << int(slave_joined_event->low_pass_filter_on);
     } else {
-        auto backhaul_wifi_channel = database.get_node_wifi_channel(hostap_params.backhaul_mac);
+        auto backhaul_wifi_channel = database.get_sta_wifi_channel(hostap_params.backhaul_mac);
         if (backhaul_wifi_channel.is_empty()) {
             LOG(ERROR) << "empty wifi channel of " << hostap_params.backhaul_mac << " in DB";
             return;
