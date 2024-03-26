@@ -1681,19 +1681,6 @@ bool Controller::handle_tlv_ap_wifi6_capabilities(ieee1905_1::CmduMessageRx &cmd
     return ret_val;
 }
 
-bool Controller::handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx)
-{
-    bool ret_val = true;
-
-    for (const auto &ap_he_caps_tlv : cmdu_rx.getClassList<wfa_map::tlvApHeCapabilities>()) {
-        if (!database.set_ap_he_capabilities(*ap_he_caps_tlv)) {
-            LOG(ERROR) << "Couldn't set values for AP WiFi6Capabilities data model";
-            ret_val = false;
-        }
-    }
-    return ret_val;
-}
-
 bool Controller::handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx,
                                          std::shared_ptr<Agent> agent)
 {
@@ -1988,10 +1975,6 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
 
     if (!handle_tlv_ap_ht_capabilities(cmdu_rx)) {
         LOG(ERROR) << "Couldn't handle TLV AP HT Capabilities";
-        return false;
-    }
-    if (!handle_tlv_ap_he_capabilities(cmdu_rx)) {
-        LOG(ERROR) << "Couldn't handle TLV AP HE Capabilities";
         return false;
     }
     if (!handle_tlv_ap_vht_capabilities(cmdu_rx)) {

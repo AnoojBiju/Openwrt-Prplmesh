@@ -399,15 +399,6 @@ private:
     bool handle_tlv_apCapability(ieee1905_1::CmduMessageRx &cmdu_rx, std::shared_ptr<Agent> agent);
 
     /**
-     * @brief Get info from 'lvApCapability' TLV,
-
-     *
-     * @param cmdu_rx AP Capability Report message.
-     * @return True on success, false otherwise.
-    */
-    bool handle_tlv_ap_he_capabilities(ieee1905_1::CmduMessageRx &cmdu_rx);
-
-    /**
      * @brief Get info from 'AP WIFI6 Capabilities' TLV,
      * set data to AP WiFi6Capabilities data element.
      *
