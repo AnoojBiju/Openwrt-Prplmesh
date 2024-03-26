@@ -341,6 +341,7 @@ private:
     const int MAX_FAILED_DHCP_ATTEMPTS                = 2;
     const int MAX_WIRELESS_ASSOCIATE_TIMEOUT_SECONDS  = 10;
     const int MAX_WIRELESS_ASSOCIATE_3ADDR_ATTEMPTS   = 2;
+    const int MAX_ETH_FAILED_ATTEMPTS                 = 14;
     const int POLL_TIMER_TIMEOUT_MS                   = 1000;
     const int WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT     = 30;
     const int RSSI_POLL_INTERVAL_MS                   = 1000;
