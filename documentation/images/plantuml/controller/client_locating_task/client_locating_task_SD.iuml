@@ -1,0 +1,26 @@
+' Sequence diagram of client_locating_task usage during onboarding process
+
+@startuml
+
+...
+Controller --> Controller : handle_intel_slave_join // THIS GUY HANDLES ALL PRPLMESH SLAVES
+Controller --> client_locating_task : add_task to pool
+client_locating_task --> client_locating_task : START
+client_locating_task --> DB : send #1 - ACTION_CONTROL_ARP_QUERY_REQUEST
+DB --> Agent_1 : son_actions::send_cmdu_to_agent
+...
+client_locating_task --> DB : send #n - ACTION_CONTROL_ARP_QUERY_REQUEST
+DB --> Agent_n : son_actions::send_cmdu_to_agent
+
+client_locating_task --> client_locating_task : set_timeout (WAIT_FOR_RESPONSE)
+...
+Agent_1 --> Controller : ACTION_CONTROL_ARP_QUERY_RESPONSE
+Controller --> Controller : handle_cmdu_control_message
+Controller --> client_locating_task : m_task_pool.response_received
+client_locating_task --> client_locating_task : handle_response
+client_locating_task --> DB : if new_connection then add node to DB
+client_locating_task --> client_locating_task : FINISH
+client_locating_task --> client_locating_task : if got ALL answers then update DB and BML
+...
+
+@enduml
