@@ -31,14 +31,6 @@ typedef struct {
     bool backhaul_vap;
 } sVapElement;
 
-/**
- * @brief Extended boolean parameter to support "not configured" value for configuration.
- * For persistent data, it is important to differ between configured (true/false) to unconfigured value.
- */
-enum class eTriStateBool : int8_t { NOT_CONFIGURED = -1, FALSE = 0, TRUE = 1 };
-
-std::ostream &operator<<(std::ostream &os, eTriStateBool value);
-
 class node {
 public:
     node(beerocks::eType type_, const std::string &mac_);
@@ -100,37 +92,6 @@ public:
         std::unordered_map<int8_t, sVapElement> vaps_info;
     };
     std::shared_ptr<radio> hostap = std::make_shared<radio>();
-
-    class link_metrics_data {
-    public:
-        link_metrics_data(){};
-        ~link_metrics_data(){};
-
-        std::vector<ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo>
-            transmitterLinkMetrics;
-        std::vector<ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo> receiverLinkMetrics;
-
-        bool add_transmitter_link_metric(
-            std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> TxLinkMetricData);
-        bool add_receiver_link_metric(
-            std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData);
-    };
-
-    class ap_metrics_data {
-    public:
-        ap_metrics_data(){};
-        ~ap_metrics_data(){};
-
-        sMacAddr bssid                               = beerocks::net::network_utils::ZERO_MAC;
-        uint8_t channel_utilization                  = 0;
-        uint16_t number_of_stas_currently_associated = 0;
-        std::vector<uint8_t> estimated_service_info_fields;
-        bool include_ac_vo = false;
-        bool include_ac_bk = false;
-        bool include_ac_vi = false;
-
-        bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
-    };
 
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
