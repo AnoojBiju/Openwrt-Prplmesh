@@ -774,14 +774,14 @@ public:
                        const std::string &name = {});
 
     /**
-     * @brief Gets Interface Node according to device and interface MAC addresses.
+     * @brief Gets Interface according to device and interface MAC addresses.
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac address for node matching
      * @return returns node shared pointer.
      */
-    std::shared_ptr<prplmesh::controller::db::Interface>
-    get_interface_node(const sMacAddr &device_mac, const sMacAddr &interface_mac);
+    std::shared_ptr<Agent::sInterface> get_interface_on_agent(const sMacAddr &device_mac,
+                                                              const sMacAddr &interface_mac);
 
     /**
      * @brief Adds interface instances to Device's Data Model.
@@ -942,9 +942,8 @@ public:
      * @param neighbor Neighbor object is used to create/update data model of neighbor
      * @return true on success, false otherwise.
      */
-    bool dm_add_interface_neighbor(
-        const std::shared_ptr<prplmesh::controller::db::Interface> &interface,
-        std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor);
+    bool dm_add_interface_neighbor(const std::shared_ptr<Agent::sInterface> &interface,
+                                   std::shared_ptr<Agent::sNeighbor> &neighbor);
 
     /**
      * @brief Remove instance of Neighbors inside Interface Data Model.

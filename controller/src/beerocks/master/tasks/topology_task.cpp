@@ -358,16 +358,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     for (const auto &iface_mac : interface_macs) {
 
-        auto iface_node = database.get_interface_node(al_mac, iface_mac);
-        if (!iface_node) {
-            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+        auto interface = database.get_interface_on_agent(al_mac, iface_mac);
+        if (!interface) {
+            LOG(ERROR) << "Failed to get interface with mac: " << iface_mac;
             continue;
         }
-        iface_node->m_neighbors.keep_new_prepare();
-        auto interface = agent->interfaces.get(iface_mac);
-        if (interface) {
-            interface->m_neighbors.keep_new_prepare();
-        }
+        interface->m_neighbors.keep_new_prepare();
     }
 
     // The reported neighbors list might not be correct since the reporting al_mac hasn't received
@@ -478,17 +474,13 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     // Update active neighbors mac list of the interface node
     for (const auto &iface_mac : interface_macs) {
 
-        auto iface_node = database.get_interface_node(al_mac, iface_mac);
-        if (!iface_node) {
-            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+        auto interface = database.get_interface_on_agent(al_mac, iface_mac);
+        if (!interface) {
+            LOG(ERROR) << "Failed to get interface with mac: " << iface_mac;
             continue;
         }
 
-        auto removed_neighbors = iface_node->m_neighbors.keep_new_remove_old();
-        auto interface         = agent->interfaces.get(iface_mac);
-        if (interface) {
-            interface->m_neighbors.keep_new_remove_old();
-        }
+        auto removed_neighbors = interface->m_neighbors.keep_new_remove_old();
 
         // Removed members needs to be cleaned up from datamodel also.
         for (const auto &removed_neighbor : removed_neighbors) {

@@ -10,7 +10,6 @@
 #define _NODE_H_
 
 #include "../tasks/task.h"
-#include "interface.h"
 #include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/network_utils.h>
 #include <tlvf/common/sMacAddr.h>
@@ -96,71 +95,8 @@ public:
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;
 
-    /**
-     * @brief Returns active interface mac addresses via loop through interface objects.
-     *
-     * @return active interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr> get_interfaces_mac();
-
-    /**
-     * @brief Get Interface with the given MAC, create it if necessary.
-     *
-     * @param mac interface MAC address
-     * @return shared pointer of Interface Object
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface> add_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Get Interface with the given MAC, if there is one. Else returns nullptr.
-     *
-     * @param mac interface MAC address
-     * @return shared pointer of Interface Object on success, nullptr otherwise.
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface> get_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Remove the Interface with the given MAC Address.
-     */
-    void remove_interface(const sMacAddr &mac);
-
-    /**
-     * @brief Get all Interfaces
-     */
-    const std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> &get_interfaces()
-    {
-        return m_interfaces;
-    }
-
-    /**
-     * @brief Returns unused interface mac addresses
-     *
-     * @param new_interfaces vector of active interface macs from topology message
-     * @return unused interface mac's returned as vector of sMacAddr
-     */
-    std::vector<sMacAddr> get_unused_interfaces(const std::vector<sMacAddr> &new_interfaces);
-
-    /**
-     * @brief Get Neighbor with the given MAC, create it if necessary within Interface.
-     *
-     * @param interface_mac interface MAC address
-     * @param neighbor_mac neighbor MAC address
-     * @param flag_ieee1905 is IEEE1905 Flag
-     * @return shared pointer of Neighbor Object
-     */
-    std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor>
-    add_neighbor(const sMacAddr &interface_mac, const sMacAddr &neighbor_mac, bool flag_ieee1905);
-
 private:
     beerocks::eType type;
-
-    /**
-     * @brief Interfaces configured on this node.
-     *
-     * The Interface objects are kept alive by this list. Only active interfaces should be on this list.
-     *
-     */
-    std::vector<std::shared_ptr<prplmesh::controller::db::Interface>> m_interfaces;
 };
 } // namespace son
 #endif
