@@ -1,0 +1,16 @@
+
+' client_locating_task state machine
+
+@startuml
+
+[*] --> START
+START --> [*] : if client does not exists or is wireless
+START --> SEND_ARP_QUERIES
+
+SEND_ARP_QUERIES --> SEND_ARP_QUERIES : wait for responses
+SEND_ARP_QUERIES --> [*] : timeout
+SEND_ARP_QUERIES--> FINISH : received responses from ALL agents
+
+FINISH --> [*] : update DB and BML
+
+@enduml
