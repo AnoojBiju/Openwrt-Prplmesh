@@ -122,7 +122,7 @@ void load_balancer_task::work()
              */
         auto most_loaded_radio_mac = tlvf::mac_from_string(most_loaded_hostap);
 
-        bool current_ap_is_5ghz = database.is_node_5ghz(most_loaded_hostap);
+        bool current_ap_is_5ghz = database.is_radio_5ghz(most_loaded_radio_mac);
         int ap_total_duration_ms =
             database.get_radio_stats_measurement_duration(most_loaded_radio_mac);
         int ap_sta_load_percent =
@@ -301,7 +301,7 @@ void load_balancer_task::work()
         for (auto hostap : hostaps) {
             son::wireless_utils::sPhyApParams hostap_params;
 
-            hostap_params.is_5ghz = database.is_node_5ghz(hostap);
+            hostap_params.is_5ghz = database.is_radio_5ghz(tlvf::mac_from_string(hostap));
 
             if (hostap_params.is_5ghz && !database.get_node_5ghz_support(sta_mac)) {
                 TASK_LOG(DEBUG) << "sta " << sta_mac
@@ -311,11 +311,11 @@ void load_balancer_task::work()
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
-            WifiChannel hostap_wifi_channel = database.get_node_wifi_channel(hostap);
-            if (hostap_wifi_channel.is_empty()) {
-                LOG(WARNING) << "empty wifi channel of " << hostap_wifi_channel << " in DB";
+            WifiChannel radio_wifi_channel = database.get_radio_wifi_channel(radio_mac);
+            if (radio_wifi_channel.is_empty()) {
+                LOG(WARNING) << "empty wifi channel of " << radio_wifi_channel << " in DB";
             }
-            hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
+            hostap_params.bw       = radio_wifi_channel.get_bandwidth();
             hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
             hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
             hostap_params.tx_power = database.get_radio_tx_power(radio_mac);

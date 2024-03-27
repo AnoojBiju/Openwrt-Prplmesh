@@ -96,37 +96,52 @@ void btm_request_task::work()
             station->steering_summary_stats.btm_failures++;
             m_database.dm_increment_steer_summary_stats("BTMFailures");
 
+            std::shared_ptr<Agent::sRadio> original_radio =
+                m_database.get_radio_by_bssid(tlvf::mac_from_string(m_original_bssid));
+            if (!original_radio) {
+                TASK_LOG(ERROR) << "Radio hosting " << m_original_bssid << "not found";
+                finish();
+                break;
+            }
+            std::shared_ptr<Agent::sRadio> target_radio =
+                m_database.get_radio_by_bssid(tlvf::mac_from_string(m_target_bssid));
+            if (!target_radio) {
+                TASK_LOG(ERROR) << "Radio hosting " << m_target_bssid << " not found";
+                finish();
+                break;
+            }
+
             /*
             * might need to split this logic to high and low bands of 5GHz
             * since some clients can support one but not the other
             */
-            if (m_database.is_node_24ghz(m_original_bssid) &&
-                m_database.is_node_5ghz(m_target_bssid)) {
+            if (m_database.is_radio_24ghz(original_radio->radio_uid) &&
+                m_database.is_radio_5ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 2.4GHz to 5GHz failed --> updating failed 5ghz "
                                    "steering attempt";
                 m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
-            } else if (m_database.is_node_24ghz(m_original_bssid) &&
-                       m_database.is_node_6ghz(m_target_bssid)) {
+            } else if (m_database.is_radio_24ghz(original_radio->radio_uid) &&
+                       m_database.is_radio_6ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 2.4GHz to 6GHz failed --> updating failed 6ghz "
                                    "steering attempt";
                 m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
-            } else if (m_database.is_node_5ghz(m_original_bssid) &&
-                       m_database.is_node_24ghz(m_target_bssid)) {
+            } else if (m_database.is_radio_5ghz(original_radio->radio_uid) &&
+                       m_database.is_radio_24ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 5GHz to 2.4GHz failed, updating failed 2.4ghz "
                                    "steering attempt";
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
-            } else if (m_database.is_node_5ghz(m_original_bssid) &&
-                       m_database.is_node_6ghz(m_target_bssid)) {
+            } else if (m_database.is_radio_5ghz(original_radio->radio_uid) &&
+                       m_database.is_radio_6ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 5GHz to 6GHz failed, updating failed 6ghz "
                                    "steering attempt";
                 m_database.update_node_failed_6ghz_steer_attempt(m_sta_mac);
-            } else if (m_database.is_node_6ghz(m_original_bssid) &&
-                       m_database.is_node_24ghz(m_target_bssid)) {
+            } else if (m_database.is_radio_6ghz(original_radio->radio_uid) &&
+                       m_database.is_radio_24ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 6GHz to 2.4GHz failed, updating failed 2.4ghz "
                                    "steering attempt";
                 m_database.update_node_failed_24ghz_steer_attempt(m_sta_mac);
-            } else if (m_database.is_node_6ghz(m_original_bssid) &&
-                       m_database.is_node_5ghz(m_target_bssid)) {
+            } else if (m_database.is_radio_6ghz(original_radio->radio_uid) &&
+                       m_database.is_radio_5ghz(target_radio->radio_uid)) {
                 TASK_LOG(DEBUG) << "Steering from 6GHz to 5GHz failed, updating failed 5ghz "
                                    "steering attempt";
                 m_database.update_node_failed_5ghz_steer_attempt(m_sta_mac);
@@ -214,9 +229,15 @@ void btm_request_task::steer_sta()
         return;
     }
 
-    auto target_wifi_channel = m_database.get_node_wifi_channel(m_target_bssid);
+    std::shared_ptr<Agent::sRadio> target_radio =
+        m_database.get_radio_by_bssid(tlvf::mac_from_string(m_target_bssid));
+    if (!target_radio) {
+        LOG(ERROR) << "No radio found hosting BSS " << m_target_bssid;
+        return;
+    }
+    auto target_wifi_channel = m_database.get_radio_wifi_channel(target_radio->radio_uid);
     if (target_wifi_channel.is_empty()) {
-        LOG(WARNING) << "empty wifi channel of " << m_target_bssid << "in DB";
+        LOG(WARNING) << "empty wifi channel of " << target_radio->radio_uid << "in DB";
     }
 
     steering_request_tlv->request_flags().request_mode =
@@ -234,8 +255,12 @@ void btm_request_task::steer_sta()
     steering_request_tlv->alloc_target_bssid_list();
     auto bssid_list                      = steering_request_tlv->target_bssid_list(0);
     std::get<1>(bssid_list).target_bssid = tlvf::mac_from_string(m_target_bssid);
-    std::get<1>(bssid_list).target_bss_operating_class =
-        m_database.get_hostap_operating_class(tlvf::mac_from_string(m_target_bssid));
+    std::shared_ptr<Agent::sRadio::sBss> bss =
+        m_database.get_bss(tlvf::mac_from_string(m_target_bssid));
+    if (bss) {
+        std::get<1>(bssid_list).target_bss_operating_class =
+            m_database.get_radio_operating_class(bss->radio.radio_uid);
+    }
     std::get<1>(bssid_list).target_bss_channel_number = target_wifi_channel.get_channel();
 
     auto source_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_original_bssid));

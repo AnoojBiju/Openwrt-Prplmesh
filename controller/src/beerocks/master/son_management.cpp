@@ -1681,8 +1681,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
-        auto radio_mac_str = tlvf::mac_to_string(request->radio_mac());
-        auto freq_type     = database.get_node_wifi_channel(radio_mac_str).get_freq_type();
+        auto freq_type = database.get_radio_wifi_channel(request->radio_mac()).get_freq_type();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
