@@ -75,9 +75,9 @@ void network_health_check_task::work()
     case CLIENT_HEALTH_CHECK: {
         auto clients = database.get_nodes(beerocks::TYPE_CLIENT);
         for (auto &client : clients) {
-            auto last_seen = database.get_node_last_seen(client);
+            auto last_seen = database.get_sta_last_seen(client);
             if (!database.is_node_wireless(client) &&
-                (database.get_node_state(client) == beerocks::STATE_CONNECTED)) {
+                (database.get_sta_state(client) == beerocks::STATE_CONNECTED)) {
                 auto now = std::chrono::steady_clock::now();
                 auto last_seen_delta =
                     std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();

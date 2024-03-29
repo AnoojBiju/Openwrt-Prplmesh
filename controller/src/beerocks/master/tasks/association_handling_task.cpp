@@ -91,7 +91,7 @@ void association_handling_task::work()
 
         new_hostap_mac = database.get_node_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -207,7 +207,7 @@ void association_handling_task::work()
         auto agent_mac         = database.get_node_parent_ire(hostap_mac);
 
         if (hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -387,7 +387,7 @@ void association_handling_task::finalize_new_connection()
     /*
      * see if special handling is required if client just came back from a handover
      */
-    if (!database.get_node_handoff_flag(*client)) {
+    if (!database.get_sta_handoff_flag(*client)) {
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
@@ -399,9 +399,9 @@ void association_handling_task::finalize_new_connection()
                 auto bssid            = database.get_node_parent(sta_mac);
                 auto parent_radio_mac = database.get_node_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
-                if (!database.set_client_initial_radio(*client,
-                                                       tlvf::mac_from_string(parent_radio_mac),
-                                                       database.config.persistent_db)) {
+                if (!database.set_sta_initial_radio(*client,
+                                                    tlvf::mac_from_string(parent_radio_mac),
+                                                    database.config.persistent_db)) {
                     LOG(WARNING) << "Failed to set client " << client->mac << "  initial radio to "
                                  << parent_radio_mac;
                 }
@@ -426,7 +426,7 @@ void association_handling_task::finalize_new_connection()
         int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
         tasks.kill_task(prev_load_balancer_task);
 
-        database.set_node_handoff_flag(*client, false);
+        database.set_sta_handoff_flag(*client, false);
     }
 }
 void association_handling_task::handle_responses_timeout(

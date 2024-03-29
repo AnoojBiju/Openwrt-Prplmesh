@@ -53,7 +53,7 @@ void client_locating_task::work()
             TASK_LOG(DEBUG) << "bad task input args -> finish task";
             finish();
         } else if ((!new_connection) &&
-                   (database.get_node_state(client_mac) == beerocks::STATE_DISCONNECTED)) {
+                   (database.get_sta_state(client_mac) == beerocks::STATE_DISCONNECTED)) {
             TASK_LOG(DEBUG)
                 << "task in disconnect mode when client is already disconnected -> finish task";
             finish();
@@ -136,7 +136,7 @@ void client_locating_task::work()
                     TASK_LOG(ERROR) << "eth_sw_container empty for slave " << deepest_slave;
                 } else {
                     auto client_parent     = database.get_node_parent(client_mac);
-                    auto client_state      = database.get_node_state(client_mac);
+                    auto client_state      = database.get_sta_state(client_mac);
                     std::string eth_sw_mac = *eth_sw_container.begin();
 
                     TASK_LOG(DEBUG)
@@ -154,10 +154,10 @@ void client_locating_task::work()
                             database.add_node_ire(tlvf::mac_from_string(client_mac),
                                                   tlvf::mac_from_string(ire_backhaul));
                         } else {
-                            database.add_node_station(network_utils::ZERO_MAC,
-                                                      tlvf::mac_from_string(client_mac),
-                                                      tlvf::mac_from_string(eth_sw_mac));
-                            database.set_node_state(client_mac, beerocks::STATE_CONNECTED);
+                            database.add_station(network_utils::ZERO_MAC,
+                                                 tlvf::mac_from_string(client_mac),
+                                                 tlvf::mac_from_string(eth_sw_mac));
+                            database.set_sta_state(client_mac, beerocks::STATE_CONNECTED);
                         }
 
                         // update bml listeners
