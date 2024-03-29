@@ -137,9 +137,15 @@ void Station::clear_cross_rssi()
     m_beacon_measurements.clear();
 }
 
+void Station::set_bSta(bool bSta) { m_is_bSta = bSta; }
+
 void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
+
+void Station::clear_sta_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
+
+bool Station::is_bSta() { return m_is_bSta; }
 
 } // namespace db
 } // namespace controller
