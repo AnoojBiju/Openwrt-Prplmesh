@@ -254,7 +254,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 
     if (n_type == beerocks::TYPE_CLIENT) {
         tlvf::mac_from_string(node->parent_bssid, n->parent_mac); // remote radio(ap)
-        node->rx_rssi = database.get_load_rx_rssi(n->mac);
+        node->rx_rssi = database.get_sta_load_rx_rssi(n->mac);
     } else {
         if (n->parent_mac != std::string()) {
             auto n_parent = database.get_node(n->parent_mac);
@@ -826,10 +826,14 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
     }
         FALLTHROUGH;
     case beerocks::TYPE_CLIENT: {
+        std::shared_ptr<Station> pSta = database.get_station(tlvf::mac_from_string(n->mac));
+        if (!pSta) {
+            return false;
+        }
         //LOG(DEBUG) << "fill TYPE_CLIENT";
 
         // filter client which have not been measured yet
-        if (n->stats_info->rx_rssi == beerocks::RSSI_INVALID) {
+        if (pSta->stats_info->rx_rssi == beerocks::RSSI_INVALID) {
             //LOG(DEBUG) << "sta_mac=" << n->mac << ", signal_strength=INVALID!";
             return buf_size;
         }
@@ -839,26 +843,26 @@ std::ptrdiff_t network_map::fill_bml_node_statistics(db &database, std::shared_p
 
         //fill sta stats
         //memset(sta_stats_bulk, 0, stats_bulk_len);
-        tlvf::mac_from_string(sta_stats_bulk->mac, n->mac);
+        tlvf::mac_from_string(sta_stats_bulk->mac, tlvf::mac_to_string(pSta->mac));
         sta_stats_bulk->type = BML_STAT_TYPE_CLIENT;
 
-        sta_stats_bulk->bytes_sent              = n->stats_info->tx_bytes;
-        sta_stats_bulk->bytes_received          = n->stats_info->rx_bytes;
-        sta_stats_bulk->packets_sent            = n->stats_info->tx_packets;
-        sta_stats_bulk->packets_received        = n->stats_info->rx_packets;
-        sta_stats_bulk->measurement_window_msec = n->stats_info->stats_delta_ms;
-        sta_stats_bulk->retrans_count           = n->stats_info->retrans_count;
+        sta_stats_bulk->bytes_sent              = pSta->stats_info->tx_bytes;
+        sta_stats_bulk->bytes_received          = pSta->stats_info->rx_bytes;
+        sta_stats_bulk->packets_sent            = pSta->stats_info->tx_packets;
+        sta_stats_bulk->packets_received        = pSta->stats_info->rx_packets;
+        sta_stats_bulk->measurement_window_msec = pSta->stats_info->stats_delta_ms;
+        sta_stats_bulk->retrans_count           = pSta->stats_info->retrans_count;
 
         // These COMMON params are not available for station from bwl
         sta_stats_bulk->errors_sent     = 0;
         sta_stats_bulk->errors_received = 0;
 
         // LOG(DEBUG) << "sta_mac=" << n->mac << ", signal_strength=" << int(n->stats_info->rx_rssi);
-        sta_stats_bulk->uType.client.signal_strength = n->stats_info->rx_rssi;
+        sta_stats_bulk->uType.client.signal_strength = pSta->stats_info->rx_rssi;
         sta_stats_bulk->uType.client.last_data_downlink_rate =
-            n->stats_info->tx_phy_rate_100kb * 100000;
+            pSta->stats_info->tx_phy_rate_100kb * 100000;
         sta_stats_bulk->uType.client.last_data_uplink_rate =
-            n->stats_info->rx_phy_rate_100kb * 100000;
+            pSta->stats_info->rx_phy_rate_100kb * 100000;
 
         //These CLIENT SPECIFIC params are missing in DB:
         sta_stats_bulk->uType.client.retransmissions = 0;
