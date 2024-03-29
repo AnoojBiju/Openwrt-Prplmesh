@@ -420,7 +420,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
 
             if (m_database.get_node_parent(client_mac) !=
                     event_obj->bssid || // client is not connected to provided bssid
-                m_database.get_node_state(client_mac) == beerocks::STATE_DISCONNECTED) {
+                m_database.get_sta_state(client_mac) == beerocks::STATE_DISCONNECTED) {
                 TASK_LOG(ERROR) << "Client " << client_mac << " is not connected to "
                                 << event_obj->bssid;
                 send_bml_response(STEERING_RSSI_MEASUREMENT_RESPONSE, event_obj->sd,
@@ -770,7 +770,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
             auto freq_type   = wifi_channel.get_freq_type();
-            auto client_caps = m_database.get_station_capabilities(client_mac, freq_type);
+            auto client_caps = m_database.get_sta_capabilities(client_mac, freq_type);
 
             auto response = message_com::create_vs_message<
                 beerocks_message::cACTION_BML_STEERING_EVENTS_UPDATE>(m_cmdu_tx);
