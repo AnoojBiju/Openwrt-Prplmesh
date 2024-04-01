@@ -170,6 +170,10 @@ public:
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
+    void set_is_backhaul(bool is_backhaul) { m_is_backhaul = is_backhaul; }
+    bool is_backhaul() { return m_is_backhaul; }
+    void set_eth_switch(std::shared_ptr<Agent::sEthSwitch> eth_switch);
+    std::shared_ptr<Agent::sEthSwitch> get_eth_switch();
     void clear_sta_stats_info();
     bool is_bSta();
     void set_bSta(bool bSta);
@@ -187,7 +191,8 @@ private:
     int m_failed_11v_request_count = 0;
     bool m_is_bSta                 = false;
 
-    bool m_handoff = false;
+    bool m_handoff     = false;
+    bool m_is_backhaul = false;
     std::chrono::steady_clock::time_point last_state_change;
 
     class beacon_measurement;
@@ -196,6 +201,7 @@ private:
     class rssi_measurement;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
+    std::weak_ptr<Agent::sEthSwitch> m_eth_switch;
     std::vector<uint8_t> m_assoc_frame;
 };
 

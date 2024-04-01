@@ -353,6 +353,12 @@ std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
 std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto agent = m_agents.add(mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to add Agent " << mac;
+        return agent;
+    }
+
+    agent->parent_mac = parent_mac;
 
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
         LOG(ERROR) << "Failed to add ire node, mac: " << mac;
@@ -389,6 +395,21 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
                                                         const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
+    if (!station) {
+        return {};
+    }
+
+    // Save stations's parent
+    std::shared_ptr<Agent::sRadio::sBss> parent_bss = get_bss(parent_mac);
+    if (parent_bss) {
+        station->set_bss(parent_bss);
+    } else {
+        std::shared_ptr<Agent::sEthSwitch> parent_switch = get_eth_switch(parent_mac);
+        if (parent_switch) {
+            station->set_eth_switch(parent_switch);
+        }
+    }
+    station->set_is_backhaul(true);
     station->set_bSta(true);
 
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
@@ -406,6 +427,13 @@ bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac
         LOG(ERROR) << "Failed to add wired_backhaul node, mac: " << mac;
         return false;
     }
+    std::shared_ptr<Agent> agent = get_agent(parent_mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to find Agent " << parent_mac;
+        return false;
+    }
+    agent->eth_switches.add(mac);
+    LOG(ERROR) << "TMP add eth switch " << mac << " with parent " << parent_mac;
 
     // TODO: Add node to the controller data model via m_ambiorix_datamodel for Wired BH agent
     return true;
@@ -615,6 +643,19 @@ bool db::set_node_ipv4(const std::string &mac, const std::string &ipv4)
         return false;
     }
     n->ipv4 = ipv4;
+    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
+        set_agent_ipv4(mac, ipv4);
+    }
+    return true;
+}
+
+bool db::set_agent_ipv4(const std::string &al_mac, const std::string &ipv4)
+{
+    std::shared_ptr<Agent> agent = get_agent(tlvf::mac_from_string(al_mac));
+    if (!agent) {
+        return false;
+    }
+    agent->ipv4 = ipv4;
     return true;
 }
 
@@ -822,6 +863,19 @@ bool db::set_node_name(const std::string &mac, const std::string &name)
         return false;
     }
     n->name = name;
+    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
+        set_agent_name(mac, name);
+    }
+    return true;
+}
+
+bool db::set_agent_name(const std::string &al_mac, const std::string &name)
+{
+    std::shared_ptr<Agent> agent = get_agent(tlvf::mac_from_string(al_mac));
+    if (!agent) {
+        return false;
+    }
+    agent->name = name;
     return true;
 }
 
@@ -845,6 +899,35 @@ bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
     }
     n->state             = state;
     n->last_state_change = std::chrono::steady_clock::now();
+    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
+        set_agent_state(mac, state);
+    } else if (n->get_type() == beerocks::TYPE_SLAVE) {
+        set_radio_state(mac, state);
+    }
+    return true;
+}
+
+bool db::set_agent_state(const std::string &al_mac, beerocks::eNodeState state)
+{
+    std::shared_ptr<Agent> agent = get_agent(tlvf::mac_from_string(al_mac));
+    if (!agent) {
+        LOG(WARNING) << __FUNCTION__ << " - agent " << al_mac << " does not exist!";
+        return false;
+    }
+    agent->state             = state;
+    agent->last_state_change = std::chrono::steady_clock::now();
+    return true;
+}
+
+bool db::set_radio_state(const std::string &ruid, beerocks::eNodeState state)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(ruid));
+    if (!radio) {
+        LOG(ERROR) << __FUNCTION__ << " - radio " << ruid << "does not exist!";
+        return false;
+    }
+    radio->state             = state;
+    radio->last_state_change = std::chrono::steady_clock::now();
     return true;
 }
 
@@ -1191,6 +1274,50 @@ sMacAddr db::get_node_parent_ire(const std::string &mac)
     return tlvf::mac_from_string(p->mac);
 }
 
+sMacAddr db::get_radio_parent_agent(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent> agent = get_agent_by_radio_uid(radio_mac);
+    if (!agent) {
+        LOG(ERROR) << "No Agent found hosting radio " << radio_mac;
+        return network_utils::ZERO_MAC;
+    }
+
+    return agent->al_mac;
+}
+
+sMacAddr db::get_bss_parent_agent(const sMacAddr &bssid)
+{
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(bssid);
+    if (!bss) {
+        LOG(ERROR) << "No BSS found with BSSID " << bssid;
+        return network_utils::ZERO_MAC;
+    }
+
+    return get_radio_parent_agent(bss->radio.radio_uid);
+}
+
+sMacAddr db::get_agent_parent(const sMacAddr &al_mac)
+{
+    std::shared_ptr<Agent> agent = get_agent(al_mac);
+    if (!agent) {
+        LOG(ERROR) << "No Agent found with ALID " << al_mac;
+        return network_utils::ZERO_MAC;
+    }
+
+    return agent->parent_mac;
+}
+
+sMacAddr db::get_eth_switch_parent_agent(const sMacAddr &mac)
+{
+    for (const auto &agent : m_agents) {
+        if (agent.second->eth_switches.get(mac)) {
+            return agent.first;
+        }
+    }
+
+    return network_utils::ZERO_MAC;
+}
+
 std::string db::get_node_previous_parent(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -1199,6 +1326,19 @@ std::string db::get_node_previous_parent(const std::string &mac)
         return std::string();
     }
     return n->previous_parent_mac;
+}
+
+std::shared_ptr<Agent::sEthSwitch> db::get_eth_switch(const sMacAddr &mac)
+{
+    std::shared_ptr<Agent::sEthSwitch> eth_switch;
+    for (const auto &agent : m_agents) {
+        eth_switch = agent.second->eth_switches.get(mac);
+        if (eth_switch) {
+            break;
+        }
+    }
+
+    return eth_switch;
 }
 
 std::set<std::string> db::get_node_siblings(const std::string &mac, int type)
@@ -1263,13 +1403,13 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
     // According to IEEE 1905.1 a neighbor is defined as a first circle only, so we need to filter
     // out the childrens from second circle and above.
     for (const auto &al_mac_iter : all_al_macs) {
-        if (get_node_parent_ire(al_mac_iter) == al_mac) {
+        if (get_agent_parent(tlvf::mac_from_string(al_mac_iter)) == al_mac) {
             neighbors_al_macs.push_back(tlvf::mac_from_string(al_mac_iter));
         }
     }
 
     // Add the parent bridge as well to the neighbors list
-    auto parent_bridge = get_node_parent_ire(tlvf::mac_to_string(al_mac));
+    auto parent_bridge = get_agent_parent(al_mac);
     if (parent_bridge != network_utils::ZERO_MAC) {
         neighbors_al_macs.push_back(parent_bridge);
     }

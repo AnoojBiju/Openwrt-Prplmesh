@@ -43,13 +43,12 @@ beerocks::eChannelScanStatusCode dynamic_channel_selection_task::dcs_request_sca
     }
 
     // get the parent node to send the CMDU to the agent
-    auto radio_mac_str = tlvf::mac_to_string(m_radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    auto ire = database.get_radio_parent_agent(m_radio_mac);
     if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
     }
-    son_actions::send_cmdu_to_agent(ire, cmdu_tx, database, radio_mac_str);
+    son_actions::send_cmdu_to_agent(ire, cmdu_tx, database, tlvf::mac_to_string(m_radio_mac));
 
     return beerocks::eChannelScanStatusCode::SUCCESS;
 }
@@ -91,13 +90,12 @@ beerocks::eChannelScanStatusCode dynamic_channel_selection_task::dcs_request_sca
               request->scan_params().channel_pool);
 
     // get the parent node to send the CMDU to the agent
-    auto radio_mac_str = tlvf::mac_to_string(m_radio_mac);
-    auto ire           = database.get_node_parent_ire(radio_mac_str);
+    auto ire = database.get_radio_parent_agent(m_radio_mac);
     if (ire == beerocks::net::network_utils::ZERO_MAC) {
         LOG(ERROR) << "Failed to get node_parent_ire!";
         return beerocks::eChannelScanStatusCode::INTERNAL_FAILURE;
     }
-    son_actions::send_cmdu_to_agent(ire, cmdu_tx, database, radio_mac_str);
+    son_actions::send_cmdu_to_agent(ire, cmdu_tx, database, tlvf::mac_to_string(m_radio_mac));
 
     return beerocks::eChannelScanStatusCode::SUCCESS;
 }

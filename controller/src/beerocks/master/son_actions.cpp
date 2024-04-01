@@ -190,7 +190,7 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
                                     eClientDisconnectSource src)
 {
 
-    auto agent_mac = database.get_node_parent_ire(bssid);
+    auto agent_mac = database.get_bss_parent_agent(tlvf::mac_from_string(bssid));
 
     auto request =
         message_com::create_vs_message<beerocks_message::cACTION_CONTROL_CLIENT_DISCONNECT_REQUEST>(

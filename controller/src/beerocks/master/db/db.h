@@ -668,6 +668,7 @@ public:
     beerocks::eType get_node_type(const std::string &mac);
 
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
+    bool set_agent_ipv4(const std::string &al_mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
     bool set_sta_ipv4(const std::string &mac, const std::string &ipv4);
@@ -688,9 +689,12 @@ public:
     get_sta_beacon_measurement_support_level(const std::string &mac);
 
     bool set_node_name(const std::string &mac, const std::string &name);
+    bool set_agent_name(const std::string &al_mac, const std::string &name);
     bool set_sta_name(const std::string &mac, const std::string &name);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
+    bool set_agent_state(const std::string &al_mac, beerocks::eNodeState state);
+    bool set_radio_state(const std::string &ruid, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
     bool set_sta_state(const std::string &mac, beerocks::eNodeState state);
@@ -1092,6 +1096,10 @@ public:
 
     std::string get_node_previous_parent(const std::string &mac);
     sMacAddr get_node_parent_ire(const std::string &mac);
+    sMacAddr get_radio_parent_agent(const sMacAddr &radio_mac);
+    sMacAddr get_bss_parent_agent(const sMacAddr &bssid);
+    sMacAddr get_agent_parent(const sMacAddr &al_mac);
+    sMacAddr get_eth_switch_parent_agent(const sMacAddr &mac);
     std::string get_node_parent_backhaul(const std::string &mac);
     std::set<std::string> get_node_siblings(const std::string &mac, int type = beerocks::TYPE_ANY);
     std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,
@@ -2846,6 +2854,7 @@ public:
     void update_unassociated_station_stats(const sMacAddr &mac_address,
                                            UnassociatedStation::Stats &new_stats,
                                            const std::string &radio_dm_path);
+    std::shared_ptr<Agent::sEthSwitch> get_eth_switch(const sMacAddr &mac);
 
 private:
     /**

@@ -471,7 +471,7 @@ void channel_selection_task::work()
         request->params().failsafe_channel_bandwidth = database.config.fail_safe_5G_bw;
         request->params().vht_center_frequency       = database.config.fail_safe_5G_vht_frequency;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac = database.get_radio_parent_agent(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
                                         tlvf::mac_to_string(radio_mac));
 
@@ -510,7 +510,7 @@ void channel_selection_task::work()
             TASK_LOG(INFO) << " restricted_channels: "
                            << int(request->params().restricted_channels[i]);
         }
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac = database.get_radio_parent_agent(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
                                         tlvf::mac_to_string(radio_mac));
 
@@ -534,7 +534,7 @@ void channel_selection_task::work()
         request->params().failsafe_channel_bandwidth = 0;
         memset(request->params().restricted_channels, 0, message::RESTRICTED_CHANNEL_LENGTH);
         TASK_LOG(INFO) << "***** clear 2.4G restricted channel for " << radio_mac;
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac = database.get_radio_parent_agent(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
                                         tlvf::mac_to_string(radio_mac));
 
@@ -573,7 +573,7 @@ void channel_selection_task::work()
             TASK_LOG(INFO) << " restricted_channels: "
                            << int(request->params().restricted_channels[i]);
         }
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac = database.get_radio_parent_agent(radio_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
                                         tlvf::mac_to_string(radio_mac));
 
@@ -613,7 +613,7 @@ void channel_selection_task::work()
         request->cs_params().channel              = 0;
         request->cs_params().bandwidth            = beerocks::BANDWIDTH_20;
         request->cs_params().vht_center_frequency = 0;
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac                            = database.get_radio_parent_agent(radio_mac);
         if (!son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database,
                                              tlvf::mac_to_string(radio_mac))) {
             LOG(ERROR) << "Send cmdu failed!";
@@ -634,7 +634,7 @@ void channel_selection_task::work()
         break;
     }
     case eState::SEND_CHANNEL_SWITCH: {
-        auto agent_mac = database.get_node_parent_ire(tlvf::mac_to_string(radio_mac));
+        auto agent_mac = database.get_radio_parent_agent(radio_mac);
 
         // CMDU Message
         auto request = message_com::create_vs_message<

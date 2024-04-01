@@ -148,7 +148,8 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                     remove_pending_request_event(STEERING_SET_GROUP_REQUEST);
                     break;
                 }
-                auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+                auto agent_mac =
+                    m_database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
                 if (tlvf::mac_to_string(agent_mac).empty()) {
                     TASK_LOG(ERROR) << "Database error: parent radio IRE node of radio MAC "
                                     << radio_mac << " is not found";
@@ -291,7 +292,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
 
             LOG(DEBUG) << "Sending ACTION_CONTROL_STEERING_CLIENT_SET_REQUEST to radio "
                        << radio_mac;
-            auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+            auto agent_mac = m_database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
             if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
                 send_bml_response(STEERING_CLIENT_SET_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
                 remove_pending_request_event(STEERING_CLIENT_SET_REQUEST);
@@ -428,7 +429,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+            auto agent_mac = m_database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
             if (!son_actions::send_cmdu_to_agent(agent_mac, m_cmdu_tx, m_database, radio_mac)) {
                 send_bml_response(STEERING_SET_GROUP_RESPONSE, event_obj->sd, -BML_RET_CMDU_FAIL);
                 break;
@@ -1003,7 +1004,7 @@ void pre_association_steering_task::send_bml_event_to_listeners(
 
 bool pre_association_steering_task::send_steering_conf_to_agent(const std::string &radio_mac)
 {
-    auto agent_mac = m_database.get_node_parent_ire(radio_mac);
+    auto agent_mac = m_database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
     size_t idx     = 0;
 
     for (const auto &steering_group : m_pre_association_steering_db.get_steering_group_list()) {
