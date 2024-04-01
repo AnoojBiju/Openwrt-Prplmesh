@@ -189,7 +189,7 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
 
     // Save latest station capabilities to Station object
     auto sta_mac_str = tlvf::mac_to_string(sta_mac);
-    result           = m_database.set_station_capabilities(sta_mac_str, capabilities);
+    result           = m_database.set_sta_capabilities(sta_mac_str, capabilities);
     if (!result) {
         LOG(ERROR) << "Failed to save station capabilities.";
         return false;
@@ -206,7 +206,7 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
     }
 
     // Update the station's link bw with the received caps
-    WifiChannel sta_wifi_channel = m_database.get_node_wifi_channel(sta_mac_str);
+    WifiChannel sta_wifi_channel = m_database.get_sta_wifi_channel(sta_mac_str);
     if (sta_wifi_channel.is_empty()) {
         LOG(WARNING) << "empty wifi channel of " << sta_mac_str << " in DB";
     }
@@ -268,8 +268,7 @@ bool client_association_task::dm_add_sta_association_event_caps(const sMacAddr &
      * 2) station was previously associated to same freq band, so caps won't change
      * Otherwise, controller has to query agent for client capabilities
      */
-    auto capabilities =
-        m_database.get_station_capabilities(sta_mac_str, wifi_channel.get_freq_type());
+    auto capabilities = m_database.get_sta_capabilities(sta_mac_str, wifi_channel.get_freq_type());
     if (!capabilities || !capabilities->valid) {
         return false;
     }
