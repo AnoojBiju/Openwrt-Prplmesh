@@ -312,9 +312,8 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
                     LOG(DEBUG) << "Non-Prplmesh Agent";
-                    if (!database.update_vap(src_mac, radio_entry.radio_uid(),
-                                             bss_entry.radio_bssid(), bss_entry.ssid_str(),
-                                             false)) {
+                    if (!database.update_bss(src_mac, radio_entry.radio_uid(),
+                                             bss_entry.radio_bssid(), bss_entry.ssid_str())) {
                         LOG(ERROR) << "Failed to update VAP for radio " << radio_entry.radio_uid()
                                    << " BSS " << bss_entry.radio_bssid() << " SSID "
                                    << bss_entry.ssid_str();
@@ -323,13 +322,6 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     LOG(DEBUG) << "Prplmesh Agent";
                     // update BSS vap_id if still undefined
                     bss->update_vap_id(vap_id);
-                    if (!database.add_vap(al_mac, tlvf::mac_to_string(radio_entry.radio_uid()),
-                                          int(vap_id), tlvf::mac_to_string(bss_entry.radio_bssid()),
-                                          bss_entry.ssid_str(), false)) {
-                        LOG(ERROR)
-                            << "Failed to add VAP for radio " << radio_entry.radio_uid() << " BSS "
-                            << bss_entry.radio_bssid() << " SSID " << bss_entry.ssid_str();
-                    }
                 }
             }
             auto removed = radio->bsses.keep_new_remove_old();
@@ -343,7 +335,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
                 // Remove the vap from DB
                 LOG(DEBUG) << "Removing BSS with bssid " << bss->bssid << " from DB";
-                database.remove_vap(*radio, *bss);
+                database.disable_bss(*radio, *bss);
             }
         }
     }

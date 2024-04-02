@@ -123,11 +123,11 @@ void association_handling_task::work()
             }
         }
 
-        auto radio_mac = database.get_node_parent_radio(new_hostap_mac);
+        auto radio_mac = database.get_bss_parent_radio(new_hostap_mac);
         auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(radio_mac));
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, radio_mac);
 
-        add_pending_mac(database.get_node_parent_radio(new_hostap_mac),
+        add_pending_mac(radio_mac,
                         beerocks_message::ACTION_CONTROL_CLIENT_START_MONITORING_RESPONSE);
         set_responses_timeout(START_MONITORING_RESPONSE_TIMEOUT_MSEC);
         break;
@@ -138,7 +138,7 @@ void association_handling_task::work()
                            "capabilities on "
                         << sta_mac;
         std::string bssid     = database.get_node_parent(sta_mac);
-        std::string radio_mac = database.get_node_parent_radio(bssid);
+        std::string radio_mac = database.get_bss_parent_radio(bssid);
         auto agent_mac        = database.get_bss_parent_agent(tlvf::mac_from_string(bssid));
 
         auto measurement_request = message_com::create_vs_message<
@@ -223,7 +223,7 @@ void association_handling_task::work()
                 << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
             return;
         }
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         auto radio_wifi_channel =
             database.get_radio_wifi_channel(tlvf::mac_from_string(parent_radio));
         if (radio_wifi_channel.is_empty()) {
@@ -397,7 +397,7 @@ void association_handling_task::finalize_new_connection()
             if ((client->stay_on_initial_radio == eTriStateBool::TRUE) &&
                 (client->initial_radio == network_utils::ZERO_MAC)) {
                 auto bssid            = database.get_node_parent(sta_mac);
-                auto parent_radio_mac = database.get_node_parent_radio(bssid);
+                auto parent_radio_mac = database.get_bss_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
                 if (!database.set_sta_initial_radio(*client,
                                                     tlvf::mac_from_string(parent_radio_mac),

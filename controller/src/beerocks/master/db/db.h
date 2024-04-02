@@ -1282,46 +1282,35 @@ public:
     bool set_radio_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
                               const beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_radio_iface_type(const sMacAddr &mac);
+    std::set<std::string> get_radio_bss_bssids(const std::string &mac);
 
-    bool set_hostap_vap_list(const sMacAddr &mac,
-                             const std::unordered_map<int8_t, sVapElement> &vap_list);
-    std::unordered_map<int8_t, sVapElement> &get_hostap_vap_list(const sMacAddr &mac);
-    std::set<std::string> get_hostap_vaps_bssids(const std::string &mac);
-
-    /** Remove VAP
-     *
-     * This method removes VAP from Hostap VAP List (node hierarchy)
-     * To search to VAP which is going to be removed, bss.vap_id is used.
-     *
-     * After removing VAP from list, datamodel of VAP is also cleared.
-     * Note that, database object it self is not deleted in this method.
+    /** Disable VAP
+     * 
+     * This method sets a BSS to disabled.
+     * Datamodel of BSS is cleared.
      *
      * @param[in] radio radio db object
      * @param[in] bss bss db object
      * @return True on success, false otherwise.
      */
-    bool remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss);
-
-    bool add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
-                 const std::string &bssid, const std::string &ssid, bool backhaul);
-
+    bool disable_bss(Agent::sRadio &radio, Agent::sRadio::sBss &bss);
     std::shared_ptr<Agent::sRadio::sBss>
     add_bss(Agent::sRadio &radio, const sMacAddr &bssid, const std::string &ssid,
             int vap_id = beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID);
-    /** Update VAP information
+    /** Update BSS information
      *
-     * Add or update the VAP information for the given BSSID on the
-     * given radio on a specific agent. If the VAP exists already, it
-     * is updated. If no VAP with the given BSSID exists, a new one is
+     * Add or update the BSS information for the given BSSID on the
+     * given radio on a specific agent. If the BSS exists already, it
+     * is updated. If no BSS with the given BSSID exists, a new one is
      * created with a unique vap_id.
      *
-     * For prplMesh agents, this function should be called after the VAPs were created (with
-     * add_vap) so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
+     * For prplMesh agents, this function should be called after the BSSs were created
+     * so the vap_id is correct. For non-prplMesh agents, the vap_id doesn't matter.
      */
-    bool update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
-                    const std::string &ssid, bool backhaul);
+    bool update_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                    const std::string &ssid);
 
-    std::string get_hostap_ssid(const sMacAddr &mac);
+    std::string get_bss_ssid(const sMacAddr &mac);
     /**
      * @brief checks if vap name is on the steer list.
      *
@@ -1329,9 +1318,10 @@ public:
      * @return true if vap name is on the steer list.
      */
     bool is_vap_on_steer_list(const sMacAddr &bssid);
-    std::string get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid);
-    sMacAddr get_hostap_vap_mac(const sMacAddr &mac, int vap_id);
+    std::string get_bss_by_ssid(const sMacAddr &radio_mac, const std::string &ssid);
+    sMacAddr get_radio_bss_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
+    std::string get_bss_parent_radio(const std::string &bssid);
 
     /**
      * @brief Get data model path of Station
@@ -1344,12 +1334,12 @@ public:
     std::string get_radio_data_model_path(const sMacAddr &radio_mac);
     std::string get_agent_data_model_path(const sMacAddr &al_mac);
 
-    int8_t get_hostap_vap_id(const sMacAddr &mac);
+    int8_t get_bss_vap_id(const sMacAddr &bssid);
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
 
-    std::string get_5ghz_sibling_hostap(const std::string &mac);
+    std::string get_5ghz_sibling_bss(const std::string &mac);
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();

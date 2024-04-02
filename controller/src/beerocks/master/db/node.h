@@ -27,7 +27,6 @@ namespace son {
 typedef struct {
     std::string mac;
     std::string ssid;
-    bool backhaul_vap;
 } sVapElement;
 
 class node {
@@ -63,11 +62,6 @@ public:
 
     int load_balancer_task_id             = -1;
     int dynamic_channel_selection_task_id = -1;
-    class radio {
-    public:
-        std::unordered_map<int8_t, sVapElement> vaps_info;
-    };
-    std::shared_ptr<radio> hostap = std::make_shared<radio>();
 
     beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
     std::chrono::steady_clock::time_point last_seen;

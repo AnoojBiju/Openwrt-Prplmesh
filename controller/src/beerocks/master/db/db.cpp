@@ -574,6 +574,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
         LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
         return station;
     }
+    station->parent_mac = parent_mac;
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFi client)
@@ -1156,13 +1157,9 @@ std::set<std::string> db::get_nodes(int type)
 std::set<std::string> db::get_active_hostaps()
 {
     std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if (kv.second->get_type() == beerocks::TYPE_SLAVE && kv.second->hostap != nullptr &&
-                kv.second->state == beerocks::STATE_CONNECTED && kv.first == kv.second->mac &&
-                is_radio_active(tlvf::mac_from_string(kv.second->mac))) {
-                ret.insert(kv.first);
-            }
+    for (const auto &agent : m_agents) {
+        for (const auto &radio : agent.second->radios) {
+            ret.insert(tlvf::mac_to_string(radio.first));
         }
     }
     return ret;
@@ -2598,36 +2595,6 @@ void db::update_node_11v_responsiveness(Station &station, bool success)
 
 bool db::get_node_11v_capability(const Station &station) { return station.m_supports_11v; }
 
-bool db::set_hostap_vap_list(const sMacAddr &mac,
-                             const std::unordered_map<int8_t, sVapElement> &vap_list)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return false;
-    }
-    n->hostap->vaps_info = vap_list;
-    return true;
-}
-
-std::unordered_map<int8_t, sVapElement> &db::get_hostap_vap_list(const sMacAddr &mac)
-{
-    static std::unordered_map<int8_t, sVapElement> invalid_vap_list;
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return invalid_vap_list;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " is not a valid hostap!";
-        return invalid_vap_list;
-    }
-
-    return n->hostap->vaps_info;
-}
-
 std::shared_ptr<Agent::sRadio::sBss> db::add_bss(Agent::sRadio &radio, const sMacAddr &bssid,
                                                  const std::string &ssid, int vap_id)
 {
@@ -2645,106 +2612,51 @@ std::shared_ptr<Agent::sRadio::sBss> db::add_bss(Agent::sRadio &radio, const sMa
     return bss;
 }
 
-bool db::remove_vap(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
+bool db::disable_bss(Agent::sRadio &radio, Agent::sRadio::sBss &bss)
 {
-    auto vap_list = get_hostap_vap_list(radio.radio_uid);
-    auto vap      = vap_list.find(bss.get_vap_id());
-
-    if (vap != vap_list.end()) {
-        if (!vap_list.erase(bss.get_vap_id())) {
-            LOG(ERROR) << "Failed to remove VAP, id: " << bss.get_vap_id()
-                       << "bssid: " << vap->second.mac;
-            return false;
-        }
-    } else {
-        LOG(INFO) << "Failed to get correct vap from the list, bssid=" << bss.bssid;
-    }
-
+    bss.enabled = false;
     return dm_remove_bss(bss);
 }
 
-bool db::add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
-                 const std::string &bssid, const std::string &ssid, bool backhaul)
+bool db::update_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
+                    const std::string &ssid)
 {
-    if (!has_node(tlvf::mac_from_string(bssid)) &&
-        !add_virtual_node(tlvf::mac_from_string(bssid), tlvf::mac_from_string(radio_mac))) {
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
         return false;
     }
 
-    auto &vaps_info                = get_hostap_vap_list(tlvf::mac_from_string(radio_mac));
-    vaps_info[vap_id].mac          = bssid;
-    vaps_info[vap_id].ssid         = ssid;
-    vaps_info[vap_id].backhaul_vap = backhaul;
-
-    return true;
-}
-
-bool db::update_vap(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
-                    const std::string &ssid, bool backhaul)
-{
-    if (!has_node(bssid) && !add_virtual_node(bssid, radio_mac)) {
-        return false;
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(bssid, al_mac);
+    if (!bss) {
+        LOG(DEBUG) << "update_bss: creating new BSS for " << bssid;
+        return (add_bss(*radio, bssid, ssid) != nullptr);
     }
-
-    auto &vaps_info = get_hostap_vap_list(radio_mac);
-    auto it         = std::find_if(vaps_info.begin(), vaps_info.end(),
-                           [&](const std::pair<int8_t, sVapElement> &vap) {
-                               return vap.second.mac == tlvf::mac_to_string(bssid);
-                           });
-    if (it == vaps_info.end()) {
-        LOG(DEBUG) << "update_vap: creating new VAP for " << bssid;
-
-        // Need to create a new VAP, which means creating a new vap_id
-        auto max_vap_it = std::max_element(
-            vaps_info.begin(), vaps_info.end(),
-            [](const std::pair<int8_t, sVapElement> &a, const std::pair<int8_t, sVapElement> &b) {
-                return a.first < b.first;
-            });
-        int8_t new_vap_id = (max_vap_it == vaps_info.end()) ? 0 : max_vap_it->first + 1;
-        return add_vap(al_mac, tlvf::mac_to_string(radio_mac), new_vap_id,
-                       tlvf::mac_to_string(bssid), ssid, backhaul);
-    }
-    it->second.ssid         = ssid;
-    it->second.backhaul_vap = backhaul;
+    bss->ssid = ssid;
     return dm_set_radio_bss(al_mac, radio_mac, bssid);
 }
 
-std::set<std::string> db::get_hostap_vaps_bssids(const std::string &mac)
+std::set<std::string> db::get_radio_bss_bssids(const std::string &mac)
 {
     std::set<std::string> bssid_set;
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(mac));
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return bssid_set;
     }
 
-    if (n->get_type() != beerocks::TYPE_SLAVE) {
-        // Only slaves have vap's
-        return bssid_set;
-    }
-    auto vap_list = get_hostap_vap_list(tlvf::mac_from_string(mac));
-    for (auto &vap : vap_list) {
-        bssid_set.insert(vap.second.mac);
+    for (auto &bss : radio->bsses) {
+        bssid_set.insert(tlvf::mac_to_string(bss.first));
     }
     return bssid_set;
 }
 
-std::string db::get_hostap_ssid(const sMacAddr &mac)
+std::string db::get_bss_ssid(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(mac);
+    if (!bss) {
         return std::string();
     }
-    for (auto const &it : n->hostap->vaps_info) {
-        if (tlvf::mac_from_string(it.second.mac) == mac) {
-            return it.second.ssid;
-        }
-    }
-    return std::string();
+    return bss->ssid;
 }
 
 bool db::is_vap_on_steer_list(const sMacAddr &bssid)
@@ -2765,7 +2677,7 @@ bool db::is_vap_on_steer_list(const sMacAddr &bssid)
         return false;
     }
 
-    auto vap_id = get_hostap_vap_id(bssid);
+    auto vap_id = get_bss_vap_id(bssid);
     if (vap_id == IFACE_ID_INVALID) {
         LOG(ERROR) << "vap id is invalid for bssid " << bssid;
         return false;
@@ -2786,42 +2698,32 @@ bool db::is_vap_on_steer_list(const sMacAddr &bssid)
     return true;
 }
 
-std::string db::get_hostap_vap_with_ssid(const sMacAddr &mac, const std::string &ssid)
+std::string db::get_bss_by_ssid(const sMacAddr &radio_mac, const std::string &ssid)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
         return std::string();
     }
-
-    auto it = std::find_if(
-        n->hostap->vaps_info.begin(), n->hostap->vaps_info.end(),
-        [&](const std::pair<int8_t, sVapElement> &vap) { return vap.second.ssid == ssid; });
-
-    if (it == n->hostap->vaps_info.end()) {
-        // no vap with same ssid is found
-        return std::string();
+    for (const auto &bss : radio->bsses) {
+        if (bss.second->ssid == ssid) {
+            return tlvf::mac_to_string(bss.first);
+        }
     }
-    return it->second.mac;
+    return std::string();
 }
 
-sMacAddr db::get_hostap_vap_mac(const sMacAddr &mac, int vap_id)
+sMacAddr db::get_radio_bss_mac(const sMacAddr &radio_mac, int vap_id)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::net::network_utils::ZERO_MAC;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return beerocks::net::network_utils::ZERO_MAC;
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        return network_utils::ZERO_MAC;
     }
-
-    auto it = n->hostap->vaps_info.find(vap_id);
-    return (it != n->hostap->vaps_info.end()) ? tlvf::mac_from_string(it->second.mac)
-                                              : network_utils::ZERO_MAC;
+    for (const auto &bss : radio->bsses) {
+        if (bss.second->get_vap_id() == vap_id) {
+            return bss.first;
+        }
+    }
+    return network_utils::ZERO_MAC;
 }
 
 std::string db::get_node_parent_radio(const std::string &mac)
@@ -2835,13 +2737,25 @@ std::string db::get_node_parent_radio(const std::string &mac)
     }
     if (n->get_type() == beerocks::TYPE_CLIENT) {
         const auto parent_bssid = get_node_parent(mac);
-        n                       = get_node(parent_bssid);
-        if (!n) {
-            LOG(WARNING) << __FUNCTION__ << " - node " << parent_bssid << " does not exist!";
+        std::shared_ptr<Agent::sRadio> parent_radio =
+            get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
+        if (!parent_radio) {
+            LOG(ERROR) << __FUNCTION__ << " - radio hosting " << parent_bssid << " does not exist!";
             return std::string();
         }
+        return tlvf::mac_to_string(parent_radio->radio_uid);
     }
     return n->mac;
+}
+
+std::string db::get_bss_parent_radio(const std::string &bssid)
+{
+    std::shared_ptr<Agent::sRadio> parent_radio = get_radio_by_bssid(tlvf::mac_from_string(bssid));
+    if (!parent_radio) {
+        return std::string();
+    }
+
+    return tlvf::mac_to_string(parent_radio->radio_uid);
 }
 
 std::string db::get_agent_data_model_path(const sMacAddr &al_mac)
@@ -2874,23 +2788,10 @@ std::string db::get_radio_data_model_path(const sMacAddr &radio_mac)
     return radio->dm_path;
 }
 
-int8_t db::get_hostap_vap_id(const sMacAddr &mac)
+int8_t db::get_bss_vap_id(const sMacAddr &bssid)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return IFACE_ID_INVALID;
-    } else if (n->get_type() != beerocks::TYPE_SLAVE || n->hostap == nullptr) {
-        LOG(WARNING) << __FUNCTION__ << "node " << mac << " is not a valid hostap!";
-        return IFACE_ID_INVALID;
-    }
-
-    for (auto const &it : n->hostap->vaps_info) {
-        if (tlvf::mac_from_string(it.second.mac) == mac) {
-            return it.first;
-        }
-    }
-    return IFACE_ID_INVALID;
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(bssid);
+    return bss ? bss->get_vap_id() : IFACE_ID_INVALID;
 }
 
 bool db::set_radio_iface_name(const sMacAddr &mac, const std::string &iface_name)
@@ -2964,17 +2865,24 @@ beerocks::eIfaceType db::get_node_backhaul_iface_type(const std::string &mac)
     return n->iface_type;
 }
 
-std::string db::get_5ghz_sibling_hostap(const std::string &mac)
+std::string db::get_5ghz_sibling_bss(const std::string &mac)
 {
-    auto siblings = get_node_siblings(mac, beerocks::TYPE_SLAVE);
-    for (auto &hostap : siblings) {
-        if (get_radio_5ghz_support(tlvf::mac_from_string(hostap))) {
-            auto n = get_node(hostap);
-            if (!n) {
-                LOG(ERROR) << "node " << hostap << " does not exist";
-                return std::string();
+    std::shared_ptr<Agent> agent = get_agent_by_bssid(tlvf::mac_from_string(mac));
+    if (!agent) {
+        return std::string();
+    }
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(tlvf::mac_from_string(mac));
+    if (!bss) {
+        return std::string();
+    }
+
+    for (const auto &radio : agent->radios) {
+        if (radio.second->supports_5ghz) {
+            for (const auto &sibling_bss : radio.second->bsses) {
+                if (sibling_bss.second->ssid == bss->ssid) {
+                    return tlvf::mac_to_string(sibling_bss.second->bssid);
+                }
             }
-            return hostap;
         }
     }
     return std::string();
@@ -4253,7 +4161,7 @@ bool db::set_sta_stay_on_initial_radio(Station &client, bool stay_on_initial_rad
                     LOG(ERROR) << "BSS not found for station " << mac;
                     return false;
                 }
-                auto parent_radio_mac = get_node_parent_radio(tlvf::mac_to_string(bss->bssid));
+                auto parent_radio_mac = get_bss_parent_radio(tlvf::mac_to_string(bss->bssid));
                 LOG(DEBUG) << "Persistent DB, Setting client " << mac << " initial-radio to "
                            << parent_radio_mac;
                 values_map[INITIAL_RADIO_STR] = parent_radio_mac;
@@ -4280,7 +4188,7 @@ bool db::set_sta_stay_on_initial_radio(Station &client, bool stay_on_initial_rad
             LOG(ERROR) << "BSS not found for station " << mac;
             return false;
         }
-        auto parent_radio_mac = get_node_parent_radio(tlvf::mac_to_string(bss->bssid));
+        auto parent_radio_mac = get_bss_parent_radio(tlvf::mac_to_string(bss->bssid));
         client.initial_radio  = tlvf::mac_from_string(parent_radio_mac);
         LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client.initial_radio;
     }
@@ -5519,12 +5427,6 @@ bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwid
     if (bw == n->wifi_channel.get_bandwidth()) {
         return true;
     }
-    if (n->get_type() == beerocks::TYPE_SLAVE) {
-        if (n->hostap == nullptr) {
-            LOG(ERROR) << __FUNCTION__ << " - node " << mac << " is null!";
-            return false;
-        }
-    }
 
     if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(INFO) << "update wifiChannel node " << mac << " bw from "
@@ -5968,7 +5870,7 @@ std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, i
         return children;
     }
 
-    auto bssids = get_hostap_vaps_bssids(n->mac);
+    auto bssids = get_radio_bss_bssids(n->mac);
     bssids.insert(n->mac);
 
     int hierarchy = get_node_hierarchy(n) + 1;
@@ -6176,7 +6078,7 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
         // If stay-on-initial-radio is enabled and initial_radio is not set and client is already connected:
         // Set the initial_radio from parent radio mac (not bssid).
         auto bssid            = node->parent_mac;
-        auto parent_radio_mac = get_node_parent_radio(bssid);
+        auto parent_radio_mac = get_bss_parent_radio(bssid);
         client->initial_radio = tlvf::mac_from_string(parent_radio_mac);
         LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client->initial_radio;
     }
