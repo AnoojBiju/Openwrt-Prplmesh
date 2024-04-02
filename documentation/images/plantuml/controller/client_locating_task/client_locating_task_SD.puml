@@ -1,0 +1,35 @@
+' Sequence diagram of client_locating_task usage during onboarding process
+
+@startuml
+
+...
+note over of Controller : handle_intel_slave_join(...) \n// this guy handles all prplmesh slaves
+Controller --> client_locating_task : add_task to pool
+note over of client_locating_task : FSM: START\n- killing previous task\n- get client_ipv4
+
+note over of client_locating_task : FSM: SEND_ARP_QUERIES
+client_locating_task --> DB : send #1 - ACTION_CONTROL_ARP_QUERY_REQUEST
+DB --> Agent_1 : son_actions::send_cmdu_to_agent
+note over of client_locating_task : pending_ires_num++
+...
+
+client_locating_task --> DB : send #n - ACTION_CONTROL_ARP_QUERY_REQUEST
+note over of client_locating_task : pending_ires_num++
+DB --> Agent_n : son_actions::send_cmdu_to_agent
+note over of client_locating_task : set_responses_timeout(...)
+...
+
+Agent_1 --> Controller : ACTION_CONTROL_ARP_QUERY_RESPONSE
+note over of Controller : handle_cmdu_control_message(...)
+Controller --> client_locating_task : m_task_pool.response_received
+note over of client_locating_task : handle_response
+note over of client_locating_task : pending_ires_num--
+note over of client_locating_task : if got ALL responses\nthen go FSM: FINISH
+...
+note over of client_locating_task : FSM: FINISH
+client_locating_task -> DB : update local DB hierarchy
+client_locating_task -> Controller : task_pool -> update BML listeners
+
+...
+
+@enduml
