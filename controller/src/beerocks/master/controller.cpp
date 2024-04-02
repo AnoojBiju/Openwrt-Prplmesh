@@ -2047,7 +2047,7 @@ bool Controller::handle_cmdu_1905_operating_channel_report(const sMacAddr &src_m
         auto tx_power = operating_channel_report_tlv->current_transmit_power();
 
         /*
-            Here need to remove the CurrentOperatingClass data from the Controler Data Model which was
+            Here need to remove the CurrentOperatingClass data from the Controller Data Model which was
             set in previous OPERATING_CHANNEL_REPORT_MESSAGE.
          */
         database.remove_current_op_classes(ruid);
@@ -2768,7 +2768,7 @@ bool Controller::autoconfig_wsc_parse_radio_caps(
 
     /*
     ** Here need to remove the OperatingClasses data element
-    ** from the Controler Data Model because we are entering a new one
+    ** from the Controller Data Model because we are entering a new one
     */
     database.remove_hostap_supported_operating_classes(radio_mac);
 
