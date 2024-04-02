@@ -25,6 +25,10 @@
 #include "controller.h"
 #include "db/db.h"
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
+
 #ifdef ENABLE_NBAPI
 #include "ambiorix_impl.h"
 #include "on_action.h"
@@ -624,6 +628,10 @@ int main(int argc, char *argv[])
     std::cout << "Beerocks Controller Process Start" << std::endl;
 
     init_signals();
+#ifdef INCLUDE_BREAKPAD
+    breakpad_ExceptionHandler();
+#endif
+    std::cout << "Beerocks Controller - breakpad added" << std::endl;
 
     // Check for version query first, handle and exit if requested.
     std::string module_description;
