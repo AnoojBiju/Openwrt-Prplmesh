@@ -285,6 +285,37 @@ public:
 
     std::unordered_map<sMacAddr, std::vector<sStaSteeringEvent>> m_stations_steering_events;
 
+    class link_metrics_data {
+    public:
+        link_metrics_data(){};
+        ~link_metrics_data(){};
+
+        std::vector<ieee1905_1::tlvTransmitterLinkMetric::sInterfacePairInfo>
+            transmitterLinkMetrics;
+        std::vector<ieee1905_1::tlvReceiverLinkMetric::sInterfacePairInfo> receiverLinkMetrics;
+
+        bool add_transmitter_link_metric(
+            std::shared_ptr<ieee1905_1::tlvTransmitterLinkMetric> TxLinkMetricData);
+        bool add_receiver_link_metric(
+            std::shared_ptr<ieee1905_1::tlvReceiverLinkMetric> RxLinkMetricData);
+    };
+
+    class ap_metrics_data {
+    public:
+        ap_metrics_data(){};
+        ~ap_metrics_data(){};
+
+        sMacAddr bssid                               = beerocks::net::network_utils::ZERO_MAC;
+        uint8_t channel_utilization                  = 0;
+        uint16_t number_of_stas_currently_associated = 0;
+        std::vector<uint8_t> estimated_service_info_fields;
+        bool include_ac_vo = false;
+        bool include_ac_bk = false;
+        bool include_ac_vi = false;
+
+        bool add_ap_metric_data(std::shared_ptr<wfa_map::tlvApMetrics> ApMetricData);
+    };
+
     // Unassoc sta link metrics variables
     bool m_measurement_done = false;
     int m_opclass;
@@ -509,6 +540,8 @@ public:
     // General set/get
     bool has_node(const sMacAddr &mac);
 
+    bool has_station(const sMacAddr &mac);
+
     bool add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac);
 
     /**
@@ -616,8 +649,8 @@ public:
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
-    add_node_station(const sMacAddr &al_mac, const sMacAddr &mac,
-                     const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    add_station(const sMacAddr &al_mac, const sMacAddr &mac,
+                const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     bool remove_node(const sMacAddr &mac);
 
@@ -637,37 +670,44 @@ public:
     bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
-    bool set_node_manufacturer(const std::string &mac, const std::string &manufacturer);
+    bool set_sta_ipv4(const std::string &mac, const std::string &ipv4);
+    std::string get_sta_ipv4(const std::string &mac);
+
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
                                 const std::string &manufacturer);
 
-    int get_hostap_operating_class(const sMacAddr &mac);
+    int get_radio_operating_class(const sMacAddr &mac);
 
-    bool set_node_vap_id(const std::string &mac, int8_t vap_id);
-    int8_t get_node_vap_id(const std::string &mac);
+    bool set_sta_vap_id(const std::string &mac, int8_t vap_id);
+    int8_t get_sta_vap_id(const std::string &mac);
 
-    bool set_node_beacon_measurement_support_level(
+    bool set_sta_beacon_measurement_support_level(
         const std::string &mac,
         beerocks::eBeaconMeasurementSupportLevel support_beacon_measurement);
     beerocks::eBeaconMeasurementSupportLevel
-    get_node_beacon_measurement_support_level(const std::string &mac);
+    get_sta_beacon_measurement_support_level(const std::string &mac);
 
     bool set_node_name(const std::string &mac, const std::string &name);
+    bool set_sta_name(const std::string &mac, const std::string &name);
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 
+    bool set_sta_state(const std::string &mac, beerocks::eNodeState state);
+    beerocks::eNodeState get_sta_state(const std::string &mac);
     std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
-    bool set_node_handoff_flag(Station &station, bool handoff);
-    bool get_node_handoff_flag(const Station &station);
+    bool set_sta_handoff_flag(Station &station, bool handoff);
+    bool get_sta_handoff_flag(const Station &station);
 
     bool update_node_last_seen(const std::string &mac);
+    bool update_sta_last_seen(const std::string &mac);
 
     std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
+    std::chrono::steady_clock::time_point get_sta_last_seen(const std::string &mac);
 
-    bool set_hostap_active(const sMacAddr &mac, bool active);
-    bool is_hostap_active(const sMacAddr &mac);
+    bool set_radio_active(const sMacAddr &mac, const bool active);
+    bool is_radio_active(const sMacAddr &mac);
 
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 
@@ -679,14 +719,14 @@ public:
      * @brief Get the link metric database
      * @return reference to the map that holds link metric data of all agents.
      */
-    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>> &
+    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>> &
     get_link_metric_data_map();
 
     /**
      * @brief Get the ap metric database
      * @return reference to the map that holds ap metric data of all agents.
      */
-    std::unordered_map<sMacAddr, son::node::ap_metrics_data> &get_ap_metric_data_map();
+    std::unordered_map<sMacAddr, son::db::ap_metrics_data> &get_ap_metric_data_map();
 
     /**
      * @brief Get the unassoc sta link metrics map
@@ -744,14 +784,14 @@ public:
                        const std::string &name = {});
 
     /**
-     * @brief Gets Interface Node according to device and interface MAC addresses.
+     * @brief Gets Interface according to device and interface MAC addresses.
      *
      * @param device_mac device MAC address for node matching
      * @param interface_mac interface mac address for node matching
      * @return returns node shared pointer.
      */
-    std::shared_ptr<prplmesh::controller::db::Interface>
-    get_interface_node(const sMacAddr &device_mac, const sMacAddr &interface_mac);
+    std::shared_ptr<Agent::sInterface> get_interface_on_agent(const sMacAddr &device_mac,
+                                                              const sMacAddr &interface_mac);
 
     /**
      * @brief Adds interface instances to Device's Data Model.
@@ -912,9 +952,8 @@ public:
      * @param neighbor Neighbor object is used to create/update data model of neighbor
      * @return true on success, false otherwise.
      */
-    bool dm_add_interface_neighbor(
-        const std::shared_ptr<prplmesh::controller::db::Interface> &interface,
-        std::shared_ptr<prplmesh::controller::db::Interface::sNeighbor> &neighbor);
+    bool dm_add_interface_neighbor(const std::shared_ptr<Agent::sInterface> &interface,
+                                   std::shared_ptr<Agent::sNeighbor> &neighbor);
 
     /**
      * @brief Remove instance of Neighbors inside Interface Data Model.
@@ -1155,12 +1194,12 @@ public:
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_current_capabilities(const std::string &mac);
+    get_sta_current_capabilities(const std::string &mac);
 
     const beerocks::message::sRadioCapabilities *
-    get_station_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
-    bool set_station_capabilities(const std::string &client_mac,
-                                  const beerocks::message::sRadioCapabilities &sta_cap);
+    get_sta_capabilities(const std::string &client_mac, beerocks::eFreqType freq_type);
+    bool set_sta_capabilities(const std::string &client_mac,
+                              const beerocks::message::sRadioCapabilities &sta_cap);
 
     /**
      * @brief Set ClientCapabilities values for Station and AssocEvent object
@@ -1175,18 +1214,18 @@ public:
      */
     bool set_client_capabilities(const sMacAddr &sta_mac, const std::string &frame, db &database);
 
-    bool set_hostap_ant_num(const sMacAddr &mac, beerocks::eWiFiAntNum ant_num);
-    beerocks::eWiFiAntNum get_hostap_ant_num(const sMacAddr &mac);
+    bool set_radio_ant_num(const sMacAddr &mac, const beerocks::eWiFiAntNum ant_num);
+    beerocks::eWiFiAntNum get_radio_ant_num(const sMacAddr &mac);
 
-    bool set_hostap_ant_gain(const sMacAddr &al_mac, const sMacAddr &mac, int ant_gain);
-    int get_hostap_ant_gain(const sMacAddr &mac);
+    bool set_radio_ant_gain(const sMacAddr &radio_mac, const int ant_gain);
+    int get_radio_ant_gain(const sMacAddr &radio_mac);
 
-    bool set_hostap_tx_power(const sMacAddr &al_mac, const sMacAddr &mac, int tx_power);
-    int get_hostap_tx_power(const sMacAddr &mac);
+    bool set_radio_tx_power(const sMacAddr &radio_mac, const int tx_power);
+    int get_radio_tx_power(const sMacAddr &radio_mac);
 
-    bool set_hostap_supported_channels(const sMacAddr &mac,
-                                       beerocks::WifiChannel *supported_channels, int length);
-    std::vector<beerocks::WifiChannel> get_hostap_supported_channels(const sMacAddr &mac);
+    bool set_radio_supported_channels(const sMacAddr &mac,
+                                      beerocks::WifiChannel *supported_channels, const int length);
+    std::vector<beerocks::WifiChannel> get_radio_supported_channels(const sMacAddr &mac);
     std::string get_hostap_supported_channels_string(const sMacAddr &radio_mac);
     std::string get_bss_color_bitmap_string(uint64_t decimal_value);
 
@@ -1194,22 +1233,28 @@ public:
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
 
-    bool set_hostap_band_capability(const sMacAddr &al_mac, const sMacAddr &mac,
-                                    beerocks::eRadioBandCapability capability);
-    beerocks::eRadioBandCapability get_hostap_band_capability(const sMacAddr &mac);
+    bool set_radio_band_capability(const sMacAddr &mac,
+                                   const beerocks::eRadioBandCapability capability);
+    beerocks::eRadioBandCapability get_radio_band_capability(const sMacAddr &mac);
 
     bool capability_check(const std::string &mac, int channel);
 
     bool get_node_6ghz_support(const std::string &mac);
-    bool get_node_5ghz_support(
+    bool get_sta_5ghz_support(
         const std::string &mac); // TODO: add a real learning algorithm for per-channel support
-    bool get_node_24ghz_support(const std::string &mac);
-    bool is_node_6ghz(const std::string &mac);
+    bool get_sta_6ghz_support(const std::string &mac);
+    bool get_radio_5ghz_support(const sMacAddr &radio_mac);
+    bool get_sta_24ghz_support(const std::string &mac);
+    bool is_radio_6ghz(const sMacAddr &radio_mac);
     bool is_node_5ghz(const std::string &mac);
-    bool is_node_24ghz(const std::string &mac);
-    bool update_node_failed_6ghz_steer_attempt(const std::string &mac);
-    bool update_node_failed_5ghz_steer_attempt(const std::string &mac);
-    bool update_node_failed_24ghz_steer_attempt(const std::string &mac);
+    bool is_radio_5ghz(const sMacAddr &radio_mac);
+    bool is_radio_24ghz(const sMacAddr &radio_mac);
+    bool is_sta_6ghz(const sMacAddr &sta_mac);
+    bool is_sta_5ghz(const sMacAddr &sta_mac);
+    bool is_sta_24ghz(const sMacAddr &sta_mac);
+    bool update_sta_failed_6ghz_steer_attempt(const std::string &mac);
+    bool update_sta_failed_5ghz_steer_attempt(const std::string &mac);
+    bool update_sta_failed_24ghz_steer_attempt(const std::string &mac);
 
     /**
      * @brief Checks if it's possible to initiate client steering.
@@ -1223,13 +1268,12 @@ public:
     void update_node_11v_responsiveness(Station &station, bool success);
     bool get_node_11v_capability(const Station &mac);
 
-    bool set_hostap_iface_name(const sMacAddr &al_mac, const sMacAddr &mac,
-                               const std::string &iface_name);
-    std::string get_hostap_iface_name(const sMacAddr &mac);
+    bool set_radio_iface_name(const sMacAddr &mac, const std::string &iface_name);
+    std::string get_radio_iface_name(const sMacAddr &mac);
 
-    bool set_hostap_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
-                               beerocks::eIfaceType iface_type);
-    beerocks::eIfaceType get_hostap_iface_type(const sMacAddr &mac);
+    bool set_radio_iface_type(const sMacAddr &al_mac, const sMacAddr &mac,
+                              const beerocks::eIfaceType iface_type);
+    beerocks::eIfaceType get_radio_iface_type(const sMacAddr &mac);
 
     bool set_hostap_vap_list(const sMacAddr &mac,
                              const std::unordered_map<int8_t, sVapElement> &vap_list);
@@ -1253,6 +1297,9 @@ public:
     bool add_vap(const sMacAddr &al_mac, const std::string &radio_mac, int vap_id,
                  const std::string &bssid, const std::string &ssid, bool backhaul);
 
+    std::shared_ptr<Agent::sRadio::sBss>
+    add_bss(Agent::sRadio &radio, const sMacAddr &bssid, const std::string &ssid,
+            int vap_id = beerocks::eBeeRocksIfaceIds::IFACE_ID_INVALID);
     /** Update VAP information
      *
      * Add or update the VAP information for the given BSSID on the
@@ -1279,13 +1326,15 @@ public:
     std::string get_node_parent_radio(const std::string &mac);
 
     /**
-     * @brief Get data model path of node
+     * @brief Get data model path of Station
      *
-     * @param[in] mac node mac address.
-     * @return Data model path of node on success or empty string otherwise.
+     * @param[in] mac Station mac address.
+     * @return Data model path of Station on success or empty string otherwise.
      */
-    std::string get_node_data_model_path(const std::string &mac);
-    std::string get_node_data_model_path(const sMacAddr &mac);
+    std::string get_sta_data_model_path(const sMacAddr &mac);
+    std::string get_sta_data_model_path(const std::string &mac);
+    std::string get_radio_data_model_path(const sMacAddr &radio_mac);
+    std::string get_agent_data_model_path(const sMacAddr &al_mac);
 
     int8_t get_hostap_vap_id(const sMacAddr &mac);
 
@@ -1296,9 +1345,9 @@ public:
 
     bool set_global_restricted_channels(const uint8_t *restricted_channels);
     std::vector<uint8_t> get_global_restricted_channels();
-    bool set_hostap_conf_restricted_channels(const sMacAddr &hostap_mac,
-                                             const uint8_t *restricted_channels);
-    std::vector<uint8_t> get_hostap_conf_restricted_channels(const sMacAddr &hostap_mac);
+    bool set_radio_conf_restricted_channels(const sMacAddr &ruid,
+                                            const uint8_t *restricted_channels);
+    std::vector<uint8_t> get_radio_conf_restricted_channels(const sMacAddr &hostap_mac);
 
     /**
      * @brief Sets channel scan capabilities parameters of Agent DB for given radio.
@@ -1314,23 +1363,24 @@ public:
     //
     // CS - DFS
     //
-    bool set_hostap_activity_mode(const sMacAddr &mac, beerocks::eApActiveMode ap_activity_mode);
-    beerocks::eApActiveMode get_hostap_activity_mode(const sMacAddr &mac);
+    bool set_radio_activity_mode(const sMacAddr &mac,
+                                 const beerocks::eApActiveMode ap_activity_mode);
+    beerocks::eApActiveMode get_radio_activity_mode(const sMacAddr &mac);
     bool set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry);
     bool set_supported_channel_radar_affected(const sMacAddr &mac,
                                               const std::vector<uint8_t> &channels, bool affected);
     //bool get_supported_channel_all_availble(const std::string &mac );
 
-    bool set_hostap_cac_completed(const sMacAddr &mac, bool enable);
-    bool get_hostap_cac_completed(const sMacAddr &mac);
+    bool set_radio_cac_completed(const sMacAddr &mac, bool enable);
+    bool get_radio_cac_completed(const sMacAddr &mac);
 
-    bool set_hostap_on_dfs_reentry(const sMacAddr &mac, bool enable);
-    bool get_hostap_on_dfs_reentry(const sMacAddr &mac);
+    bool set_radio_on_dfs_reentry(const sMacAddr &mac, bool enable);
+    bool get_radio_on_dfs_reentry(const sMacAddr &mac);
 
-    bool set_hostap_dfs_reentry_clients(const sMacAddr &mac,
-                                        const std::set<std::string> &dfs_reentry_clients);
-    std::set<std::string> get_hostap_dfs_reentry_clients(const sMacAddr &mac);
-    bool clear_hostap_dfs_reentry_clients(const sMacAddr &mac);
+    bool set_radio_dfs_reentry_clients(const sMacAddr &mac,
+                                       const std::set<std::string> &dfs_reentry_clients);
+    std::set<std::string> get_radio_dfs_reentry_clients(const sMacAddr &mac);
+    bool clear_radio_dfs_reentry_clients(const sMacAddr &mac);
 
     //
     // Channel Scan
@@ -1542,7 +1592,7 @@ public:
      *
      */
     bool get_channel_report_record(const sMacAddr &mac, const std::string &ISO_8601_timestamp,
-                                   node::radio::channel_scan_report_index &report_index);
+                                   Agent::sRadio::channel_scan_report_index &report_index);
 
     /**
      * @brief Get the channel pool containing all the supported channels.
@@ -1597,7 +1647,7 @@ public:
      */
     const std::vector<sChannelScanResults>
     get_channel_scan_report(const sMacAddr &RUID,
-                            const node::radio::channel_scan_report_index &index);
+                            const Agent::sRadio::channel_scan_report_index &index);
 
     /**
      * @brief Get the report records for a given radio using a given timestamp.
@@ -1659,7 +1709,7 @@ public:
                                   const uint8_t channel_number,
                                   const bool is_central_channel = false);
 
-    node::radio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
+    Agent::sRadio::PreferenceReportMap get_radio_channel_preference(const sMacAddr &radio_mac);
 
     /**
      * @brief Clear the channel preference for a given Radio.
@@ -1750,8 +1800,8 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_stay_on_initial_radio(Station &client, bool stay_on_initial_radio,
-                                          bool save_to_persistent_db = true);
+    bool set_sta_stay_on_initial_radio(Station &client, bool stay_on_initial_radio,
+                                       bool save_to_persistent_db = true);
 
     /**
      * @brief Get the client's stay-on-initial-radio.
@@ -1759,7 +1809,7 @@ public:
      * @param mac MAC address of a client.
      * @return Enable client stay on the radio it initially connected to.
      */
-    eTriStateBool get_client_stay_on_initial_radio(const sMacAddr &mac);
+    eTriStateBool get_sta_stay_on_initial_radio(const sMacAddr &mac);
 
     /**
      * @brief Set the client's initial-radio.
@@ -1769,8 +1819,8 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
-                                  bool save_to_persistent_db = true);
+    bool set_sta_initial_radio(Station &client, const sMacAddr &initial_radio_mac,
+                               bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's selected-bands.
@@ -1780,8 +1830,8 @@ public:
      * @param save_to_persistent_db If set to true, update the persistent-db (write-through), default is true.
      * @return true on success, otherwise false.
      */
-    bool set_client_selected_bands(Station &client, int8_t selected_bands,
-                                   bool save_to_persistent_db = true);
+    bool set_sta_selected_bands(Station &client, int8_t selected_bands,
+                                bool save_to_persistent_db = true);
 
     /**
      * @brief Set the client's unfriendly status.
@@ -1869,8 +1919,8 @@ public:
     // Measurements
     //
 
-    bool set_hostap_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
-    void clear_hostap_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
+    bool set_radio_stats_info(const sMacAddr &mac, const beerocks_message::sApStatsParams *params);
+    void clear_radio_stats_info(const sMacAddr &al_mac, const sMacAddr &mac);
 
     /**
      * @brief Notify about client disconnection.
@@ -1878,8 +1928,8 @@ public:
      * @param reason_code Reason code of clients failed association/connection.
      * @param bssid String with left bss mac.
      */
-    bool notify_disconnection(const std::string &mac, const uint16_t reason_code,
-                              const std::string &bssid);
+    bool notify_sta_disconnection(const std::string &mac, const uint16_t reason_code,
+                                  const std::string &bssid);
 
     /**
      * @brief Update the node stats info
@@ -1889,14 +1939,14 @@ public:
      *
      * @return true on success, otherwise false.
      */
-    bool set_node_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
+    bool set_sta_stats_info(const sMacAddr &mac, const beerocks_message::sStaStatsParams *params);
 
     /**
      * @brief Clear any existing node stats info
      *
      * @param[in] mac MAC address of the given node
      */
-    void clear_node_stats_info(const sMacAddr &mac);
+    void clear_sta_stats_info(const sMacAddr &mac);
 
     /**
      * @brief Set virtual AP metrics info
@@ -1917,35 +1967,35 @@ public:
     bool commit_persistent_db_changes();
     bool is_commit_to_persistent_db_required();
 
-    int get_hostap_stats_measurement_duration(const sMacAddr &mac);
-    std::chrono::steady_clock::time_point get_hostap_stats_info_timestamp(const sMacAddr &mac);
+    int get_radio_stats_measurement_duration(const sMacAddr &mac);
+    std::chrono::steady_clock::time_point get_radio_stats_info_timestamp(const sMacAddr &mac);
 
-    uint32_t get_node_rx_bytes(const std::string &mac);
-    uint32_t get_node_tx_bytes(const std::string &mac);
+    uint32_t get_sta_rx_bytes(const std::string &mac);
+    uint32_t get_sta_tx_bytes(const std::string &mac);
 
-    double get_node_rx_bitrate(const std::string &mac);
-    double get_node_tx_bitrate(const std::string &mac);
+    double get_sta_rx_bitrate(const std::string &mac);
+    double get_sta_tx_bitrate(const std::string &mac);
 
     bool set_node_rx_phy_rate_100kb(const std::string &mac, uint16_t rx_phy_rate_100kb);
     bool set_node_tx_phy_rate_100kb(const std::string &mac, uint16_t tx_phy_rate_100kb);
 
-    uint16_t get_node_rx_phy_rate_100kb(const std::string &mac);
-    uint16_t get_node_tx_phy_rate_100kb(const std::string &mac);
+    uint16_t get_sta_rx_phy_rate_100kb(const std::string &mac);
+    uint16_t get_sta_tx_phy_rate_100kb(const std::string &mac);
 
-    int get_hostap_channel_load_percent(const sMacAddr &mac);
+    int get_radio_channel_load_percent(const sMacAddr &mac);
 
-    uint32_t get_hostap_total_sta_rx_bytes(const sMacAddr &mac);
-    uint32_t get_hostap_total_sta_tx_bytes(const sMacAddr &mac);
+    uint32_t get_radio_total_sta_rx_bytes(const sMacAddr &mac);
+    uint32_t get_radio_total_sta_tx_bytes(const sMacAddr &mac);
 
-    int get_hostap_total_client_tx_load_percent(const sMacAddr &mac);
-    int get_hostap_total_client_rx_load_percent(const sMacAddr &mac);
+    int get_radio_total_client_tx_load_percent(const sMacAddr &mac);
+    int get_radio_total_client_rx_load_percent(const sMacAddr &mac);
 
-    int get_node_rx_load_percent(const std::string &mac);
-    int get_node_tx_load_percent(const std::string &mac);
+    int get_sta_rx_load_percent(const std::string &mac);
+    int get_sta_tx_load_percent(const std::string &mac);
 
-    int8_t get_load_rx_rssi(const std::string &sta_mac);
-    uint16_t get_load_rx_phy_rate_100kb(const std::string &sta_mac);
-    uint16_t get_load_tx_phy_rate_100kb(const std::string &sta_mac);
+    int8_t get_sta_load_rx_rssi(const std::string &sta_mac);
+    uint16_t get_sta_load_rx_phy_rate_100kb(const std::string &sta_mac);
+    uint16_t get_sta_load_tx_phy_rate_100kb(const std::string &sta_mac);
 
     bool set_measurement_delay(const std::string &mac, int measurement_delay);
     int get_measurement_delay(const std::string &mac);
@@ -1958,6 +2008,12 @@ public:
     int get_measurement_window_size(const std::string &mac);
     bool set_measurement_window_size(const std::string &mac, int window_size);
 
+    beerocks::WifiChannel get_radio_wifi_channel(const sMacAddr &radio_mac);
+    bool set_radio_wifi_channel(const sMacAddr &radio_mac,
+                                const beerocks::WifiChannel &wifi_channel);
+
+    bool set_sta_wifi_channel(const sMacAddr &sta_mac, const beerocks::WifiChannel &wifi_channel);
+    beerocks::WifiChannel get_sta_wifi_channel(const std::string &mac);
     /**
      * @brief Search a node that is identified by the mac
      * and get a copy of the node's wifiChannel object
@@ -2816,7 +2872,6 @@ private:
      * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
      */
     std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    std::shared_ptr<node::radio> get_hostap(const sMacAddr &radio_uid);
     int get_node_hierarchy(std::shared_ptr<node> n);
     std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
     void adjust_subtree_hierarchy(std::shared_ptr<node> n);
@@ -3013,20 +3068,10 @@ private:
      *
      * @param radio_mac mac address of radio on which BSSID exists.
      * @param bssid BSSID of the BSS.
-     * @param ssid SSID of the BSS. If empty, BSS is considered disabled.
      * @param is_vbss Whether this is a Virtual BSS or not
      */
     bool dm_set_radio_bss(const sMacAddr &al_mac, const sMacAddr &radio_mac, const sMacAddr &bssid,
-                          const std::string &ssid, bool is_vbss = false);
-
-    /**
-     * @brief Set data model path member of a node
-     *
-     * @param mac mac address of node
-     * @param data_model_path data model path
-     * @return true on success, false otherwise.
-     */
-    bool set_node_data_model_path(const sMacAddr &mac, const std::string &data_model_path);
+                          bool is_vbss = false);
 
     int network_optimization_task_id           = -1;
     int channel_selection_task_id              = -1;
@@ -3081,7 +3126,7 @@ private:
      * Map created empty in all other nodes.
      */
     //TODO: This map should be moved to the agent nodes instead of being a separate map.
-    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::node::link_metrics_data>>
+    std::unordered_map<sMacAddr, std::unordered_map<sMacAddr, son::db::link_metrics_data>>
         m_link_metric_data;
 
     /**
@@ -3090,7 +3135,7 @@ private:
      * Map created empty in all other nodes.
      */
     //TODO: This map should be moved to the BSS nodes (which currently don't exist) instead of being a separate map.
-    std::unordered_map<sMacAddr, son::node::ap_metrics_data> m_ap_metric_data;
+    std::unordered_map<sMacAddr, son::db::ap_metrics_data> m_ap_metric_data;
 
     // certification
     std::shared_ptr<uint8_t> certification_tx_buffer;

@@ -636,14 +636,47 @@ bool CapabilityReportingTask::add_channel_scan_capabilities(
     radio_channel_scan_capabilities->capabilities().scan_impact = wfa_map::
         cRadiosWithScanCapabilities::eScanImpact::SCAN_IMPACT_REDUCED_NUMBER_OF_SPATIAL_STREAM;
 
-    // Create operating class object
-    auto op_class_channels = radio_channel_scan_capabilities->create_operating_classes_list();
-    if (!op_class_channels) {
-        LOG(ERROR) << "create_operating_classes_list() has failed!";
+    // Fill values for operating classes and channels (PPM-2294).
+    const std::vector<uint8_t> &supported_op_classes =
+        son::wireless_utils::get_operating_classes_of_freq_type(
+            radio->wifi_channel.get_freq_type());
+    if (supported_op_classes.empty()) {
+        LOG(ERROR) << "supported_op_classes is empty";
         return false;
     }
 
-    // TODO: Fill values for operating classes and channels (PPM-2294).
+    for (const auto &oper_class : supported_op_classes) {
+        // According to Wi-Fi EasyMesh Specification v5, operating classes specified in shall be
+        // 20 MHz operating classes from Table E-4 of [1].
+
+        if (son::wireless_utils::operating_class_to_bandwidth(oper_class) ==
+            beerocks::eWiFiBandwidth::BANDWIDTH_20) {
+            // Create operating class object
+            auto op_class_channels =
+                radio_channel_scan_capabilities->create_operating_classes_list();
+            if (!op_class_channels) {
+                LOG(ERROR) << "create_operating_classes_list() has failed!";
+                return false;
+            }
+
+            op_class_channels->operating_class() = oper_class;
+            std::vector<uint8_t> channel_vec(
+                son::wireless_utils::operating_class_to_channel_set(oper_class).begin(),
+                son::wireless_utils::operating_class_to_channel_set(oper_class).end());
+            if (!op_class_channels->set_channel_list(channel_vec.data(), channel_vec.size())) {
+                LOG(ERROR) << "set_channel_list() has failed!";
+                return false;
+            }
+            if (!radio_channel_scan_capabilities->add_operating_classes_list(op_class_channels)) {
+                LOG(ERROR) << "add_operating_classes_list failed";
+                return false;
+            }
+
+            if (op_class_channels->channel_list_length() == 0) {
+                LOG(DEBUG) << "channel_list_length is 0";
+            }
+        }
+    }
 
     // Push operating class object to the list of operating class objects
     if (!channel_scan_capabilities_tlv.add_radio_list(radio_channel_scan_capabilities)) {

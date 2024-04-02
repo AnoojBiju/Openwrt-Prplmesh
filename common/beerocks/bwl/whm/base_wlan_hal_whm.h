@@ -12,6 +12,7 @@
 #include "utils_wlan_hal_whm.h"
 #include <bcl/beerocks_state_machine.h>
 #include <bwl/base_wlan_hal.h>
+#include <bwl/key_value_parser.h>
 #include <bwl/nl80211_client.h>
 
 #include "ambiorix_client.h"
@@ -51,7 +52,8 @@ struct sStationInfo {
  * Base class for the whm abstraction layer.
  */
 class base_wlan_hal_whm : public virtual base_wlan_hal,
-                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event> {
+                          protected beerocks::beerocks_fsm<whm_fsm_state, whm_fsm_event>,
+                          public KeyValueParser {
 
     // Public methods:
 public:
@@ -103,6 +105,8 @@ protected:
     void subscribe_to_radio_events();
     virtual bool process_radio_event(const std::string &interface, const std::string &key,
                                      const beerocks::wbapi::AmbiorixVariant *value);
+    void subscribe_to_radio_channel_change_events();
+    virtual bool process_radio_channel_change_event(const beerocks::wbapi::AmbiorixVariant *value);
 
     void subscribe_to_ap_events();
     virtual bool process_ap_event(const std::string &interface, const std::string &key,
@@ -122,11 +126,28 @@ protected:
      */
     virtual bool process_scan_complete_event(const std::string &result);
 
+    /**
+     * @brief Process event "wpaCtrlEvents"
+     */
+    virtual bool process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data);
+
+    /**
+     * @brief subscribe to WiFi.Radio.XXXXX.NaStaMonitor.RssiEventing RssiUpdate dm notification
+     */
+    virtual void subscribe_to_rssi_eventing_events();
+
+    /**
+     * @brief Process the event "RssiUpdate" when received from the dm
+     */
+    virtual void process_rssi_eventing_event(const std::string &interface,
+                                             beerocks::wbapi::AmbiorixVariant *value);
+
     // Private data-members:
 private:
     bool fsm_setup();
 
 protected:
+    std::shared_ptr<beerocks::wbapi::sAmbiorixEventHandler> m_rssi_event_handler;
     std::string m_radio_mac_address;
 };
 

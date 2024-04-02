@@ -305,9 +305,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                     LOG(DEBUG) << "bssid=" << vap_map_it->first << ", vap_id=" << int(vap_id);
                 }
 
-                auto bss     = radio->bsses.add(bss_entry.radio_bssid(), *radio, vap_id);
+                auto bss =
+                    database.add_bss(*radio, bss_entry.radio_bssid(), bss_entry.ssid_str(), vap_id);
                 bss->enabled = true;
-                bss->ssid    = bss_entry.ssid_str();
                 // Backhaul is not reported in this message. Leave it unchanged.
                 // TODO "backhaul" is not set in this TLV, so just assume false
                 if (vap_id == eBeeRocksIfaceIds::IFACE_ID_INVALID) {
@@ -342,7 +342,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
                 }
 
                 // Remove the vap from DB
-                LOG(DEBUG) << "Removing BSS with path " << bss->dm_path << " from DB";
+                LOG(DEBUG) << "Removing BSS with bssid " << bss->bssid << " from DB";
                 database.remove_vap(*radio, *bss);
             }
         }
@@ -358,16 +358,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     for (const auto &iface_mac : interface_macs) {
 
-        auto iface_node = database.get_interface_node(al_mac, iface_mac);
-        if (!iface_node) {
-            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+        auto interface = database.get_interface_on_agent(al_mac, iface_mac);
+        if (!interface) {
+            LOG(ERROR) << "Failed to get interface with mac: " << iface_mac;
             continue;
         }
-        iface_node->m_neighbors.keep_new_prepare();
-        auto interface = agent->interfaces.get(iface_mac);
-        if (interface) {
-            interface->neighbors.keep_new_prepare();
-        }
+        interface->m_neighbors.keep_new_prepare();
     }
 
     // The reported neighbors list might not be correct since the reporting al_mac hasn't received
@@ -478,17 +474,13 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     // Update active neighbors mac list of the interface node
     for (const auto &iface_mac : interface_macs) {
 
-        auto iface_node = database.get_interface_node(al_mac, iface_mac);
-        if (!iface_node) {
-            LOG(ERROR) << "Failed to get interface node with mac: " << iface_mac;
+        auto interface = database.get_interface_on_agent(al_mac, iface_mac);
+        if (!interface) {
+            LOG(ERROR) << "Failed to get interface with mac: " << iface_mac;
             continue;
         }
 
-        auto removed_neighbors = iface_node->m_neighbors.keep_new_remove_old();
-        auto interface         = agent->interfaces.get(iface_mac);
-        if (interface) {
-            interface->neighbors.keep_new_remove_old();
-        }
+        auto removed_neighbors = interface->m_neighbors.keep_new_remove_old();
 
         // Removed members needs to be cleaned up from datamodel also.
         for (const auto &removed_neighbor : removed_neighbors) {
@@ -621,7 +613,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
 
     if (client_connected) {
         //add or update node parent
-        auto client = database.add_node_station(src_mac, client_mac, bssid);
+        auto client = database.add_station(src_mac, client_mac, bssid);
         if (!client) {
             LOG(ERROR) << "client " << client_mac << " not created";
             return false;
@@ -630,7 +622,12 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         LOG(INFO) << "client connected, al_mac=" << src_mac << " mac=" << client_mac_str
                   << ", bssid=" << bssid_str;
 
-        auto wifi_channel = database.get_node_wifi_channel(bssid_str);
+        std::shared_ptr<Agent::sRadio> radio = database.get_radio_by_bssid(bssid);
+        if (!radio) {
+            LOG(ERROR) << "No radio found hosting BSS " << bssid;
+            return false;
+        }
+        auto wifi_channel = database.get_radio_wifi_channel(radio->radio_uid);
         if (wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << bssid_str << " is empty";
         }
@@ -643,16 +640,16 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                 client_bw = std::min(client_bw, bss_bw);
             }
         }
-        database.set_node_wifi_channel(client_mac, wifi_channel);
+        database.set_sta_wifi_channel(client_mac, wifi_channel);
 
         // Note: The Database node stats and the Datamodels' stats are not the same.
         // Therefore, client information in data model and in node DB might differ.
-        database.clear_node_stats_info(client_mac);
+        database.clear_sta_stats_info(client_mac);
         client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
         if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_node_handoff_flag(*client))) {
+              database.get_sta_handoff_flag(*client))) {
             // The node is not an IRE in handoff
             database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
         }
@@ -661,8 +658,8 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
                                               beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
         if (vs_tlv) {
-            database.set_node_vap_id(client_mac_str, vs_tlv->vap_id());
-            database.set_station_capabilities(client_mac_str, vs_tlv->capabilities());
+            database.set_sta_vap_id(client_mac_str, vs_tlv->vap_id());
+            database.set_sta_capabilities(client_mac_str, vs_tlv->capabilities());
         }
 
         // Notify existing steering task of completed connection
@@ -733,7 +730,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         uint16_t reason_code = (vs_tlv)
                                    ? vs_tlv->disconnect_reason()
                                    : (uint16_t)wfa_map::tlvProfile2ReasonCode::UNSPECIFIED_REASON;
-        if (!database.notify_disconnection(client_mac_str, reason_code, bssid_str)) {
+        if (!database.notify_sta_disconnection(client_mac_str, reason_code, bssid_str)) {
             LOG(WARNING) << "Failed to notify disconnection event.";
         }
 

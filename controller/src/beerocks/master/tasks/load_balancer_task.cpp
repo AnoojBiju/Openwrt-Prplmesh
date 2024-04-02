@@ -68,7 +68,7 @@ void load_balancer_task::work()
         }
 
         for (auto hostap : hostaps) {
-            if (database.get_hostap_stats_info_timestamp(tlvf::mac_from_string(hostap)) <=
+            if (database.get_radio_stats_info_timestamp(tlvf::mac_from_string(hostap)) <=
                 start_timestamp) {
                 /*
                  * if the load info is not up-to-date, request a new report
@@ -101,7 +101,7 @@ void load_balancer_task::work()
 
         for (auto hostap : hostaps) {
             int hostap_channel_load =
-                database.get_hostap_channel_load_percent(tlvf::mac_from_string(hostap));
+                database.get_radio_channel_load_percent(tlvf::mac_from_string(hostap));
             if (hostap_channel_load > max_load) {
                 most_loaded_hostap = hostap;
                 max_load           = hostap_channel_load;
@@ -122,14 +122,14 @@ void load_balancer_task::work()
              */
         auto most_loaded_radio_mac = tlvf::mac_from_string(most_loaded_hostap);
 
-        bool current_ap_is_5ghz = database.is_node_5ghz(most_loaded_hostap);
+        bool current_ap_is_5ghz = database.is_radio_5ghz(most_loaded_radio_mac);
         int ap_total_duration_ms =
-            database.get_hostap_stats_measurement_duration(most_loaded_radio_mac);
+            database.get_radio_stats_measurement_duration(most_loaded_radio_mac);
         int ap_sta_load_percent =
-            database.get_hostap_total_client_tx_load_percent(most_loaded_radio_mac) +
-            database.get_hostap_total_client_rx_load_percent(most_loaded_radio_mac);
-        int ap_tx_bytes = database.get_hostap_total_sta_tx_bytes(most_loaded_radio_mac);
-        int ap_rx_bytes = database.get_hostap_total_sta_rx_bytes(most_loaded_radio_mac);
+            database.get_radio_total_client_tx_load_percent(most_loaded_radio_mac) +
+            database.get_radio_total_client_rx_load_percent(most_loaded_radio_mac);
+        int ap_tx_bytes = database.get_radio_total_sta_tx_bytes(most_loaded_radio_mac);
+        int ap_rx_bytes = database.get_radio_total_sta_rx_bytes(most_loaded_radio_mac);
 
         ASSERT_NONZERO(ap_tx_bytes);
         ASSERT_NONZERO(ap_rx_bytes);
@@ -156,10 +156,10 @@ void load_balancer_task::work()
         auto most_loaded_hostap_clients      = database.get_node_children(most_loaded_hostap);
 
         for (auto client : most_loaded_hostap_clients) {
-            int client_tx_bytes           = database.get_node_tx_bytes(client);
-            int client_rx_bytes           = database.get_node_rx_bytes(client);
-            int client_airtime_percentage = database.get_node_tx_load_percent(client) +
-                                            database.get_node_rx_load_percent(client);
+            int client_tx_bytes = database.get_sta_tx_bytes(client);
+            int client_rx_bytes = database.get_sta_rx_bytes(client);
+            int client_airtime_percentage =
+                database.get_sta_tx_load_percent(client) + database.get_sta_rx_load_percent(client);
             //int client_bytes_percentage = 100 * ((client_tx_bytes / ap_rx_bytes) + (client_rx_bytes / ap_tx_bytes));
 
             int client_bytes_percentage = 0;
@@ -174,10 +174,10 @@ void load_balancer_task::work()
             float client_efficiency_ratio = 0;
             if (client_airtime_percentage > 0) {
                 //client_efficiency_ratio = (float)client_bytes_percentage / (float)client_airtime_percentage;
-                double client_tx_bitrate          = database.get_node_tx_bitrate(client);
-                double client_rx_bitrate          = database.get_node_rx_bitrate(client);
-                uint16_t client_rx_phy_rate_100kb = database.get_load_rx_phy_rate_100kb(client);
-                uint16_t client_tx_phy_rate_100kb = database.get_load_tx_phy_rate_100kb(client);
+                double client_tx_bitrate          = database.get_sta_tx_bitrate(client);
+                double client_rx_bitrate          = database.get_sta_rx_bitrate(client);
+                uint16_t client_rx_phy_rate_100kb = database.get_sta_load_rx_phy_rate_100kb(client);
+                uint16_t client_tx_phy_rate_100kb = database.get_sta_load_tx_phy_rate_100kb(client);
 
                 if (client_tx_bitrate > 0) {
                     client_efficiency_ratio +=
@@ -266,10 +266,10 @@ void load_balancer_task::work()
             ASSERT_NONZERO(other_clients_airtime_percentage);
             int extra_available_bytes = 0;
             for (auto client : clients) {
-                float client_tx_share = (float)database.get_node_tx_load_percent(client) / other_clients_airtime_percentage;
-                float client_rx_share = (float)database.get_node_rx_load_percent(client) / other_clients_airtime_percentage;
-                int client_tx_bytes = database.get_node_tx_bytes(client);
-                int client_rx_bytes = database.get_node_rx_bytes(client);
+                float client_tx_share = (float)database.get_sta_tx_load_percent(client) / other_clients_airtime_percentage;
+                float client_rx_share = (float)database.get_sta_rx_load_percent(client) / other_clients_airtime_percentage;
+                int client_tx_bytes = database.get_sta_tx_bytes(client);
+                int client_rx_bytes = database.get_sta_rx_bytes(client);
                 extra_available_bytes = client_tx_bytes * (1 + client_tx_share) + client_rx_bytes * (1 + client_rx_share);
             }
             ASSERT_NONZERO(ap_total_duration_ms);
@@ -295,15 +295,15 @@ void load_balancer_task::work()
         bool sta_is_5ghz                          = database.is_node_5ghz(chosen_client);
         bool confine                              = false;
 
-        auto sta_capabilities          = database.get_station_current_capabilities(chosen_client);
-        uint16_t sta_phy_tx_rate_100kb = database.get_node_rx_phy_rate_100kb(chosen_client);
+        auto sta_capabilities          = database.get_sta_current_capabilities(chosen_client);
+        uint16_t sta_phy_tx_rate_100kb = database.get_sta_rx_phy_rate_100kb(chosen_client);
 
         for (auto hostap : hostaps) {
             son::wireless_utils::sPhyApParams hostap_params;
 
-            hostap_params.is_5ghz = database.is_node_5ghz(hostap);
+            hostap_params.is_5ghz = database.is_radio_5ghz(tlvf::mac_from_string(hostap));
 
-            if (hostap_params.is_5ghz && !database.get_node_5ghz_support(sta_mac)) {
+            if (hostap_params.is_5ghz && !database.get_sta_5ghz_support(sta_mac)) {
                 TASK_LOG(DEBUG) << "sta " << sta_mac
                                 << " does not support 5ghz, skipping candidate " << hostap;
                 continue;
@@ -311,14 +311,14 @@ void load_balancer_task::work()
 
             auto radio_mac = tlvf::mac_from_string(hostap);
 
-            WifiChannel hostap_wifi_channel = database.get_node_wifi_channel(hostap);
-            if (hostap_wifi_channel.is_empty()) {
-                LOG(WARNING) << "empty wifi channel of " << hostap_wifi_channel << " in DB";
+            WifiChannel radio_wifi_channel = database.get_radio_wifi_channel(radio_mac);
+            if (radio_wifi_channel.is_empty()) {
+                LOG(WARNING) << "empty wifi channel of " << radio_wifi_channel << " in DB";
             }
-            hostap_params.bw       = hostap_wifi_channel.get_bandwidth();
-            hostap_params.ant_num  = database.get_hostap_ant_num(radio_mac);
-            hostap_params.ant_gain = database.get_hostap_ant_gain(radio_mac);
-            hostap_params.tx_power = database.get_hostap_tx_power(radio_mac);
+            hostap_params.bw       = radio_wifi_channel.get_bandwidth();
+            hostap_params.ant_num  = database.get_radio_ant_num(radio_mac);
+            hostap_params.ant_gain = database.get_radio_ant_gain(radio_mac);
+            hostap_params.tx_power = database.get_radio_tx_power(radio_mac);
 
             auto station = database.get_station(tlvf::mac_from_string(sta_mac));
             if (!station) {
@@ -355,7 +355,7 @@ void load_balancer_task::work()
 
             //double predicted_chosen_client_phy_rate = son::wireless_utils::estimate_ap_tx_phy_rate(hostap_dl_rssi, sta_capabilities, hostap_params.bw, hostap_params.is_5ghz);
 
-            int hostap_duration_ms = database.get_hostap_stats_measurement_duration(radio_mac);
+            int hostap_duration_ms = database.get_radio_stats_measurement_duration(radio_mac);
 
             ASSERT_NONZERO(ap_total_duration_ms);
             uint64_t normalized_chosen_client_bytes =
@@ -369,7 +369,7 @@ void load_balancer_task::work()
                                << std::endl
                                << "   predicted bitrate for sta " << chosen_client << " on hostap "
                                << hostap << " is " << predicted_chosen_client_bitrate << " b/s");
-            //int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_hostap_channel_load_percent(hostap)) / 100;
+            //int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_radio_channel_load_percent(hostap)) / 100;
 
             if (predicted_chosen_client_bitrate > chosen_hostap_predicted_bitrate) {
                 chosen_hostap                   = hostap;
@@ -390,26 +390,26 @@ void load_balancer_task::work()
 #if 0
 
 
-                uint16_t predicted_chosen_client_phy_rate_100kb = database.get_load_rx_phy_rate_100kb(chosen_client) / 2;
+                uint16_t predicted_chosen_client_phy_rate_100kb = database.get_sta_load_rx_phy_rate_100kb(chosen_client) / 2;
                 //FIXME
                     // son::wireless_utils::calculate_basic_phy_rate_100kb(database.get_node_max_supported_phy_rate_100kb(chosen_client),
-                    //         database.get_hostap_ant_num(hostap),
-                    //         database.get_hostap_ant_gain(hostap), 
-                    //         database.get_hostap_tx_power(hostap), 
+                    //         database.get_radio_ant_num(hostap),
+                    //         database.get_radio_ant_gain(hostap), 
+                    //         database.get_radio_tx_power(hostap), 
                     //         database.get_rssi_rx_measurement(chosen_client, hostap), 
-                    //         database.get_node_rx_phy_rate_100kb(chosen_client),
+                    //         database.get_sta_rx_phy_rate_100kb(chosen_client),
                     //         sta_is_5ghz,
                     //         hostap_params.is_5ghz,
                     //         database.get_hostap_channel_bw(hostap));
                 ASSERT_NONZERO(predicted_chosen_client_phy_rate_100kb);
 
-                int hostap_duration_ms = database.get_hostap_stats_measurement_duration(hostap);
+                int hostap_duration_ms = database.get_radio_stats_measurement_duration(hostap);
                 ASSERT_NONZERO(hostap_duration_ms);
                 uint64_t normalized_chosen_client_bytes = chosen_client_bytes * hostap_duration_ms / hostap_duration_ms;
 
                 int predicted_chosen_client_airtime_ms = 1000 * (double(normalized_chosen_client_bytes) / (1e+5*predicted_chosen_client_phy_rate_100kb));
 
-                int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_hostap_channel_load_percent(hostap)) / 100;
+                int free_hostap_airtime_ms = hostap_duration_ms * float(100 - database.get_radio_channel_load_percent(hostap)) / 100;
 
                 int hostap_bytes_per_second_gained = extra_available_bytes_per_second;
                 if (predicted_chosen_client_airtime_ms <= free_hostap_airtime_ms) {
@@ -434,16 +434,16 @@ void load_balancer_task::work()
                      */
                     predicted_lost_bytes += normalized_chosen_client_bytes * float(excess_required_airtime_ms) / float(total_predicted_airtime_ms);
 
-                    int hostap_total_client_tx_load_percent = database.get_hostap_total_client_tx_load_percent(hostap);
-                    int hostap_total_client_rx_load_percent = database.get_hostap_total_client_rx_load_percent(hostap);
+                    int hostap_total_client_tx_load_percent = database.get_radio_total_client_tx_load_percent(hostap);
+                    int hostap_total_client_rx_load_percent = database.get_radio_total_client_rx_load_percent(hostap);
                     ASSERT_NONZERO(hostap_total_client_tx_load_percent);
                     ASSERT_NONZERO(hostap_total_client_rx_load_percent);
 
                     for (auto client : clients) {
-                        float client_tx_share = (float)database.get_node_tx_load_percent(client) / hostap_total_client_tx_load_percent;
-                        float client_rx_share = (float)database.get_node_rx_load_percent(client) / hostap_total_client_rx_load_percent;
-                        int client_tx_bytes = database.get_node_tx_bytes(client);
-                        int client_rx_bytes = database.get_node_rx_bytes(client);
+                        float client_tx_share = (float)database.get_sta_tx_load_percent(client) / hostap_total_client_tx_load_percent;
+                        float client_rx_share = (float)database.get_sta_rx_load_percent(client) / hostap_total_client_rx_load_percent;
+                        int client_tx_bytes = database.get_sta_tx_bytes(client);
+                        int client_rx_bytes = database.get_sta_rx_bytes(client);
                         predicted_lost_bytes += client_tx_bytes*client_tx_share + client_rx_bytes*client_rx_share;
                     }
 

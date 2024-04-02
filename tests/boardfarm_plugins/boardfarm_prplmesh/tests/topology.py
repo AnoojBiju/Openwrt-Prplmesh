@@ -34,7 +34,8 @@ class Topology(PrplMeshBaseTest):
         for value in topology.values():
             debug(value)
 
-        debug("Confirming Controller MAC appears on Agent Interface Neighbors")
+        debug("Confirming Controller MAC " + controller.mac
+              + "appears on Agent Interface Neighbors")
         found = False
         map_agent = topology[agent.mac]
         for map_interface in map_agent.interfaces.values():

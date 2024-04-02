@@ -91,7 +91,7 @@ void association_handling_task::work()
 
         new_hostap_mac = database.get_node_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -148,15 +148,15 @@ void association_handling_task::work()
             LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_BEACON_11K_REQUEST message!";
             return;
         }
-        auto wifi_channel = database.get_node_wifi_channel(bssid);
+        auto wifi_channel = database.get_radio_wifi_channel(tlvf::mac_from_string(radio_mac));
         if (wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << bssid << " in DB";
+            LOG(WARNING) << "empty wifi channel of " << radio_mac << " in DB";
         }
         measurement_request->params().measurement_mode =
             beerocks::MEASURE_MODE_ACTIVE; // son::eMeasurementMode11K "passive"/"active"/"table"
         measurement_request->params().channel = wifi_channel.get_channel();
         measurement_request->params().op_class =
-            database.get_hostap_operating_class(tlvf::mac_from_string(bssid));
+            database.get_radio_operating_class(tlvf::mac_from_string(radio_mac));
         measurement_request->params().rand_ival = beerocks::
             BEACON_MEASURE_DEFAULT_RANDOMIZATION_INTERVAL; // random interval - specifies the upper bound of the random delay to be used prior to making the measurement, expressed in units of TUs [=1024usec]
         measurement_request->params().duration = beerocks::
@@ -207,7 +207,7 @@ void association_handling_task::work()
         auto agent_mac         = database.get_node_parent_ire(hostap_mac);
 
         if (hostap_mac != original_parent_mac ||
-            database.get_node_state(sta_mac) != beerocks::STATE_CONNECTED) {
+            database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
                             << original_parent_mac << " finishing task";
             finish();
@@ -223,17 +223,18 @@ void association_handling_task::work()
                 << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
             return;
         }
-        auto hostap_wifi_channel = database.get_node_wifi_channel(hostap_mac);
-        if (hostap_wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << hostap_mac << " in DB";
+        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        auto radio_wifi_channel =
+            database.get_radio_wifi_channel(tlvf::mac_from_string(parent_radio));
+        if (radio_wifi_channel.is_empty()) {
+            LOG(WARNING) << "empty wifi channel of " << parent_radio << " in DB";
         }
         measurement_request->params().mac       = tlvf::mac_from_string(sta_mac);
         measurement_request->params().ipv4      = network_utils::ipv4_from_string(ipv4);
-        measurement_request->params().channel   = hostap_wifi_channel.get_channel();
-        measurement_request->params().bandwidth = hostap_wifi_channel.get_bandwidth();
+        measurement_request->params().channel   = radio_wifi_channel.get_channel();
+        measurement_request->params().bandwidth = radio_wifi_channel.get_bandwidth();
         measurement_request->params().cross     = 0;
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
 
         TASK_LOG(DEBUG) << "requested rx rssi measurement from " << hostap_mac << " for sta "
@@ -290,7 +291,7 @@ void association_handling_task::handle_response(std::string mac,
         }
 
         if (database.settings_client_11k_roaming() &&
-            (database.get_node_beacon_measurement_support_level(sta_mac) ==
+            (database.get_sta_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
             (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
 
@@ -354,7 +355,7 @@ void association_handling_task::handle_response(std::string mac,
                 //on nexus 5x devices rsni always 0, and they are not supports measurement by ssid (special handling)
                 support_level |= beerocks::BEACON_MEAS_SSID_SUPPORTED;
             }
-            database.set_node_beacon_measurement_support_level(
+            database.set_sta_beacon_measurement_support_level(
                 sta_mac, beerocks::eBeaconMeasurementSupportLevel(support_level));
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
             break;
@@ -386,7 +387,7 @@ void association_handling_task::finalize_new_connection()
     /*
      * see if special handling is required if client just came back from a handover
      */
-    if (!database.get_node_handoff_flag(*client)) {
+    if (!database.get_sta_handoff_flag(*client)) {
         if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
@@ -398,9 +399,9 @@ void association_handling_task::finalize_new_connection()
                 auto bssid            = database.get_node_parent(sta_mac);
                 auto parent_radio_mac = database.get_node_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
-                if (!database.set_client_initial_radio(*client,
-                                                       tlvf::mac_from_string(parent_radio_mac),
-                                                       database.config.persistent_db)) {
+                if (!database.set_sta_initial_radio(*client,
+                                                    tlvf::mac_from_string(parent_radio_mac),
+                                                    database.config.persistent_db)) {
                     LOG(WARNING) << "Failed to set client " << client->mac << "  initial radio to "
                                  << parent_radio_mac;
                 }
@@ -425,7 +426,7 @@ void association_handling_task::finalize_new_connection()
         int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
         tasks.kill_task(prev_load_balancer_task);
 
-        database.set_node_handoff_flag(*client, false);
+        database.set_sta_handoff_flag(*client, false);
     }
 }
 void association_handling_task::handle_responses_timeout(
@@ -469,8 +470,8 @@ void association_handling_task::handle_responses_timeout(
             TASK_LOG(DEBUG) << "state CHECK_11K_BEACON_MEASURE_CAP reached maximum attempts="
                             << attempts << " setting sta " << sta_mac
                             << " as beacon measurement unsupported ";
-            database.set_node_beacon_measurement_support_level(sta_mac,
-                                                               beerocks::BEACON_MEAS_UNSUPPORTED);
+            database.set_sta_beacon_measurement_support_level(sta_mac,
+                                                              beerocks::BEACON_MEAS_UNSUPPORTED);
             state = REQUEST_RSSI_MEASUREMENT_WAIT;
         }
         break;

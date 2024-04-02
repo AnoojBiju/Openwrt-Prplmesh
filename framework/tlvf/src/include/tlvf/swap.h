@@ -23,6 +23,7 @@
 #else // Linux
 #include <arpa/inet.h>
 #include <stdint.h>
+#include <string.h>
 #endif
 
 inline uint64_t htonll(uint64_t x)
@@ -56,8 +57,10 @@ inline void tlvf_swap(uint8_t size, uint8_t *ptr)
         break;
     }
     case 64: {
-        uint64_t *tmp64 = reinterpret_cast<uint64_t *>(ptr);
-        swap_64(*tmp64);
+        uint64_t tmp64;
+        memcpy(&tmp64, ptr, sizeof(tmp64));
+        swap_64(tmp64);
+        memcpy(ptr, &tmp64, sizeof(tmp64));
         break;
     }
     default:
@@ -79,8 +82,10 @@ inline void tlvf_swap(uint8_t size, int8_t *ptr)
         break;
     }
     case 64: {
-        int64_t *tmp64 = reinterpret_cast<int64_t *>(ptr);
-        swap_64(*tmp64);
+        int64_t tmp64;
+        memcpy(&tmp64, ptr, sizeof(tmp64));
+        swap_64(tmp64);
+        memcpy(ptr, &tmp64, sizeof(tmp64));
         break;
     }
     default:

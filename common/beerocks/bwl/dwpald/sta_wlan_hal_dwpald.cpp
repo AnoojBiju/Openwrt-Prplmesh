@@ -399,6 +399,20 @@ bool sta_wlan_hal_dwpal::set_4addr_mode(bool enable)
     return true;
 }
 
+bool sta_wlan_hal_dwpal::set_3addr_mcast(bool enable)
+{
+    auto iface_name = get_iface_name();
+    LOG(DEBUG) << (enable ? "Allowing" : "Disabling") << " 3address multicast";
+    int param = enable;
+    if (!dwpal_nl_cmd_set(iface_name, LTQ_NL80211_VENDOR_SUBCMD_SET_ALLOW_3ADDR_MCAST, &param,
+                          sizeof(param))) {
+        LOG(ERROR) << "LTQ_NL80211_VENDOR_SUBCMD_SET_ALLOW_3ADDR_MCAST failed!";
+        return false;
+    }
+
+    return true;
+}
+
 bool sta_wlan_hal_dwpal::unassoc_rssi_measurement(const std::string &mac, int chan, int bw,
                                                   int vht_center_frequency, int delay,
                                                   int window_size)

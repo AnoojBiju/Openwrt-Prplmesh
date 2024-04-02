@@ -151,11 +151,6 @@ public:
 
     // Forward declaration
     struct sRadioInfo;
-    /**
-     * @brief Removes the handlers for the external and internal events 
-     *        as well as the events themselves for the given radio.
-     */
-    void clear_radio_handlers(beerocks::BackhaulManager::sRadioInfo &radio_info);
 
 private:
     std::shared_ptr<bwl::sta_wlan_hal> get_selected_backhaul_sta_wlan_hal();
@@ -248,6 +243,13 @@ private:
      */
     bool send_slaves_tear_down();
 
+    /**
+     * @brief Removes the handlers for the external and internal events 
+     *        as well as the events themselves for the given radio.
+     */
+    void
+    clear_radio_handlers(const std::shared_ptr<beerocks::BackhaulManager::sRadioInfo> &radio_info);
+
     std::shared_ptr<bwl::sta_wlan_hal> get_wireless_hal(std::string iface = "");
 
     /**
@@ -339,6 +341,7 @@ private:
     const int MAX_FAILED_DHCP_ATTEMPTS                = 2;
     const int MAX_WIRELESS_ASSOCIATE_TIMEOUT_SECONDS  = 10;
     const int MAX_WIRELESS_ASSOCIATE_3ADDR_ATTEMPTS   = 2;
+    const int MAX_ETH_FAILED_ATTEMPTS                 = 14;
     const int POLL_TIMER_TIMEOUT_MS                   = 1000;
     const int WIRELESS_WAIT_FOR_RECONNECT_TIMEOUT     = 30;
     const int RSSI_POLL_INTERVAL_MS                   = 1000;

@@ -37,7 +37,7 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
                                               task_pool &tasks, std::string client_mac)
 {
     LOG(INFO) << "handle_completed_connection client_mac=" << client_mac;
-    if (!database.set_node_state(client_mac, beerocks::STATE_CONNECTED)) {
+    if (!database.set_sta_state(client_mac, beerocks::STATE_CONNECTED)) {
         LOG(ERROR) << "set node state failed";
     }
 
@@ -97,13 +97,13 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
         gw_lan_switch = *gw_lan_switches.begin();
     }
 
-    if (!database.add_node_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
-                                   tlvf::mac_from_string(gw_lan_switch))) {
+    if (!database.add_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
+                              tlvf::mac_from_string(gw_lan_switch))) {
         LOG(ERROR) << "add_node_to_default_location - add_node failed";
         return false;
     }
 
-    if (!database.set_node_state(client_mac, beerocks::STATE_CONNECTING)) {
+    if (!database.set_sta_state(client_mac, beerocks::STATE_CONNECTING)) {
         LOG(ERROR) << "add_node_to_default_location - set_node_state failed.";
         return false;
     }
@@ -167,10 +167,10 @@ int son_actions::start_btm_request_task(
     tasks.add_task(new_task);
     return new_task->id;
 }
-bool son_actions::set_hostap_active(db &database, task_pool &tasks, std::string hostap_mac,
-                                    bool active)
+bool son_actions::set_radio_active(db &database, task_pool &tasks, std::string hostap_mac,
+                                   const bool active)
 {
-    bool result = database.set_hostap_active(tlvf::mac_from_string(hostap_mac), active);
+    bool result = database.set_radio_active(tlvf::mac_from_string(hostap_mac), active);
 
     if (result) {
         bml_task::connection_change_event new_event;
@@ -282,7 +282,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
     if (reported_by_parent) {
         if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
-            database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+            database.set_sta_state(mac, beerocks::STATE_DISCONNECTED);
 
             auto station = database.get_station(tlvf::mac_from_string(mac));
             if (!station) {
@@ -303,7 +303,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
             if (tasks.is_task_running(btm_request_task))
                 tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
 
-            if (database.get_node_handoff_flag(*station)) {
+            if (database.get_sta_handoff_flag(*station)) {
                 LOG(DEBUG) << "handoff_flag == true, mac " << mac;
                 // We're in the middle of steering, don't mark as disconnected (yet).
                 return;
@@ -327,7 +327,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
             database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
-            set_hostap_active(database, tasks, mac, false);
+            set_radio_active(database, tasks, mac, false);
         }
 
         /*
@@ -369,8 +369,8 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                 }
 
                 database.set_node_state(node_mac, beerocks::STATE_DISCONNECTED);
-                set_hostap_active(database, tasks, node_mac,
-                                  false); //implementation checks for hostap node type
+                set_radio_active(database, tasks, node_mac,
+                                 false); //implementation checks for hostap node type
 
                 if (database.get_node_type(node_mac) == beerocks::TYPE_IRE ||
                     database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
@@ -565,7 +565,8 @@ bool son_actions::send_client_association_control(
     association_control_request_tlv->bssid_to_block_client() = agent_bssid;
     association_control_request_tlv->association_control()   = association_flag;
 
-    if (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) {
+    if (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK ||
+        association_flag == wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK) {
         association_control_request_tlv->validity_period_sec() = duration_sec;
     } else {
         association_control_request_tlv->validity_period_sec() = 0;
@@ -592,8 +593,10 @@ bool son_actions::send_client_association_control(
     }
 
     std::string action_str =
-        (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK) ? "block"
-                                                                                 : "unblock";
+        (association_flag == wfa_map::tlvClientAssociationControlRequest::BLOCK ||
+         association_flag == wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK)
+            ? "block"
+            : "unblock";
 
     std::string duration_str =
         duration_sec != 0 ? "for " + std::to_string(duration_sec) + " seconds" : "";

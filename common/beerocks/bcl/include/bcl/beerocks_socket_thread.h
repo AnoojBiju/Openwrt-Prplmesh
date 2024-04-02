@@ -18,8 +18,6 @@
 
 #include <chrono>
 
-#define DEFAULT_SELECT_TIMEOUT_MS 500
-
 namespace beerocks {
 
 class socket_thread : public thread_base {

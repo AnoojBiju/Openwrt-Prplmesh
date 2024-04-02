@@ -24,52 +24,51 @@
 #include <string>
 #include <vector>
 
-#define NOISE_FIGURE 8
-#define TX_POWER_MIN 19
-#define ESTIMATE_RSSI_DELTA 4
+constexpr float NOISE_FIGURE = 8.0f;
 
 #define PHY_RATE_TABLE_ANT_MODE_MAX (beerocks::ANT_MODE_2X2_SS2 + 1)
 #define PHY_RATE_TABLE_MCS_MAX (beerocks::MCS_9 + 1)
 #define PHY_RATE_TABLE_BANDWIDTH_MAX (beerocks::BANDWIDTH_160 + 1)
 
-#define BIT_RATE_MAX_TABLE_SIZE 42
+constexpr int BIT_RATE_MAX_TABLE_SIZE = 42;
 
-#define LAST_2G_CHANNEL 14
+constexpr uint8_t LAST_2G_CHANNEL            = 14;
+constexpr uint8_t FIRST_5G_CHANNEL           = 36;
+constexpr uint8_t FIRST_5G_6G_COMMON_CHANNEL = 149;
+constexpr uint8_t LAST_5G_6G_COMMON_CHANNEL  = 165;
 
-#define START_OF_HIGH_BAND 100
-#define END_OF_HIGH_BAND 165
-#define END_OF_LOW_BAND 64
+constexpr uint32_t START_OF_HIGH_BAND = 100U;
+constexpr uint32_t END_OF_HIGH_BAND   = 165U;
+constexpr uint32_t END_OF_LOW_BAND    = 64U;
 
-#define START_OF_LOW_BAND_NON_DFS 36
-#define START_OF_HIGH_BAND_NON_DFS 149
-#define END_OF_HIGH_BAND_NON_DFS 161
-#define END_OF_LOW_BAND_NON_DFS 48
+constexpr uint32_t START_OF_LOW_BAND_NON_DFS  = 36U;
+constexpr uint32_t START_OF_HIGH_BAND_NON_DFS = 149U;
+constexpr uint32_t END_OF_HIGH_BAND_NON_DFS   = 161U;
+constexpr uint32_t END_OF_LOW_BAND_NON_DFS    = 48U;
 //DFS CHANNELS
-#define START_OF_LOW_DFS_SUBBAND 52
-#define START_OF_HIGH_DFS_SUBBAND 100
-#define END_OF_LOW_DFS_SUBBAND 64
-#define END_OF_HIGH_DFS_SUBBAND 144
+constexpr uint32_t START_OF_LOW_DFS_SUBBAND  = 52U;
+constexpr uint32_t START_OF_HIGH_DFS_SUBBAND = 100U;
+constexpr uint32_t END_OF_LOW_DFS_SUBBAND    = 64U;
+constexpr uint32_t END_OF_HIGH_DFS_SUBBAND   = 144U;
 
-#define START_OF_FIRST_DFS_SUBBAND 100
-#define START_OF_SECOND_DFS_SUBBAND 116
-#define START_OF_THIRD_DFS_SUBBAND 132
-#define END_OF_FIRST_DFS_SUBBAND 112
-#define END_OF_SECOND_DFS_SUBBAND 128
-#define END_OF_THIRD_DFS_SUBBAND 144
+constexpr uint32_t START_OF_FIRST_DFS_SUBBAND  = 100U;
+constexpr uint32_t START_OF_SECOND_DFS_SUBBAND = 116U;
+constexpr uint32_t START_OF_THIRD_DFS_SUBBAND  = 132U;
+constexpr uint32_t END_OF_FIRST_DFS_SUBBAND    = 112U;
+constexpr uint32_t END_OF_SECOND_DFS_SUBBAND   = 128U;
+constexpr uint32_t END_OF_THIRD_DFS_SUBBAND    = 144U;
 //
 
-#define BAND_5G_CHANNEL_CHECK 14
-#define RADAR_STATS_LIST_MAX 10
-
-#define RESTRICTED_2G_OVERLAPP_SIZE 5
+constexpr uint32_t BAND_5G_CHANNEL_CHECK = 14U;
+constexpr size_t RADAR_STATS_LIST_MAX    = 10U;
 
 //Based on https://en.wikipedia.org/wiki/List_of_WLAN_channels
-#define BAND_24G_MIN_FREQ 2401
-#define BAND_24G_MAX_FREQ 2473
-#define BAND_5G_MIN_FREQ 5150
-#define BAND_5G_MAX_FREQ 5895
-#define BAND_6G_MIN_FREQ 5945
-#define BAND_6G_MAX_FREQ 7125
+constexpr uint32_t BAND_24G_MIN_FREQ = 2401U;
+constexpr uint32_t BAND_24G_MAX_FREQ = 2473U;
+constexpr uint32_t BAND_5G_MIN_FREQ  = 5150U;
+constexpr uint32_t BAND_5G_MAX_FREQ  = 5895U;
+constexpr uint32_t BAND_6G_MIN_FREQ  = 5945U;
+constexpr uint32_t BAND_6G_MAX_FREQ  = 7125U;
 
 namespace son {
 class wireless_utils {
@@ -179,7 +178,7 @@ public:
      * @param center_freq center frequency value in MHz.
      * @return channel number.
      */
-    static int freq_to_channel(int center_freq);
+    static int freq_to_channel(uint32_t center_freq);
     /**
      * @brief Get the center frequency of a channel.
      * 

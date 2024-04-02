@@ -86,7 +86,7 @@ public:
             eRadioScanStatus status                              = eRadioScanStatus::PENDING;
             std::chrono::system_clock::time_point next_time_scan = {};
             bool is_single_scan                                  = true;
-            std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
+            std::set<Agent::sRadio::channel_scan_report::channel_scan_report_key> scan_report_index;
         };
 
         /**
@@ -377,7 +377,8 @@ private:
      * @return True on success, false otherwise.
     */
     bool handle_tlv_channel_preference(
-        const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv);
+        const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv,
+        const wfa_map::tlvProfile2MultiApProfile::eMultiApProfile &agent_profile);
 
     /**
      * @brief Handles Tlv of Profile-2 CAC Completion Report.

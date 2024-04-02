@@ -99,7 +99,7 @@ public:
 
     static void kill_pid(const std::string &path, const std::string &file_name);
 
-    static bool is_pid_running(const std::string &path, std::string file_name,
+    static bool is_pid_running(const std::string &path, const std::string &file_name,
                                int *pid_out = nullptr);
 
     /**
@@ -114,9 +114,9 @@ public:
 
     static bool write_pid_file(const std::string &path, const std::string &file_name);
 
-    static bool touch_pid_file(std::string file_path);
+    static bool touch_pid_file(const std::string &file_path);
 
-    static int redirect_console_std(std::string log_file_name);
+    static int redirect_console_std(const std::string &log_file_name);
 
     static void close_file(int fd);
 

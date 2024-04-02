@@ -389,6 +389,8 @@ def nbapi_ubus_command(entity: ALEntity, path: str, command: str, args: Dict = N
         command.append(json.dumps(args))
     result = entity.command(*command)
     if result:
+        pattern = r'{\s*}\s*{\s*"amxd-error-code"\s*:\s*0\s*}'
+        result = re.sub(pattern, '', result)
         return json.loads(result)
     else:
         return result
@@ -407,6 +409,8 @@ def nbapi_ubus_command_not_fail(entity: ALEntity, path: str, command: str,
         debug("ubus call command fail")
         debug(error)
     if result:
+        pattern = r'{\s*}\s*{\s*"amxd-error-code"\s*:\s*0\s*}'
+        result = re.sub(pattern, '', result)
         return json.loads(result)
     else:
         return result

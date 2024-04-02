@@ -238,6 +238,15 @@ public:
     bool subscribe_to_object_event(const std::string &object_path,
                                    std::shared_ptr<sAmbiorixEventHandler> &event_handler,
                                    const std::string &filter = {});
+    /**
+     * @brief unsubscribe from event for a given object.
+     *
+     * @param[in] event_handler: event handler that handle the existing subscription
+     * @return true on success, false otherwise.
+     */
+
+    bool unsubscribe_from_object_event(
+        std::shared_ptr<beerocks::wbapi::sAmbiorixEventHandler> &event_handler);
 
 private:
     AmbiorixConnectionSmartPtr m_connection;

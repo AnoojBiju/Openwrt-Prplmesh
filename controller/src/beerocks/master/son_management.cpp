@@ -319,7 +319,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         association_control_request_tlv->bssid_to_block_client() =
             tlvf::mac_from_string(hostap_mac);
         association_control_request_tlv->association_control() =
-            wfa_map::tlvClientAssociationControlRequest::BLOCK;
+            wfa_map::tlvClientAssociationControlRequest::TIMED_BLOCK;
         //TODO: Get real validity_period_sec
         association_control_request_tlv->validity_period_sec() = 1;
         association_control_request_tlv->alloc_sta_list();
@@ -572,7 +572,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        if (database.get_node_state(client_mac) == beerocks::STATE_CONNECTED) {
+        if (database.get_sta_state(client_mac) == beerocks::STATE_CONNECTED) {
 
             if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(TRACE) << "CLI roaming task already running for " << client_mac;
@@ -611,7 +611,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         /*
              * start load balancing
              */
-        if (database.is_hostap_active(tlvf::mac_from_string(hostap_mac)) &&
+        if (database.is_radio_active(tlvf::mac_from_string(hostap_mac)) &&
             database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
@@ -1189,8 +1189,8 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         if (request->params().is_global) {
             database.set_global_restricted_channels(request->params().restricted_channels);
         } else {
-            database.set_hostap_conf_restricted_channels(request->params().hostap_mac,
-                                                         request->params().restricted_channels);
+            database.set_radio_conf_restricted_channels(request->params().hostap_mac,
+                                                        request->params().restricted_channels);
         }
 
         //send restricted channel event to channel selection task
@@ -1235,7 +1235,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto vec_restricted_channels =
             request->params().is_global
                 ? database.get_global_restricted_channels()
-                : database.get_hostap_conf_restricted_channels(request->params().hostap_mac);
+                : database.get_radio_conf_restricted_channels(request->params().hostap_mac);
         std::copy(vec_restricted_channels.begin(), vec_restricted_channels.end(),
                   response->params().restricted_channels);
 
@@ -1273,7 +1273,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             if (dst_mac == network_utils::WILD_MAC_STRING) {
                 auto slaves = database.get_active_hostaps();
                 for (const auto &slave : slaves) {
-                    if (database.is_hostap_active(tlvf::mac_from_string(slave))) {
+                    if (database.is_radio_active(tlvf::mac_from_string(slave))) {
                         auto agent_mac = database.get_node_parent_ire(slave);
                         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, slave);
                     }
@@ -1681,8 +1681,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "Failed building cACTION_BML_TRIGGER_CHANNEL_SELECTION_RESPONSE";
         }
 
-        auto radio_mac_str = tlvf::mac_to_string(request->radio_mac());
-        auto freq_type     = database.get_node_wifi_channel(radio_mac_str).get_freq_type();
+        auto freq_type = database.get_radio_wifi_channel(request->radio_mac()).get_freq_type();
 
         LOG(INFO) << "ACTION_BML_TRIGGER_CHANNEL_SELECTION_REQUEST "
                   << ", radio_mac=" << request->radio_mac() << ", channel=" << request->channel()
@@ -2221,9 +2220,9 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         auto client_mac = request->sta_mac();
 
         // If client doesn't have node in runtime DB - add node to runtime DB.
-        if (!database.has_node(client_mac)) {
+        if (!database.has_station(client_mac)) {
             LOG(DEBUG) << "Setting a client which doesn't exist in DB, adding client to DB";
-            if (!database.add_node_station(network_utils::ZERO_MAC, client_mac)) {
+            if (!database.add_station(network_utils::ZERO_MAC, client_mac)) {
                 LOG(ERROR) << "Failed to add client node for client " << client_mac;
                 send_response(false);
                 break;
@@ -2242,7 +2241,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             auto stay_on_initial_radio =
                 (eTriStateBool(request->client_config().stay_on_initial_radio) ==
                  eTriStateBool::TRUE);
-            if (!database.set_client_stay_on_initial_radio(*client, stay_on_initial_radio, false)) {
+            if (!database.set_sta_stay_on_initial_radio(*client, stay_on_initial_radio, false)) {
                 LOG(ERROR) << " Failed to set stay-on-initial-radio to " << stay_on_initial_radio
                            << " for client " << client_mac;
                 send_response(false);
@@ -2271,7 +2270,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // Set selected_bands if requested.
         if (request->client_config().selected_bands != PARAMETER_NOT_CONFIGURED) {
             auto selected_bands = eClientSelectedBands(request->client_config().selected_bands);
-            if (!database.set_client_selected_bands(*client, selected_bands, false)) {
+            if (!database.set_sta_selected_bands(*client, selected_bands, false)) {
                 LOG(ERROR) << " Failed to set selected-bands to " << selected_bands
                            << " for client " << client_mac;
                 send_response(false);
@@ -2323,7 +2322,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
         auto client_mac = request->sta_mac();
         auto client     = database.get_station(client_mac);
-        if (!database.has_node(client_mac) || !client) {
+        if (!database.has_station(client_mac) || !client) {
             LOG(DEBUG) << "Requested client " << client_mac << " is not listed in the DB";
             response->result() = 1; //Fail.
             controller_ctx->send_cmdu(sd, cmdu_tx);

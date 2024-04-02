@@ -319,7 +319,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
             agent.second.status = eAgentStatus::IDLE;
         };
 
-        std::set<node::radio::channel_scan_report::channel_scan_report_key> scan_report_index;
+        std::set<Agent::sRadio::channel_scan_report::channel_scan_report_key> scan_report_index;
 
         // Helper lambda - Add a new radio to the channel scan request tlv.
         auto add_radio_to_channel_scan_request_tlv =
@@ -368,7 +368,7 @@ bool dynamic_channel_selection_r2_task::trigger_pending_scan_requests()
                 // Convert channels list to operating_class: channels list
                 std::unordered_map<uint8_t, std::set<uint8_t>> operating_class_to_classes_map;
 
-                auto wifi_channel = database.get_node_wifi_channel(tlvf::mac_to_string(radio_mac));
+                auto wifi_channel = database.get_radio_wifi_channel(radio_mac);
                 if (wifi_channel.is_empty()) {
                     LOG(ERROR) << "WifiChannel is empty";
                 }
@@ -903,7 +903,7 @@ bool dynamic_channel_selection_r2_task::handle_scan_report_event(
         const auto &radio_mac          = radio_scan_request_iter.first;
         const auto &radio_scan_request = radio_scan_request_iter.second;
         auto request_scan_report_copy  = radio_scan_request.scan_report_index;
-        node::radio::channel_scan_report_index stored_report_index;
+        Agent::sRadio::channel_scan_report_index stored_report_index;
         // Get the report record according to the given timestamp.
         if (!database.get_channel_report_record(radio_mac, ISO_8601_timestamp,
                                                 stored_report_index)) {
@@ -1045,7 +1045,7 @@ bool dynamic_channel_selection_r2_task::send_selection_requests()
      */
     using radio_preference_tlv_format = std::map<std::pair<uint8_t, uint8_t>, std::set<uint8_t>>;
     auto convert_preference_report_map_to_tlv_format =
-        [](const node::radio::PreferenceReportMap &radio_preference)
+        [](const Agent::sRadio::PreferenceReportMap &radio_preference)
         -> radio_preference_tlv_format {
         radio_preference_tlv_format map;
         for (const auto &iter : radio_preference) {
@@ -1609,7 +1609,7 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
     for (const auto &channel_preference_tlv :
          cmdu_rx.getClassList<wfa_map::tlvChannelPreference>()) {
 
-        if (!handle_tlv_channel_preference(channel_preference_tlv)) {
+        if (!handle_tlv_channel_preference(channel_preference_tlv, agent->profile)) {
             LOG(ERROR) << "Failed to parse the Channel Preference TLV";
             return false;
         }
@@ -1658,7 +1658,8 @@ bool dynamic_channel_selection_r2_task::handle_cmdu_1905_channel_preference_repo
 }
 
 bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
-    const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv)
+    const std::shared_ptr<wfa_map::tlvChannelPreference> &channel_preference_tlv,
+    const wfa_map::tlvProfile2MultiApProfile::eMultiApProfile &agent_profile)
 {
     std::stringstream ss;
 
@@ -1705,12 +1706,35 @@ bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
             ss << "Channel list: [";
             for (const auto channel_num : channel_set) {
                 ss << int(channel_num) << " ";
-                if (!database.set_channel_preference(radio_uid, op_cls_num, channel_num,
-                                                     op_cls_flags.preference)) {
-                    LOG(ERROR) << "Failed to update Channel Preference";
-                    return false;
+
+                // In case of R1 agent, check if the operating class falls within the range 125-130
+                if (agent_profile ==
+                        wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1 &&
+                    (op_cls_num >= 125 && op_cls_num <= 130)) {
+                    /* 
+                       Set the channel preference to lowest for UNII-4 channels in case of R1 agent,
+                       as these channels were added newly into the IEEE802.11 standard after the release of EM R1.
+                       Retaining these channels in the preference list could lead to undefined behavior.
+                    */
+                    LOG(DEBUG) << "Channel preference of " << channel_num << " set to "
+                               << beerocks::eChannelPreferenceRankingConsts::LOWEST;
+                    if (!database.set_channel_preference(
+                            radio_uid, op_cls_num, channel_num,
+                            static_cast<uint8_t>(
+                                beerocks::eChannelPreferenceRankingConsts::LOWEST))) {
+                        LOG(ERROR) << "Failed to update Channel Preference";
+                        return false;
+                    }
+                } else {
+                    // Set the channel preference based on the operating class flags
+                    if (!database.set_channel_preference(radio_uid, op_cls_num, channel_num,
+                                                         op_cls_flags.preference)) {
+                        LOG(ERROR) << "Failed to update Channel Preference";
+                        return false;
+                    }
                 }
             }
+
             ss << "]." << std::endl;
         }
     }

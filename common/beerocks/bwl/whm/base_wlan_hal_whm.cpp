@@ -50,6 +50,22 @@ base_wlan_hal_whm::~base_wlan_hal_whm() { base_wlan_hal_whm::detach(); }
 
 void base_wlan_hal_whm::subscribe_to_radio_events()
 {
+    // subscribe to radio wpaCtrlEvents notifications
+    auto wpaCtrl_Event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    wpaCtrl_Event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
+    wpaCtrl_Event_handler->callback_fn = [this](AmbiorixVariant &event_data,
+                                                void *context) -> void {
+        std::string data;
+        if (!event_data || !event_data.read_child(data, "eventData")) {
+            return;
+        }
+        process_wpaCtrl_events(event_data);
+    };
+    std::string wpaCtrl_filter =
+        "(path matches '" + m_radio_path + "$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+
     // subscribe to the WiFi.Radio.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
     event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
@@ -82,11 +98,71 @@ void base_wlan_hal_whm::subscribe_to_radio_events()
                          " && (contains('parameters.Status'))";
 
     m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
+
+    std::string wifi_radio_channel_path = m_radio_path + "ChannelMgt.TargetChanspec.";
+    std::string filter_radio_channel    = "(path matches '" + wifi_radio_channel_path +
+                                       "$')"
+                                       " && (notification == '" +
+                                       AMX_CL_OBJECT_CHANGED_EVT +
+                                       "')"
+                                       " && (contains('parameters.Channel'))";
+
+    m_ambiorix_cl.subscribe_to_object_event(wifi_radio_channel_path, event_handler,
+                                            filter_radio_channel);
+}
+
+void base_wlan_hal_whm::subscribe_to_radio_channel_change_events()
+{
+
+    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type  = AMX_CL_CHANNEL_CHANGE_EVT;
+    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        if (!event_data) {
+            return;
+        }
+        std::string notif_name;
+        if (!event_data.read_child(notif_name, "notification")) {
+            LOG(DEBUG) << "Received Notification  without 'notification' param!";
+            return;
+        }
+        if (notif_name != AMX_CL_CHANNEL_CHANGE_EVT) {
+            LOG(DEBUG) << "Received wrong Notification : " << notif_name
+                       << " instead of: " << AMX_CL_CHANNEL_CHANGE_EVT;
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+        hal->process_radio_channel_change_event(&event_data);
+    };
+
+    event_handler->context = this;
+    std::string filter     = "(path matches '" + m_radio_path +
+                         "$')"
+                         " && (notification == '" +
+                         AMX_CL_CHANNEL_CHANGE_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
 }
 
 void base_wlan_hal_whm::subscribe_to_ap_events()
 {
-    std::string wifi_ap_path   = wbapi_utils::search_path_ap();
+    std::string wifi_ap_path = wbapi_utils::search_path_ap();
+    // subscribe to accesspoint wpaCtrlEvents notifications
+    auto wpaCtrl_Event_handler         = std::make_shared<sAmbiorixEventHandler>();
+    wpaCtrl_Event_handler->event_type  = AMX_CL_WPA_CTRL_EVT;
+    wpaCtrl_Event_handler->callback_fn = [this](AmbiorixVariant &event_data,
+                                                void *context) -> void {
+        std::string data;
+        if (!event_data || !event_data.read_child(data, "eventData")) {
+            return;
+        }
+        process_wpaCtrl_events(event_data);
+    };
+    std::string wpaCtrl_filter = "(path matches '" + wifi_ap_path +
+                                 "[0-9]+.$') && (notification == '" + AMX_CL_WPA_CTRL_EVT + "')";
+
+    m_ambiorix_cl.subscribe_to_object_event(wifi_ap_path, wpaCtrl_Event_handler, wpaCtrl_filter);
+
+    // subscribe to the WiFi.Accesspoint.iface_name.Status
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
     event_handler->event_type  = AMX_CL_OBJECT_CHANGED_EVT;
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
@@ -256,8 +332,53 @@ void base_wlan_hal_whm::subscribe_to_sta_events()
                                             filter);
 }
 
+void base_wlan_hal_whm::subscribe_to_rssi_eventing_events()
+{
+
+    m_rssi_event_handler              = std::make_shared<sAmbiorixEventHandler>();
+    m_rssi_event_handler->event_type  = AMX_CL_RSSI_UPDATE_EVT;
+    m_rssi_event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+        std::string eventDatastr;
+        event_data.get(eventDatastr);
+        if (!event_data) {
+            return;
+        }
+        std::string notif_name;
+        if (!event_data.read_child(notif_name, "notification")) {
+            LOG(DEBUG) << " Received Notification  without 'notification' param!";
+            return;
+        }
+        if (notif_name != AMX_CL_RSSI_UPDATE_EVT) {
+            LOG(DEBUG) << " Received wrong Notification : " << notif_name
+                       << " instead of: " << AMX_CL_RSSI_UPDATE_EVT;
+            return;
+        }
+        base_wlan_hal_whm *hal = (static_cast<base_wlan_hal_whm *>(context));
+
+        auto updates = event_data.find_child("Update"); //htable
+        if (!updates) {
+            LOG(ERROR) << " received ScanComplete event without Updates param!";
+            return;
+        }
+
+        hal->process_rssi_eventing_event(hal->get_iface_name(), updates.get());
+    };
+    m_rssi_event_handler->context = this;
+    //std::string filter = "(notification == '" + std::string(AMX_CL_RSSI_UPDATE_EVT) + "')";
+    std::string filter = "";
+    if (!m_ambiorix_cl.subscribe_to_object_event(m_radio_path + "NaStaMonitor.RssiEventing.",
+                                                 m_rssi_event_handler, filter)) {
+        LOG(ERROR) << "failed to subscribe to RSSSI eventing";
+    };
+}
+
 bool base_wlan_hal_whm::process_radio_event(const std::string &interface, const std::string &key,
                                             const AmbiorixVariant *value)
+{
+    return true;
+}
+
+bool base_wlan_hal_whm::process_radio_channel_change_event(const AmbiorixVariant *value)
 {
     return true;
 }
@@ -274,7 +395,18 @@ bool base_wlan_hal_whm::process_sta_event(const std::string &interface, const st
     return true;
 }
 
+void base_wlan_hal_whm::process_rssi_eventing_event(const std::string &interface,
+                                                    beerocks::wbapi::AmbiorixVariant *updates)
+{
+    LOG(TRACE) << __func__ << " - NOT IMPLEMENTED";
+}
+
 bool base_wlan_hal_whm::process_scan_complete_event(const std::string &result) { return true; }
+
+bool base_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+{
+    return true;
+}
 
 bool base_wlan_hal_whm::fsm_setup() { return true; }
 
@@ -720,7 +852,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
     };
     event_handler->context = this;
     std::string filter     = "(path matches '" + m_radio_path +
-                         "[0-9]+.$')"
+                         "$')"
                          " && (notification == '" +
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 

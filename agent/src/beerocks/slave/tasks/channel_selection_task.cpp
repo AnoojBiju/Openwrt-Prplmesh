@@ -53,6 +53,19 @@ uint8_t
 get_preference_for_channel(const AgentDB::sRadio::channel_preferences_map &channel_preferences,
                            uint8_t operating_class, uint8_t channel_number)
 {
+    auto db = AgentDB::get();
+    if (db->device_conf.certification_mode) {
+        /*
+            If certification mode is enabled, then the channels falling under
+            the operating classes range 125 to 130 needs to be given low priority
+            since the controller may not block these in it's channel selection
+            request, which can lead to the agent switching unintentionally to 
+            one of these channels.
+
+        */
+        if (operating_class >= 125 && operating_class <= 130)
+            return (uint8_t)beerocks::eChannelPreferenceRankingConsts::LOWEST;
+    }
     // Check if channel present in operating class
     if (!son::wireless_utils::is_channel_in_operating_class(operating_class, channel_number)) {
         // Channel is not present in Operating Class, returning Non-Operable
@@ -1538,7 +1551,7 @@ ChannelSelectionTask::sSelectedChannel ChannelSelectionTask::select_next_channel
         [&](const uint8_t channel, const beerocks::eWiFiBandwidth bandwidth,
             const uint8_t operating_class) -> std::pair<uint8_t, uint8_t> {
         const auto beacon_channels =
-            son::wireless_utils::center_channel_5g_to_beacon_channels(channel, bandwidth);
+            son::wireless_utils::center_channel_to_beacon_channels(channel, bandwidth, freq_type);
 
         uint8_t best_bcn_pref = 0;
         uint8_t best_bcn_chan = 0;

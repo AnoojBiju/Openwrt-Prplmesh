@@ -78,7 +78,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -pthread -Wno-comment 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s -O2 -Wformat -Wformat-security -Wl,-S -fPIC -fPIE")
 
 # Compiler specific flags
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 9.1)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-address-of-packed-member")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fstack-protector-strong")
 else()
@@ -149,6 +149,10 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
 elseif (TARGET_PLATFORM STREQUAL "linux")
     add_definitions(-DBEEROCKS_LINUX)
     set(BEEROCKS_BH_WIRE_IFACE "eth1" CACHE STRING "Backhaul wire iface")
+endif()
+
+if (TARGET_PLATFORM_TYPE STREQUAL "turris-omnia")
+    add_compile_definitions(MISALIGNED_DWORD_ACCESS_NEEDS_SPECIAL_HANDLING)
 endif()
 
 # Default values - cached (are set only if not previously set)
@@ -238,6 +242,14 @@ if (BUILD_AGENT)
 endif()
 if (BUILD_CONTROLLER)
     add_subdirectory(controller)
+endif()
+
+## ACL
+if (BUILD_CONTROLLER AND ENABLE_NBAPI)
+    set(ACL_DIR etc/acl/admin)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json.in ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json DESTINATION ${ACL_DIR})
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/acl/admin/prplmesh.json DESTINATION "${CMAKE_MULTIAP_OUTPUT_DIRECTORY}/${ACL_DIR}}")
 endif()
 
 ## Version

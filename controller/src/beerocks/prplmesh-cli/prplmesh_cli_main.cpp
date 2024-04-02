@@ -64,6 +64,28 @@ bool set_security(int argc, char *argv[])
     return ap and mode and prpl_cli.set_security(ap, mode, passphrase ?: "");
 }
 
+bool print_status(int argc, char *argv[])
+{
+    int opt;
+    const char *format = 0;
+
+    while ((opt = getopt(argc, argv, "o:")) != -1) {
+        switch (opt) {
+        case 'o':
+            format = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (!format) {
+        format = isatty(STDOUT_FILENO) ? "pretty" : "json";
+    }
+
+    return !prpl_cli.print_status(format);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -89,9 +111,14 @@ int main(int argc, char *argv[])
                 prpl_cli.print_version();
             } else if (command_string == "help") {
                 prpl_cli.print_help();
+            } else if (command_string == "mode") {
+                return !prpl_cli.print_mode();
+            } else if (command_string == "status") {
+                return print_status(argc, argv);
             } else {
                 std::cerr << "Error, command not found: " << command_string << std::endl
                           << "Run '-c help' to see supported commands" << std::endl;
+                return 1;
             }
 
             break;

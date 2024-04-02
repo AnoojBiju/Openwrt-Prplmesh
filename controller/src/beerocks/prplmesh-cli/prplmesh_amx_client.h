@@ -48,7 +48,12 @@ public:
     bool amx_initialize(const std::string &amxb_backend, const std::string &bus_uri);
 
     // Get a object from bus using object_path.
-    amxc_var_t *get_object(const std::string &object_path);
+    amxc_var_t *get_object(const std::string &object_path)
+    {
+        bool dummy = false;
+        return get_object(object_path, dummy);
+    }
+    amxc_var_t *get_object(const std::string &object_path, bool &request_timed_out);
     const amxc_htable_t *get_htable_object(const std::string &object_path);
 
     /**

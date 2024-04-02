@@ -44,13 +44,13 @@ const std::map<uint8_t, wireless_utils::sOperatingClass> wireless_utils::operati
     {122,       {{100, 108, 116, 124, 132, 140},                               beerocks::BANDWIDTH_40}},
     {123,       {{104, 112, 120, 128, 136, 144},                               beerocks::BANDWIDTH_40}},
     {124,       {{149, 153, 157, 161},                                         beerocks::BANDWIDTH_20}},
-    {125,       {{149, 153, 157, 161, 165, 169},                               beerocks::BANDWIDTH_20}},
-    {126,       {{149, 157},                                                   beerocks::BANDWIDTH_40}},
-    {127,       {{153, 161},                                                   beerocks::BANDWIDTH_40}},
+    {125,       {{149, 153, 157, 161, 165, 169, 173, 177},                     beerocks::BANDWIDTH_20}},
+    {126,       {{149, 157, 165, 173},                                         beerocks::BANDWIDTH_40}},
+    {127,       {{153, 161, 169, 177},                                         beerocks::BANDWIDTH_40}},
 //  {OP Class   {Channel center Frequency index},                              Bandwidth              }}
-    {128,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80}},
-    {129,       {{50, 114},                                                    beerocks::BANDWIDTH_160}},
-    {130,       {{42, 58, 106, 122, 138, 155},                                 beerocks::BANDWIDTH_80_80}},
+    {128,       {{42, 58, 106, 122, 138, 155, 171},                            beerocks::BANDWIDTH_80}},
+    {129,       {{50, 114, 163},                                               beerocks::BANDWIDTH_160}},
+    {130,       {{42, 58, 106, 122, 138, 155, 171},                            beerocks::BANDWIDTH_80_80}},
 //  {OP Class   {Channels List,                                                Bandwidth             }}
     {131,       {{1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57,
                   61, 65, 69, 73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113,
@@ -929,7 +929,7 @@ uint16_t wireless_utils::channel_to_freq(int channel, beerocks::eFreqType freq_t
     return 0;
 }
 
-int wireless_utils::freq_to_channel(int center_freq)
+int wireless_utils::freq_to_channel(uint32_t center_freq)
 {
     /* see 802.11-2007 17.3.8.3.2 and Annex J */
     if (center_freq == 2484) {
