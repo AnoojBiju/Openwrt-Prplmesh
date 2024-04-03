@@ -27,7 +27,7 @@
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-
+#include<string>
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
