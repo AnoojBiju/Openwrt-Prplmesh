@@ -85,6 +85,13 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received CLIENT_CAPABILITY_QUERY_MESSAGE , mid=" << std::hex << mid;
 
+    auto db = AgentDB::get();
+    if (src_mac != db->controller_info.bridge_mac) {
+        LOG(ERROR) << "Ignoring CLIENT_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+                   << src_mac;
+        return;
+    }
+
     auto client_info_tlv_r = cmdu_rx.getClass<wfa_map::tlvClientInfo>();
     if (!client_info_tlv_r) {
         LOG(ERROR) << "getClass wfa_map::tlvClientInfo failed";
@@ -110,8 +117,6 @@ void CapabilityReportingTask::handle_client_capability_query(ieee1905_1::CmduMes
         LOG(ERROR) << "addClass wfa_map::tlvClientCapabilityReport has failed";
         return;
     }
-
-    auto db = AgentDB::get();
 
     // Check if it is an error scenario - if the STA specified in the Client Capability Query
     // message is not associated with any of the BSS operated by the Multi-AP Agent [ though the
@@ -158,6 +163,13 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received AP_CAPABILITY_QUERY_MESSAGE, mid=" << std::hex << mid;
 
+    auto db = AgentDB::get();
+    if (src_mac != db->controller_info.bridge_mac) {
+        LOG(ERROR) << "Ignoring AP_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+                   << src_mac;
+        return;
+    }
+
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::AP_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type AP_CAPABILITY_REPORT_MESSAGE, has failed";
         return;
@@ -173,8 +185,6 @@ void CapabilityReportingTask::handle_ap_capability_query(ieee1905_1::CmduMessage
         LOG(ERROR) << "addClass wfa_map::tlvApCapability has failed";
         return;
     }
-
-    auto db = AgentDB::get();
 
     // 1. The tlvs created in the loop are created per radio and are
     // defined in the specification as "Zero Or More" (multi-ap specification v2, 17.1.7)
@@ -281,12 +291,18 @@ void CapabilityReportingTask::handle_backhaul_sta_capability_query(
     const auto mid = cmdu_rx.getMessageId();
     LOG(DEBUG) << "Received BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE, mid=" << std::hex << mid;
 
+    auto db = AgentDB::get();
+    if (src_mac != db->controller_info.bridge_mac) {
+        LOG(ERROR) << "Ignoring BACKHAUL_STA_CAPABILITY_QUERY_MESSAGE from an unknown Controller: "
+                   << src_mac;
+        return;
+    }
+
     if (!m_cmdu_tx.create(mid, ieee1905_1::eMessageType::BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE, has failed";
         return;
     }
 
-    auto db = AgentDB::get();
     for (auto radio : db->get_radios_list()) {
 
         if (!radio) {
