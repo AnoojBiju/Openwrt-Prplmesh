@@ -51,7 +51,7 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
     }
 
-    auto new_hostap_mac      = database.get_node_parent(client_mac);
+    auto new_hostap_mac      = database.get_sta_parent(client_mac);
     auto previous_hostap_mac = database.get_node_previous_parent(client_mac);
     auto hostaps             = database.get_active_hostaps();
 
@@ -116,7 +116,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
     LOG(DEBUG) << "unblocking " << sta_mac << " from network";
 
     auto hostaps              = database.get_active_hostaps();
-    const auto &current_bssid = database.get_node_parent(sta_mac);
+    const auto &current_bssid = database.get_sta_parent(sta_mac);
     const auto &ssid          = database.get_bss_ssid(tlvf::mac_from_string(current_bssid));
 
     std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(sta_mac)};

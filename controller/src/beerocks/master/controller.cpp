@@ -1760,7 +1760,7 @@ bool Controller::handle_tlv_associated_sta_link_metrics(const sMacAddr &src_mac,
         auto bssid_info = std::get<1>(response_list);
 
         // Verify reported BSSID and data model registered STAs BSSID is same.
-        if (database.get_node_parent(tlvf::mac_to_string(sta_link_metric->sta_mac())) !=
+        if (database.get_sta_parent(tlvf::mac_to_string(sta_link_metric->sta_mac())) !=
             tlvf::mac_to_string(bssid_info.bssid)) {
             LOG(INFO) << "Reported STA BSSID is not matching with datamodel. Reported bssid:"
                       << bssid_info.bssid;
@@ -3378,7 +3378,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        bool is_parent = (tlvf::mac_from_string(database.get_node_parent(client_mac)) ==
+        bool is_parent = (tlvf::mac_from_string(database.get_sta_parent(client_mac)) ==
                           database.get_radio_bss_mac(tlvf::mac_from_string(ap_mac),
                                                      notification->params().vap_id));
 
@@ -3408,7 +3408,7 @@ bool Controller::handle_cmdu_control_message(
                     << " is_backhaul_manager=" << (is_backhaul_manager ? "1" : "0")
                     << " src_module=" << int(notification->params().src_module)
                     << " id=" << int(beerocks_header->id())
-                    << " bssid=" << database.get_node_parent(client_mac)
+                    << " bssid=" << database.get_sta_parent(client_mac)
                     << " vap_id=" << int(notification->params().vap_id));
 
         //response return from slave backhaul manager , updating the matching same band sibling.
@@ -3459,7 +3459,7 @@ bool Controller::handle_cmdu_control_message(
             return false;
         }
 
-        std::string client_parent_mac = database.get_node_parent(client_mac);
+        std::string client_parent_mac = database.get_sta_parent(client_mac);
         sMacAddr bssid = database.get_radio_bss_mac(radio_mac, notification->params().vap_id);
         bool is_parent = (tlvf::mac_from_string(client_parent_mac) == bssid);
 
@@ -3511,7 +3511,7 @@ bool Controller::handle_cmdu_control_message(
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
                       << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
-            bool reported_by_parent = radio_mac_str == database.get_node_parent(client_mac);
+            bool reported_by_parent = radio_mac_str == database.get_sta_parent(client_mac);
             son_actions::handle_dead_node(client_mac, reported_by_parent, database, m_task_pool);
         }
         break;
@@ -3557,7 +3557,7 @@ bool Controller::handle_cmdu_control_message(
             notification_out->mac()  = notification_in->mac();
             notification_out->ipv4() = notification_in->ipv4();
 
-            auto client_bssid = database.get_node_parent(client_mac);
+            auto client_bssid = database.get_sta_parent(client_mac);
             if (client_bssid.empty()) {
                 LOG(WARNING) << "Client does not have a valid parent hostap on the database";
                 return true;

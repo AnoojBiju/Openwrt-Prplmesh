@@ -1093,6 +1093,7 @@ public:
     std::shared_ptr<Agent> get_gw();
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
+    std::string get_sta_parent(const std::string &mac);
 
     std::string get_node_previous_parent(const std::string &mac);
     sMacAddr get_node_parent_ire(const std::string &mac);

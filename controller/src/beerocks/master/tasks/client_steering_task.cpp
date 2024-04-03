@@ -54,7 +54,7 @@ void client_steering_task::work()
         m_tasks.kill_task(prev_task_id);
         station->steering_task_id = id;
 
-        m_original_bssid = m_database.get_node_parent(m_sta_mac);
+        m_original_bssid = m_database.get_sta_parent(m_sta_mac);
         m_ssid_name      = m_database.get_bss_ssid(tlvf::mac_from_string(m_original_bssid));
         update_sta_steer_attempt_stats(*station);
 
@@ -438,7 +438,7 @@ void client_steering_task::print_steering_info()
 void client_steering_task::handle_event(int event_type, void *obj)
 {
     if (event_type == STA_CONNECTED) {
-        auto connected_bssid = m_database.get_node_parent(m_sta_mac);
+        auto connected_bssid = m_database.get_sta_parent(m_sta_mac);
         if (m_target_bssid == connected_bssid) {
             TASK_LOG(DEBUG) << "steering successful for sta " << m_sta_mac << " to bssid "
                             << connected_bssid;

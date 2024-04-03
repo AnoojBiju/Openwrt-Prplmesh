@@ -104,7 +104,7 @@ void optimal_path_task::work()
     switch (state) {
     case START: {
 
-        current_hostap_vap = database.get_node_parent(sta_mac);
+        current_hostap_vap = database.get_sta_parent(sta_mac);
         // Steering allowed on all vaps unless load_steer_on_vaps list is defined
         // on the platform , in that case verify that vap is on that list
         if (!database.is_vap_on_steer_list(tlvf::mac_from_string(current_hostap_vap))) {
@@ -1632,7 +1632,7 @@ void optimal_path_task::send_rssi_measurement_request(const sMacAddr &agent_mac,
                                                       const std::string &client_mac, int channel,
                                                       const std::string &hostap, int id)
 {
-    auto hostap_mac = database.get_node_parent(client_mac);
+    auto hostap_mac = database.get_sta_parent(client_mac);
     auto request    = message_com::create_vs_message<
         beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
     if (request == nullptr) {
@@ -1781,7 +1781,7 @@ void optimal_path_task::handle_response(std::string mac,
 
 bool optimal_path_task::assert_original_parent()
 {
-    if (database.get_node_parent(sta_mac) != current_hostap_vap ||
+    if (database.get_sta_parent(sta_mac) != current_hostap_vap ||
         database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
         TASK_LOG(DEBUG) << "client disconnected from original parent, task is irrelevant";
         return false;

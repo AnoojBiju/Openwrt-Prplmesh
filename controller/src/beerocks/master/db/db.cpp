@@ -574,7 +574,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
         LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
         return station;
     }
-    station->parent_mac = parent_mac;
+    station->parent_mac = tlvf::mac_to_string(parent_mac);
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFi client)
@@ -1231,6 +1231,18 @@ std::string db::get_node_parent(const std::string &mac)
         return std::string();
     }
     return n->parent_mac;
+}
+
+// returns vap mac to which the client is connected
+
+std::string db::get_sta_parent(const std::string &mac)
+{
+    std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
+        LOG(WARNING) << "station " << mac << "does not exist!";
+        return std::string();
+    }
+    return pSta->parent_mac;
 }
 
 std::string db::get_node_parent_backhaul(const std::string &mac)
@@ -2736,7 +2748,7 @@ std::string db::get_node_parent_radio(const std::string &mac)
         return std::string();
     }
     if (n->get_type() == beerocks::TYPE_CLIENT) {
-        const auto parent_bssid = get_node_parent(mac);
+        const auto parent_bssid = get_sta_parent(mac);
         std::shared_ptr<Agent::sRadio> parent_radio =
             get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
         if (!parent_radio) {

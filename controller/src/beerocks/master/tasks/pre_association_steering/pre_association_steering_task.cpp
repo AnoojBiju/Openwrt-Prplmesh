@@ -419,7 +419,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            if (m_database.get_node_parent(client_mac) !=
+            if (m_database.get_sta_parent(client_mac) !=
                     event_obj->bssid || // client is not connected to provided bssid
                 m_database.get_sta_state(client_mac) == beerocks::STATE_DISCONNECTED) {
                 TASK_LOG(ERROR) << "Client " << client_mac << " is not connected to "
