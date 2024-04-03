@@ -1,0 +1,42 @@
+' Sequence define how Associated STA link metrics is processed from Controller viewpoint
+
+' Seems to be not fully implemented for the time being. 
+' Found no trigger for ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE on the Controller side
+
+' Data Model path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
+
+@startuml
+
+!define AGENT_COLOR LightSkyBlue
+!define CONTROLLER_COLOR LightGreen
+
+participant Agent as Agent << (A, AGENT_COLOR) >>
+participant Controller as Controller << (C, CONTROLLER_COLOR) >>
+participant DB as DB << (C, CONTROLLER_COLOR) >>
+participant Ambiorix as "Ambiorix DM" << (C, CONTROLLER_COLOR) >>
+
+note over Controller : add_ap_assoc_sta_link_metric
+Controller --> Agent : ASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE // 
+note over Controller, Agent : Agent has 1 sec to respond // EM specs 10.3.1
+
+Agent --> Controller : ASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE
+Agent --> Controller : ASSOCIATED_STA_EXTENDED_LINK_METRICS_RESPONSE_MESSAGE
+
+note over Controller : handle_cmdu_1905_ap_metric_response
+note over Controller : handle_tlv_associated_sta_link_metrics
+Controller --> DB: Verify that the station is registered
+Controller --> DB: database.dm_set_sta_link_metrics
+DB --> Ambiorix : set **EstMACDataRateDownlink**
+DB --> Ambiorix : set **EstMACDataRateUplink**
+DB --> Ambiorix : set **SignalStrength**
+
+note over Controller : handle_tlv_associated_sta_extended_link_metrics
+Controller --> DB: Verify that the station is registered
+Controller --> DB: Check that the BSS is registered 
+Controller --> DB: database.dm_set_sta_extended_link_metrics
+DB --> Ambiorix : set **LastDataDownlinkRate**
+DB --> Ambiorix : set **LastDataUplinkRate**
+DB --> Ambiorix : set **UtilizationReceive**
+DB --> Ambiorix : set **UtilizationTransmit**
+
+@enduml
