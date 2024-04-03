@@ -27,18 +27,19 @@
 #include "db/network_map.h"
 #include "tasks/client_locating_task.h"
 #include "tasks/dynamic_channel_selection_task.h"
-#include<string>
+
 #include <bcl/beerocks_backport.h>
 #include <bcl/beerocks_utils.h>
 #include <bcl/beerocks_version.h>
-#include <bcl/beerocks_wifi_channel.h>
 #include <bcl/network/sockets.h>
+#include <bcl/push.h>
 #include <bcl/son/son_wireless_utils.h>
 #include <bcl/transaction.h>
 #include <bpl/bpl_board.h>
 #include <bpl/bpl_cfg.h>
 
 #include <easylogging++.h>
+#include <string>
 
 #include <beerocks/tlvf/beerocks_message_1905_vs.h>
 #include <beerocks/tlvf/beerocks_message_control.h>
@@ -3438,7 +3439,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_hostap_vap_mac(tlvf::mac_from_string(ap_mac),
-                                                          notification->params().vap_id);
+                                                               notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
