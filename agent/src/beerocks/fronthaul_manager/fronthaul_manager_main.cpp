@@ -8,7 +8,7 @@
 
 #include "ap_manager/ap_manager.h"
 #include "monitor/monitor.h"
-
+#include<string>
 #include <bcl/beerocks_cmdu_client_factory_factory.h>
 #include <bcl/beerocks_event_loop_impl.h>
 #include <bcl/beerocks_logging.h>
