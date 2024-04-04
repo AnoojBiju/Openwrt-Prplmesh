@@ -534,7 +534,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
 
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-        args.add_child("MACAddress", mac_address);
+        args.add_child("macaddress", mac_address);
         if (!m_ambiorix_cl.call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
                        << nasta_monitor_path << " Failed!";
@@ -549,7 +549,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
     for (auto &station_to_remove : amx_un_stations_to_be_removed) {
         AmbiorixVariant result;
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-        args.add_child("MACAddress", station_to_remove);
+        args.add_child("macaddress", station_to_remove);
         if (!m_ambiorix_cl.call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
             LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
                        << " for object " << nasta_monitor_path
