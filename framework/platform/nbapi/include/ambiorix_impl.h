@@ -13,27 +13,18 @@
 #include <bcl/beerocks_event_loop.h>
 #include <easylogging++.h>
 
-// Ambiorix
-#include <amxc/amxc.h>
-#include <amxp/amxp.h>
+#include "ambiorix.h"
+#include "ambiorix_runtime.h"
 
-#include <amxc/amxc.h>
+#include <amxb/amxb_register.h>
 #include <amxd/amxd_action.h>
-#include <amxd/amxd_dm.h>
 #include <amxd/amxd_object.h>
 #include <amxd/amxd_object_event.h>
 #include <amxd/amxd_transaction.h>
 
-#include <amxb/amxb.h>
-#include <amxb/amxb_register.h>
-
-#include <amxo/amxo.h>
-#include <amxo/amxo_save.h>
-
-#include "ambiorix.h"
-
 namespace beerocks {
 namespace nbapi {
+
 
 using actions_callback = amxd_status_t (*)(amxd_object_t *object, amxd_param_t *param,
                                            amxd_action_t reason, const amxc_var_t *const args,
@@ -60,8 +51,6 @@ typedef struct sFunctions {
     std::string path;
     ambiorix_func_ptr callback;
 } sFunctions;
-
-extern amxd_dm_t *g_data_model;
 
 /**
  * @class AmbiorixImpl
@@ -180,12 +169,20 @@ public:
 
     /**
      * @brief Reads and return from Data Model value of uint64 parameter for given object.
-     * 
+     *
      * @param[in] obj_path Path to object.
      * @param[in] param_name Name of the parameter.
      * @param[out] param_val Value of parameter.
      * @return True on success, false otherwise.
     */
+
+    /**
+     * @brief Load and parse data model from the ODL file.
+     *
+     * @param datamodel_path Path to the data model definition ODL file.
+     * @return True on success and false otherwise.
+     */
+    bool load_datamodel(const std::string &datamodel_path);
 
 private:
     // Methods
@@ -208,14 +205,6 @@ private:
      * @return True on success and false otherwise.
      */
     bool apply_transaction(amxd_trans_t &transaction);
-
-    /**
-     * @brief Load and parse data model from the ODL file.
-     *
-     * @param datamodel_path Path to the data model definition ODL file.
-     * @return True on success and false otherwise.
-     */
-    bool load_datamodel(const std::string &datamodel_path);
 
     /**
      * @brief Initialize event handlers for Ambiorix fd in the event loop.
@@ -255,8 +244,6 @@ private:
 
     // Variables
     amxb_bus_ctx_t *m_bus_ctx = nullptr;
-    amxd_dm_t m_datamodel;
-    amxo_parser_t m_parser;
     std::shared_ptr<EventLoop> m_event_loop;
     //std::unordered_map<std::string, actions_callback> m_on_action_handlers;
     std::vector<sActionsCallback> m_on_action_handlers;

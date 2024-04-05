@@ -5,14 +5,21 @@
  * This code is subject to the terms of the BSD+Patent license.
  * See LICENSE file for more details.
  */
+
 #include "ambiorix_impl.h"
+
+#include <amxb/amxb_register.h>
+#include <amxd/amxd_action.h>
+#include <amxd/amxd_object.h>
+#include <amxd/amxd_object_event.h>
+#include <amxd/amxd_transaction.h>
+
 #include "tlvf/tlvftypes.h"
 #include <bcl/network/network_utils.h>
 
 namespace beerocks {
 namespace nbapi {
 
-amxd_dm_t *g_data_model = nullptr;
 
 AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
                            const std::vector<sActionsCallback> &on_action,
@@ -22,8 +29,8 @@ AmbiorixImpl::AmbiorixImpl(std::shared_ptr<EventLoop> event_loop,
       m_func_list(funcs_list)
 {
     LOG_IF(!m_event_loop, FATAL) << "Event loop is a null pointer!";
-    amxo_parser_init(&m_parser);
-    amxd_dm_init(&m_datamodel);
+    amxo_parser_init(Amxrt::getParser());
+    amxd_dm_init(Amxrt::getDatamodel());
 }
 
 bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_uri,
@@ -31,6 +38,11 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
 {
     LOG(DEBUG) << "Initializing the bus connection.";
     int status = 0;
+
+    if (!load_datamodel(datamodel_path)) {
+        LOG(ERROR) << "Failed to load data model.";
+        return false;
+    }
 
     status = amxb_be_load(amxb_backend.c_str());
     if (status != 0) {
@@ -45,12 +57,7 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
         return false;
     }
 
-    if (!load_datamodel(datamodel_path)) {
-        LOG(ERROR) << "Failed to load data model.";
-        return false;
-    }
-
-    status = amxb_register(m_bus_ctx, &m_datamodel);
+    status = amxb_register(m_bus_ctx, Amxrt::getDatamodel());
     if (status != 0) {
         LOG(ERROR) << "Failed to register the data model.";
         return false;
@@ -66,22 +73,24 @@ bool AmbiorixImpl::init(const std::string &amxb_backend, const std::string &bus_
                       "event loop.";
         return false;
     }
+
+    beerocks::nbapi::Amxrt::RegisterOrWait();
+
     LOG(DEBUG) << "The bus connection initialized successfully.";
-    g_data_model = &m_datamodel;
     return true;
 }
 
 bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
 {
     LOG(DEBUG) << "Loading the data model.";
-    auto *root_obj = amxd_dm_get_root(&m_datamodel);
+    auto *root_obj = amxd_dm_get_root(Amxrt::getDatamodel());
     if (!root_obj) {
         LOG(ERROR) << "Failed to get datamodel root object.";
         return false;
     }
 
     for (const auto &action : m_on_action_handlers) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, action.action_name.c_str(),
+        auto ret = amxo_resolver_ftab_add(Amxrt::getParser(), action.action_name.c_str(),
                                           reinterpret_cast<amxo_fn_ptr_t>(action.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << action.action_name;
@@ -90,7 +99,7 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         LOG(DEBUG) << "Added " << action.action_name << " to the functions table.";
     }
     for (const auto &event : m_events_list) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, event.name.c_str(),
+        auto ret = amxo_resolver_ftab_add(Amxrt::getParser(), event.name.c_str(),
                                           reinterpret_cast<amxo_fn_ptr_t>(event.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << event.name;
@@ -99,7 +108,8 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
         LOG(DEBUG) << "Added " << event.name << " to the functions table.";
     }
     for (const auto &func : m_func_list) {
-        auto ret = amxo_resolver_ftab_add(&m_parser, func.path.c_str(), AMXO_FUNC(func.callback));
+        auto ret =
+            amxo_resolver_ftab_add(Amxrt::getParser(), func.path.c_str(), AMXO_FUNC(func.callback));
         if (ret != 0) {
             LOG(WARNING) << "Failed to add " << func.name;
             continue;
@@ -108,11 +118,18 @@ bool AmbiorixImpl::load_datamodel(const std::string &datamodel_path)
     }
 
     // Disable eventing while loading odls
-    amxp_sigmngr_enable(&m_datamodel.sigmngr, false);
+    amxp_sigmngr_enable(&Amxrt::getDatamodel()->sigmngr, false);
 
-    amxo_parser_parse_file(&m_parser, datamodel_path.c_str(), root_obj);
+    amxo_parser_parse_file(Amxrt::getParser(), datamodel_path.c_str(), root_obj);
 
-    amxp_sigmngr_enable(&m_datamodel.sigmngr, true);
+    amxp_sigmngr_enable(&Amxrt::getDatamodel()->sigmngr, true);
+
+    beerocks::nbapi::Amxrt::AddAutoSave(amxrt_dm_save_load_main);
+
+    amxc_var_t *syssigs = GET_ARG(beerocks::nbapi::Amxrt::getConfig(), "system-signals");
+    if (syssigs != NULL) {
+        amxrt_enable_syssigs(syssigs);
+    }
 
     LOG(DEBUG) << "The data model loaded successfully.";
     return true;
@@ -245,7 +262,7 @@ bool AmbiorixImpl::remove_signal_loop()
 amxd_object_t *AmbiorixImpl::find_object(const std::string &relative_path)
 {
 
-    auto object = amxd_dm_findf(&m_datamodel, "%s", relative_path.c_str());
+    auto object = amxd_dm_findf(Amxrt::getDatamodel(), "%s", relative_path.c_str());
     if (!object) {
         LOG(ERROR) << "Failed to get object from data model when searching for: " << relative_path;
         return nullptr;
@@ -339,7 +356,7 @@ amxd_object_t *AmbiorixImpl::prepare_transaction(const std::string &relative_pat
 bool AmbiorixImpl::apply_transaction(amxd_trans_t &transaction)
 {
     auto ret    = true;
-    auto status = amxd_trans_apply(&transaction, &m_datamodel);
+    auto status = amxd_trans_apply(&transaction, Amxrt::getDatamodel());
     if (status != amxd_status_ok) {
         LOG(ERROR) << "Couldn't apply transaction object, status: " << amxd_status_string(status);
         ret = false;
@@ -925,7 +942,7 @@ uint32_t AmbiorixImpl::get_instance_index(const std::string &specific_path, cons
 {
     uint32_t index = 0;
 
-    auto object = amxd_dm_findf(&m_datamodel, specific_path.c_str(), key.c_str());
+    auto object = amxd_dm_findf(Amxrt::getDatamodel(), specific_path.c_str(), key.c_str());
     if (!object) {
         return index;
     }
@@ -1021,8 +1038,8 @@ AmbiorixImpl::~AmbiorixImpl()
     remove_event_loop();
     remove_signal_loop();
     amxb_free(&m_bus_ctx);
-    amxd_dm_clean(&m_datamodel);
-    amxo_parser_clean(&m_parser);
+    amxrt_stop();
+    amxrt_delete();
 }
 
 } // namespace nbapi

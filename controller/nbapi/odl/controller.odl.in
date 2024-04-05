@@ -118,58 +118,78 @@
 %define {
 
     // Define main data model
-@CONTROLLER_ROOT_DM_Header@
-
-                object Configuration {
+    %persistent @CONTROLLER_ROOT_DM_Header@
+                %persistent object Configuration {
                     // Used in channel_selection_task and optimal_path_task
-                    bool BandSteeringEnabled = false;
-                    
+                    %persistent bool BandSteeringEnabled {
+                        userflags %upc;
+                        default false;
+                    }
+
                     // Used in optimal_path_task
-                    bool ClientRoamingEnabled = false;
+                    %persistent bool ClientRoamingEnabled { 
+                        userflags %upc;
+                        default false;
+                    }
 
                     // Used in optimal_path_task to compute new BSS for the STA based on 11k measurements by STA
                     bool Client_11kRoaming = true;
 
                     // Used in optimal_path_task; applies bonus to current BSS {phy_rate or rssi};
                     // choice of parameter is based on prefer_signal_strength flag
-                    uint32 SteeringCurrentBonus = 0 {
+                    %persistent uint32 SteeringCurrentBonus = 0 {
                         on action validate call check_range [0, 10000];
                     }
-                    // Used in client_steering_task to format the 1905 Client Steering Request packet sent to the steering source agent
-                    uint32 SteeringDisassociationTimer = 0;
+                     // Used in client_steering_task to format the 1905 Client Steering Request packet sent to the steering source agent
+                    %persistent uint32 SteeringDisassociationTimer = 0;
 
                     // Link Metric Request Interval in Seconds
-                    uint32 LinkMetricsRequestInterval = 0;
+                    %persistent uint32 LinkMetricsRequestInterval = 0;
 
                     // Used by controller to start / stop channel_select_task
-                    bool ChannelSelectionTaskEnabled = false;
+                    %persistent bool ChannelSelectionTaskEnabled { 
+                        userflags %upc;
+                        default false;
+                    }
+                    
                     // Used by controller to start / stop dynamic_channel_selection_task_r2
-                    bool DynamicChannelSelectionTaskEnabled = false;
+                    %persistent bool DynamicChannelSelectionTaskEnabled  { 
+                        userflags %upc;
+                        default false;
+                    }
+
                     // Used to start ire_network_optimization_task
-                    bool BackhaulOptimizationEnabled = false;
+                    %persistent bool BackhaulOptimizationEnabled = false;
+
                     // load_balancer_task will use (currently TODO?) client_steering_task to move a STA between agents
-                    bool LoadBalancingTaskEnabled = false;
+                    %persistent bool LoadBalancingTaskEnabled = false;
+
                     // Used by optimal_path_task;
                     // chooses best BSS based on `rssi` if prefer_signal_strength is TRUE, `phy_rate` otherwise
-                    bool OptimalPathPreferSignalStrength = false;
+                    %persistent bool OptimalPathPreferSignalStrength = false;
+
                     // Used by controller to start / stop the health_check_task
-                    bool HealthCheckTaskEnabled = false;
+                    %persistent bool HealthCheckTaskEnabled = false;
+
                     // Used by controller to start / stop statistics_polling_task
-                    bool StatisticsPollingTaskEnabled = false;
-                    uint32 StatisticsPollingRateSec = 1 {
+                    %persistent bool StatisticsPollingTaskEnabled = false;
+
+                    %persistent uint32 StatisticsPollingRateSec = 1 {
                         on action validate call check_range [1, 10000];
                     }
                     // Used by channel_selection_task; currently (03.2024) does nothing
                     // as the task never goes to the state where this flag is checked
-                    bool DFSReentry = false;
+                    %persistent bool DFSReentry = false;
+
                     // Used by handle_cmdu_1905_autoconfiguration_WSC;
                     // don`t send credentials to extenders if enabled
-                    bool DaisyChainingDisabled = false;
-                    object QoS {
-                        uint32 SPRuleOutput = 0 {
+                    %persistent bool DaisyChainingDisabled = false;
+
+                    %persistent object QoS {
+                        %persistent uint32 SPRuleOutput = 0 {
                             on action validate call check_range [0, 9];
                         }
-                        string DSCPMap {
+                        %persistent string DSCPMap {
                             on action validate call check_range [0, 64];
                         }
                     }

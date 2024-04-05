@@ -1,0 +1,22 @@
+%populate {
+	object '@CONTROLLER_ROOT_DM@' {
+		object 'Configuration' {
+			parameter 'BandSteeringEnabled' = false;
+			parameter 'Client_11kRoaming' = false;
+			parameter 'ClientRoamingEnabled' = false;
+			parameter 'DFSReentry' = false;
+			parameter 'ChannelSelectionTaskEnabled' = true;
+			parameter 'DynamicChannelSelectionTaskEnabled' = true;
+			parameter 'StatisticsPollingTaskEnabled' = true;
+			parameter 'StatisticsPollingRateSec' = 10;
+			parameter 'HealthCheckTaskEnabled' = false;
+			parameter 'LinkMetricsRequestInterval' = 60;
+			parameter 'LoadBalancingTaskEnabled' = false;
+			parameter 'BackhaulOptimizationEnabled' = true;
+			parameter 'OptimalPathPreferSignalStrength' = false;
+			parameter 'SteeringCurrentBonus' = 10;
+			parameter 'SteeringDisassociationTimer' = 200;
+			parameter 'DaisyChainingDisabled' = false;
+		}
+	}
+}

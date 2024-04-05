@@ -9,22 +9,6 @@
 #ifndef ON_ACTION_H
 #define ON_ACTION_H
 
-#include <amxc/amxc.h>
-#include <amxp/amxp.h>
-
-#include <amxc/amxc.h>
-#include <amxd/amxd_action.h>
-#include <amxd/amxd_dm.h>
-#include <amxd/amxd_object.h>
-#include <amxd/amxd_object_event.h>
-#include <amxd/amxd_transaction.h>
-
-#include <amxb/amxb.h>
-#include <amxb/amxb_register.h>
-
-#include <amxo/amxo.h>
-#include <amxo/amxo_save.h>
-
 #include "ambiorix_impl.h"
 
 #include "../src/beerocks/master/db/db.h"
@@ -40,7 +24,6 @@ std::vector<beerocks::nbapi::sFunctions> get_func_list(void);
 beerocks::nbapi::ambiorix_func_ptr get_access_point_commit(void);
 
 extern son::db *g_database;
-extern amxd_dm_t *g_data_model;
 
 /**
 * dwell time (40 milliseconds)
