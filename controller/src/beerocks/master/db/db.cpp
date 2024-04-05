@@ -565,10 +565,10 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
         LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
         station->set_bss(bss);
     }
-    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
+    /*if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
         return station;
-    }
+    }*/
 
     if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
         LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";

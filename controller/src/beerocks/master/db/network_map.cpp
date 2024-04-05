@@ -236,6 +236,11 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
     tlvf::mac_to_array(database.get_node_parent_ire(n->mac), node->parent_bridge);
 
     if (n_type == beerocks::TYPE_CLIENT) {
+        LOG(DEBUG) << "Badhri n->parent_mac: " << n->parent_mac;
+        LOG(DEBUG) << "Badhri n->mac: " << n->mac;
+        LOG(DEBUG) << "Badhri n->ipv4: " << n->ipv4;
+        LOG(DEBUG) << "Badhri n->name: " << n->name;
+        auto pSta = database.get_station(tlvf::mac_from_string(n->mac));
         tlvf::mac_from_string(node->parent_bssid, n->parent_mac); // remote radio(ap)
         node->rx_rssi = database.get_sta_load_rx_rssi(n->mac);
     } else {
