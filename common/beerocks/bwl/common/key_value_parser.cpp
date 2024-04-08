@@ -117,7 +117,7 @@ void KeyValueParser::parse_event(std::string event_str, parsed_line_t &parsed_li
     }
 
     // Parse keyless params part and insert to the 'parsed_line' map object.
-    parse_event_keyless_params(event_str, idx_start, parsed_line);
+    parse_event_keyless_params(event_str, idx_start, parsed_line, false);
 
     // Fill the map with the rest of event data.
     while (idx != std::string::npos) {
@@ -156,12 +156,13 @@ size_t KeyValueParser::event_buffer_start_process_idx(const std::string &event_s
 }
 
 void KeyValueParser::parse_event_keyless_params(const std::string &event_str, size_t idx_start,
-                                                parsed_line_t &parsed_line)
+                                                parsed_line_t &parsed_line, bool full_parse)
 {
     // Insert to map known prams without key
     std::istringstream iss(event_str.c_str() + idx_start);
     std::string str_storage;
-    bool opcode = true;
+    bool opcode   = true;
+    int arg_index = 0;
     while (std::getline(iss, str_storage, ' ')) {
         if (opcode) {
             // assume that the second param is data or event name
@@ -171,6 +172,8 @@ void KeyValueParser::parse_event_keyless_params(const std::string &event_str, si
             parsed_line[EVENT_KEYLESS_PARAM_MAC] = str_storage;
         } else if (beerocks::utils::is_allowed_ifname_prefix(str_storage, true)) {
             parsed_line[EVENT_KEYLESS_PARAM_IFACE] = str_storage;
+        } else if (full_parse) {
+            parsed_line["_arg" + std::to_string(arg_index++)] = str_storage;
         }
     }
 }

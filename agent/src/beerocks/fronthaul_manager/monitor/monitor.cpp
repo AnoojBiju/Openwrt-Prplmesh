@@ -1484,7 +1484,8 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         mon_wlan_hal->sta_beacon_11k_request(vap_node->get_iface(), bwl_request, dialog_token);
 
-        sEvent11k event_11k = {tlvf::mac_to_string(request->params().sta_mac), dialog_token,
+        sEvent11k event_11k = {tlvf::mac_to_string(request->params().sta_mac),
+                               tlvf::mac_to_string(request->params().bssid), dialog_token,
                                std::chrono::steady_clock::now(), beerocks_header->id()};
 
         // USED IN TESTS
@@ -1866,12 +1867,15 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         LOG(INFO) << "Received beacon measurement response on BSSID: "
                   << (sMacAddr &)hal_data->bssid
                   << ", dialog_token: " << int(hal_data->dialog_token);
+        auto bssid_str = tlvf::mac_to_string((sMacAddr &)hal_data->bssid);
 
         // TODO: Can be changed to iterator loop?
         auto event_map = pending_11k_events.equal_range("RRM_EVENT_BEACON_REP_RXED");
         for (auto it = event_map.first; it != event_map.second;) {
-            if ((it->second.dialog_token == hal_data->dialog_token) ||
-                (hal_data->dialog_token == 0)) {
+            if (((it->second.dialog_token == hal_data->dialog_token) ||
+                 (hal_data->dialog_token == 0)) &&
+                ((it->second.bssid.empty()) || (it->second.bssid == bssid_str) ||
+                 (it->second.bssid == beerocks::net::network_utils::WILD_MAC_STRING))) {
 
                 auto id = it->second.id;
 

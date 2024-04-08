@@ -153,6 +153,7 @@ private:
 
     typedef struct {
         std::string sta_mac;
+        std::string bssid;
         int dialog_token;
         std::chrono::steady_clock::time_point timestamp;
         int id;

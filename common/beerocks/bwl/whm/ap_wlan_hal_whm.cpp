@@ -1265,7 +1265,7 @@ bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
     return true;
 }
 
-bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVariant &event_data)
+bool ap_wlan_hal_whm::process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVariant &event_data)
 {
     std::string event_str;
     if (!event_data.read_child<>(event_str, "eventData") || event_str.empty()) {
@@ -1414,6 +1414,14 @@ bool ap_wlan_hal_whm::process_wpaCtrl_events(const beerocks::wbapi::AmbiorixVari
     case Event::WPA_Event_EAP_Timeout_Failure2:
     case Event::WPA_Event_SAE_Unknown_Password_Identifier:
     case Event::AP_Sta_Possible_Psk_Mismatch: {
+        /* example PSK Mismatch notification
+            eobject = "WiFi.AccessPoint.[vap5g0priv].",
+            eventData = "<3>AP-STA-POSSIBLE-PSK-MISMATCH 6c:f7:84:d8:32:af",
+            ifName = "wlan2.1",
+            notification = "wpaCtrlEvents",
+            object = "WiFi.AccessPoint.vap5g0priv.",
+            path = "WiFi.AccessPoint.1."
+        */
         auto vap_id    = get_vap_id_with_bss(interface);
         auto iface_ids = beerocks::utils::get_ids_from_iface_string(interface);
         if ((vap_id < 0) && (iface_ids.vap_id != beerocks::IFACE_RADIO_ID)) {
