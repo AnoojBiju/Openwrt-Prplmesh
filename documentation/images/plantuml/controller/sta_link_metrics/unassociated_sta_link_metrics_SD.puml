@@ -1,0 +1,37 @@
+' Sequence define how Unassociated STA link metrics is processed from Controller+LinkMetricsTask viewpoint
+' Controller+LinkMetricsTask
+
+' Data Model path: Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.UnassociatedSTA.{i}.
+
+@startuml
+
+!define AGENT_COLOR LightSkyBlue
+!define CONTROLLER_COLOR LightGreen
+
+participant Agent as Agent << (A, AGENT_COLOR) >>
+participant Controller as Controller << (C, CONTROLLER_COLOR) >>
+participant LinkMetricsTask as LMT << (C, CONTROLLER_COLOR) >>
+participant DB as DB << (C, CONTROLLER_COLOR) >>
+participant Ambiorix as "Ambiorix DM" << (C, CONTROLLER_COLOR) >>
+
+Controller --> LMT : add task to pool
+...
+Controller --> LMT : m_task_pool.push_event -> UNASSOC_STA_LINK_METRICS_QUERY
+LMT --> Agent : UNASSOCIATED_STA_LINK_METRICS_QUERY_MESSAGE
+note over Controller, Agent : Agent has 1 sec to respond // EM specs 10.3.2
+
+Agent --> Controller : UNASSOCIATED_STA_LINK_METRICS_RESPONSE_MESSAGE
+note over Controller, Agent : Controller has 1 sec to respond with ACK_MESSAGE // EM specs 10.3.2
+
+note over Controller : handle_cmdu
+Controller --> LMT: m_task_pool.handle_ieee1905_1_msg
+note over LMT : handle_cmdu_1905_unassociated_station_link_metric_response
+LMT --> Agent : ACK_MESSAGE
+LMT --> DB : update station with the radio that is monitoring it
+LMT --> DB : update_unassociated_station_stats
+
+DB --> Ambiorix : set **MACAddress**
+DB --> Ambiorix : set **EstMACDataRateUplink**
+DB --> Ambiorix : set **SignalStrength**
+
+@enduml

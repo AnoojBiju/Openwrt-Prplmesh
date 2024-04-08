@@ -20,3 +20,4 @@ __pycache__/
 ipkg-*/
 /rdk
 .dccache
+.vscode/
