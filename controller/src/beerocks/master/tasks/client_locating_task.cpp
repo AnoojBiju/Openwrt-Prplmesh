@@ -43,7 +43,7 @@ void client_locating_task::work()
             TASK_LOG(DEBUG) << "IRE is wireless -> finish task";
             finish();
         }
-    } else if (database.is_node_wireless(client_mac)) {
+    } else if (database.is_sta_wireless(client_mac)) {
         TASK_LOG(DEBUG) << "client is wireless -> finish task";
         finish();
     }

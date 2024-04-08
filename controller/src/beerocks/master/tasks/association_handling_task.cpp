@@ -42,7 +42,7 @@ void association_handling_task::work()
     switch (state) {
     case START: {
 
-        if (!database.is_node_wireless(sta_mac)) {
+        if (!database.is_sta_wireless(sta_mac)) {
             TASK_LOG(DEBUG) << "client " << sta_mac << " is not wireless, finish the task";
             finish();
             return;
@@ -388,7 +388,7 @@ void association_handling_task::finalize_new_connection()
      * see if special handling is required if client just came back from a handover
      */
     if (!database.get_sta_handoff_flag(*client)) {
-        if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
+        if (!database.is_sta_wireless(sta_mac)) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
             // to allow the functionality of stay-on-initial-radio.

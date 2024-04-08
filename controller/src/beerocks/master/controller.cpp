@@ -2420,7 +2420,7 @@ bool Controller::handle_intel_slave_join(
 
         // sending to BML listeners, client disconnect notification on ire backhaul before changing it type from TYPE_CLIENT to TYPE_IRE_BACKHAUL
         if (database.get_node_type(backhaul_mac) == beerocks::TYPE_CLIENT &&
-            database.get_sta_state(backhaul_mac) == beerocks::STATE_CONNECTED) {
+            database.get_node_state(backhaul_mac) == beerocks::STATE_CONNECTED) {
             LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << backhaul_mac
                        << ", FORCING DISCONNECT NOTIFICATION!";
             bml_task::connection_change_event new_event;
@@ -2437,7 +2437,7 @@ bool Controller::handle_intel_slave_join(
                        << ", parent_bssid_mac = " << parent_bssid_mac;
             database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
                                                 parent_bssid_mac);
-        } else if (database.get_sta_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
+        } else if (database.get_node_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
             */
@@ -2507,7 +2507,7 @@ bool Controller::handle_intel_slave_join(
         database.set_node_backhaul_iface_type(backhaul_mac, backhaul_iface_type);
         database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
 
-        database.set_node_ipv4(backhaul_mac, bridge_ipv4);
+        database.set_sta_ipv4(backhaul_mac, bridge_ipv4);
         database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
 
         database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
@@ -3260,7 +3260,7 @@ bool Controller::handle_cmdu_control_message(
         bool run_locating_task = false;
         // Since wireless clients are added to the DB on association, an ARP on non-existing node
         // can only be received for Ethernet clients
-        if (new_node || !database.is_node_wireless(client_mac)) {
+        if (new_node || !database.is_sta_wireless(client_mac)) {
 
             // Assume node is connected to the GW's LAN switch
             // client_locating_task will find the correct position
@@ -3278,7 +3278,7 @@ bool Controller::handle_cmdu_control_message(
             // New IP
             if (new_node || database.get_node_ipv4(client_mac) != client_ipv4) {
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
-                database.set_node_ipv4(client_mac, client_ipv4);
+                database.set_sta_ipv4(client_mac, client_ipv4);
                 son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool,
                                                          client_mac);
             }
@@ -3300,7 +3300,7 @@ bool Controller::handle_cmdu_control_message(
             } else if (database.get_node_ipv4(client_mac) != client_ipv4) {
 
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
-                database.set_node_ipv4(client_mac, client_ipv4);
+                database.set_sta_ipv4(client_mac, client_ipv4);
                 son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool,
                                                          client_mac);
             }
@@ -3542,11 +3542,11 @@ bool Controller::handle_cmdu_control_message(
             return true;
         }
 
-        database.set_node_ipv4(client_mac, ipv4);
+        database.set_sta_ipv4(client_mac, ipv4);
         database.set_sta_name(
             client_mac, std::string(notification_in->name(beerocks::message::NODE_NAME_LENGTH)));
 
-        if (database.is_node_wireless(client_mac)) {
+        if (database.is_sta_wireless(client_mac)) {
             auto notification_out = beerocks::message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_CLIENT_NEW_IP_ADDRESS_NOTIFICATION>(cmdu_tx);
 
@@ -3669,7 +3669,7 @@ bool Controller::handle_cmdu_control_message(
             //update station bandwidth from the current downlink bandwidth
             if ((sta_stats.dl_bandwidth != beerocks::BANDWIDTH_UNKNOWN) &&
                 (sta_stats.dl_bandwidth < beerocks::BANDWIDTH_MAX)) {
-                database.update_node_wifi_channel_bw(
+                database.update_sta_wifi_channel_bw(
                     sta_stats.mac, static_cast<beerocks::eWiFiBandwidth>(sta_stats.dl_bandwidth));
             }
 

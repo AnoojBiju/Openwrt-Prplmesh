@@ -398,6 +398,7 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
     if (!station) {
         return {};
     }
+    station->set_bSta(true);
 
     // Save stations's parent
     std::shared_ptr<Agent::sRadio::sBss> parent_bss = get_bss(parent_mac);
@@ -409,8 +410,6 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
             station->set_eth_switch(parent_switch);
         }
     }
-    station->set_is_backhaul(true);
-    station->set_bSta(true);
 
     if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
         LOG(ERROR) << "Failed to add wireless_backhaul node, mac: " << mac;
@@ -553,36 +552,48 @@ bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr &mac,
                                          const sMacAddr &parent_mac)
 {
-    auto station = m_stations.add(mac);
-    auto bss     = get_bss(parent_mac, al_mac);
-    LOG(DEBUG) << "Adding Station node "
-               << " for AL-MAC " << al_mac << " station mac " << mac
-               << " parent mac: " << parent_mac;
-
-    if (!bss) {
-        LOG(ERROR) << "Failed to get sBss: " << parent_mac;
+    auto pSta = m_stations.get(mac);
+    if (pSta) { // pSta is valid if station already exists
+        LOG(DEBUG) << "Station: " << mac << " already exists, updating";
+        if (pSta->parent_mac != tlvf::mac_to_string(parent_mac)) {
+            pSta->previous_parent_mac = pSta->parent_mac;
+            LOG(DEBUG) << "Setting previous_parent_mac of " << mac << " as " << pSta->parent_mac;
+            pSta->parent_mac = tlvf::mac_to_string(parent_mac);
+        }
+        return pSta;
     } else {
-        LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
-        station->set_bss(bss);
-    }
-    /*if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
-        LOG(ERROR) << "Failed to add client node, mac: " << mac;
+        auto station = m_stations.add(mac);
+        auto bss     = get_bss(parent_mac, al_mac);
+        LOG(DEBUG) << "Adding Station node "
+                   << " for AL-MAC " << al_mac << " station mac " << mac
+                   << " parent mac: " << parent_mac;
+
+        if (!bss) {
+            LOG(ERROR) << "Failed to get sBss: " << parent_mac;
+            return {};
+        } else {
+            LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
+            station->set_bss(bss);
+        }
+        /*if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
+            LOG(ERROR) << "Failed to add client node, mac: " << mac;
+            return station;
+        }*/
+
+        if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
+            LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
+            return station;
+        }
+
+        station->parent_mac = tlvf::mac_to_string(parent_mac);
+
+        // Add STA to the controller data model via m_ambiorix_datamodel
+        // for connected station (WiFi client)
+        if (!dm_add_sta_element(al_mac, parent_mac, *station)) {
+            LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
+        }
         return station;
-    }*/
-
-    if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
-        LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
-        return station;
     }
-    station->parent_mac = tlvf::mac_to_string(parent_mac);
-
-    // Add STA to the controller data model via m_ambiorix_datamodel
-    // for connected station (WiFi client)
-    if (!dm_add_sta_element(al_mac, parent_mac, *station)) {
-        LOG(ERROR) << "Failed to add station datamodel, mac: " << station->mac;
-    }
-
-    return station;
 }
 
 bool db::remove_node(const sMacAddr &mac)
@@ -677,7 +688,8 @@ bool db::set_sta_ipv4(const std::string &mac, const std::string &ipv4)
         return false;
     }
     pSta->ipv4 = ipv4;
-    return set_node_ipv4(mac, ipv4); // temporary
+    return true;
+    //return set_node_ipv4(mac, ipv4); // temporary
 }
 
 std::string db::get_sta_ipv4(const std::string &mac)
@@ -888,7 +900,8 @@ bool db::set_sta_name(const std::string &mac, const std::string &name)
         return false;
     }
     pSta->name = name;
-    return set_node_name(mac, name); // temporary
+    return true;
+    //return set_node_name(mac, name); // temporary
 }
 
 bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
@@ -950,7 +963,8 @@ bool db::set_sta_state(const std::string &mac, beerocks::eNodeState state)
         return false;
     }
     pSta->state = state;
-    return set_node_state(mac, state);
+    return true;
+    //return set_node_state(mac, state);
 }
 
 beerocks::eNodeState db::get_sta_state(const std::string &mac)
@@ -961,6 +975,16 @@ beerocks::eNodeState db::get_sta_state(const std::string &mac)
         return beerocks::STATE_MAX;
     }
     return pSta->state;
+}
+
+bool db::is_sta_wireless(const std::string &mac)
+{
+    auto pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return false;
+    }
+    return utils::is_node_wireless(pSta->iface_type);
 }
 
 std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
@@ -1012,7 +1036,8 @@ bool db::update_sta_last_seen(const std::string &mac)
         return false;
     }
     pSta->last_seen = std::chrono::steady_clock::now();
-    return update_node_last_seen(mac); // temporary
+    return true;
+    //return update_node_last_seen(mac); // temporary
 }
 
 std::chrono::steady_clock::time_point db::get_node_last_seen(const std::string &mac)
@@ -1132,6 +1157,17 @@ std::string db::node_to_string(const std::string &mac)
     }
     return os.str();
 }
+
+std::string db::get_sta_previous_parent(const std::string &mac)
+{
+    auto pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
+        LOG(WARNING) << "station " << mac << " does not exist!";
+        return std::string();
+    }
+    return pSta->previous_parent_mac;
+}
+
 //
 // DB node functions (get only)
 //
@@ -1239,7 +1275,7 @@ std::string db::get_sta_parent(const std::string &mac)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
     if (!pSta) {
-        LOG(WARNING) << "station " << mac << "does not exist!";
+        LOG(WARNING) << "station " << mac << " does not exist!";
         return std::string();
     }
     return pSta->parent_mac;
@@ -1993,10 +2029,10 @@ bool db::set_sta_capabilities(const std::string &client_mac,
         return false;
     }
 
-    auto parent_radio = get_node_parent_radio(client_mac);
+    auto parent_radio = get_sta_parent_radio(client_mac);
 
     if (parent_radio.empty()) {
-        LOG(ERROR) << "parent radio node found for client " << client_mac;
+        LOG(ERROR) << "parent radio not found for client " << client_mac;
         return false;
     }
 
@@ -2770,6 +2806,17 @@ std::string db::get_bss_parent_radio(const std::string &bssid)
     return tlvf::mac_to_string(parent_radio->radio_uid);
 }
 
+std::string db::get_sta_parent_radio(const std::string &sta_mac)
+{
+    auto bssid                                  = get_sta_parent(sta_mac);
+    std::shared_ptr<Agent::sRadio> parent_radio = get_radio_by_bssid(tlvf::mac_from_string(bssid));
+    if (!parent_radio) {
+        return std::string();
+    }
+
+    return tlvf::mac_to_string(parent_radio->radio_uid);
+}
+
 std::string db::get_agent_data_model_path(const sMacAddr &al_mac)
 {
     std::shared_ptr<Agent> agent = get_agent(al_mac);
@@ -2798,6 +2845,22 @@ std::string db::get_radio_data_model_path(const sMacAddr &radio_mac)
     }
 
     return radio->dm_path;
+}
+
+bool db::set_sta_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
+{
+    auto pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return false;
+    }
+    if (is_sta_wireless(mac) && (iface_type > beerocks::IFACE_TYPE_WIFI_END ||
+                                 iface_type == beerocks::IFACE_TYPE_UNSUPPORTED)) {
+        LOG(ERROR) << "this should not happend!";
+        return false;
+    }
+    pSta->iface_type = iface_type;
+    return true;
 }
 
 int8_t db::get_bss_vap_id(const sMacAddr &bssid)
@@ -5364,7 +5427,8 @@ bool db::set_sta_wifi_channel(const sMacAddr &sta_mac, const beerocks::WifiChann
     }
 
     // Temporary
-    return set_node_wifi_channel(sta_mac, wifi_channel);
+    //return set_node_wifi_channel(sta_mac, wifi_channel);
+    return true;
 }
 
 beerocks::WifiChannel db::get_sta_wifi_channel(const std::string &mac)
@@ -5418,16 +5482,16 @@ bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel 
     return true;
 }
 
-bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
+bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    auto pSta = get_station(mac);
+    if (!pSta) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return false;
     }
-    if (n->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
-        LOG(ERROR) << "frequency type of node " << mac
-                   << " is unknown, channel=" << int(n->wifi_channel.get_channel());
+    if (pSta->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "frequency type of station " << mac
+                   << " is unknown, channel=" << int(pSta->wifi_channel.get_channel());
         return false;
     }
 
@@ -5436,29 +5500,29 @@ bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwid
         return false;
     }
 
-    if (bw == n->wifi_channel.get_bandwidth()) {
+    if (bw == pSta->wifi_channel.get_bandwidth()) {
         return true;
     }
 
     if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
         LOG(INFO) << "update wifiChannel node " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
                   << "MHz to MAX";
     } else {
         LOG(INFO) << "update wifiChannel node " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
+                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
                   << " to " << bw;
     }
 
-    eWiFiBandwidth prev_bw = n->wifi_channel.get_bandwidth();
-    n->wifi_channel.set_bandwidth(bw);
+    eWiFiBandwidth prev_bw = pSta->wifi_channel.get_bandwidth();
+    pSta->wifi_channel.set_bandwidth(bw);
     LOG(INFO) << "updating node " << mac << " bandwidth from "
               << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
               << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
-    auto children = get_node_children(n);
+    /*auto children = get_node_children(n);
     for (auto child : children) {
         child->wifi_channel.set_bandwidth(bw);
-    }
+    }*/
     return true;
 }
 

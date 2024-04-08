@@ -54,7 +54,8 @@ public:
     }
 
     const sMacAddr mac;
-    std::string parent_mac;
+    std::string parent_mac          = beerocks::net::network_utils::ZERO_MAC_STRING;
+    std::string previous_parent_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
     std::string name;
     uint8_t operating_class = 0;
 
@@ -63,6 +64,7 @@ public:
     std::string ipv6;
     int8_t vap_id              = beerocks::IFACE_ID_INVALID;
     beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
+    beerocks::eIfaceType iface_type;
 
     int association_handling_task_id = -1;
     int steering_task_id             = -1;

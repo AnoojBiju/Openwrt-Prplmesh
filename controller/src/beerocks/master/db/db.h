@@ -671,7 +671,7 @@ public:
     bool set_agent_ipv4(const std::string &al_mac, const std::string &ipv4 = std::string());
     std::string get_node_ipv4(const std::string &mac);
 
-    bool set_sta_ipv4(const std::string &mac, const std::string &ipv4);
+    bool set_sta_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     std::string get_sta_ipv4(const std::string &mac);
 
     bool set_agent_manufacturer(prplmesh::controller::db::Agent &agent,
@@ -716,6 +716,7 @@ public:
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 
     bool is_node_wireless(const std::string &mac);
+    bool is_sta_wireless(const std::string &mac);
 
     std::string node_to_string(const std::string &mac);
 
@@ -1096,6 +1097,7 @@ public:
     std::string get_sta_parent(const std::string &mac);
 
     std::string get_node_previous_parent(const std::string &mac);
+    std::string get_sta_previous_parent(const std::string &mac);
     sMacAddr get_node_parent_ire(const std::string &mac);
     sMacAddr get_radio_parent_agent(const sMacAddr &radio_mac);
     sMacAddr get_bss_parent_agent(const sMacAddr &bssid);
@@ -1323,6 +1325,7 @@ public:
     sMacAddr get_radio_bss_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
     std::string get_bss_parent_radio(const std::string &bssid);
+    std::string get_sta_parent_radio(const std::string &sta_mac);
 
     /**
      * @brief Get data model path of Station
@@ -1339,6 +1342,7 @@ public:
 
     bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
     beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
+    bool set_sta_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
 
     std::string get_5ghz_sibling_bss(const std::string &mac);
 
@@ -2045,7 +2049,7 @@ public:
      *      2. if the bandwidth is unknown,
      *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
      */
-    bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
+    bool update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);
