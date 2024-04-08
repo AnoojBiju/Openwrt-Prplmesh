@@ -192,7 +192,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                 for (const auto &radio_map_elemet : agent->radios) {
 
                     auto radio = radio_map_elemet.second;
-                    auto state = database.get_node_state(tlvf::mac_to_string(radio->radio_uid));
+                    auto state = database.get_radio_state(radio->radio_uid);
 
                     if (state != beerocks::STATE_DISCONNECTED) {
                         son_actions::send_cmdu_to_agent(agent->al_mac, cmdu_tx, database,
@@ -605,25 +605,26 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             isOK = false;
             break;
         }
-        std::string hostap_mac = tlvf::mac_to_string(request->ap_mac());
-        std::string ire_mac = tlvf::mac_to_string(database.get_bss_parent_agent(request->ap_mac()));
+        std::string hostap_mac  = tlvf::mac_to_string(request->ap_mac());
+        sMacAddr ire_mac        = database.get_bss_parent_agent(request->ap_mac());
+        std::string ire_mac_str = tlvf::mac_to_string(ire_mac);
         LOG(TRACE) << "CLI load notification from hostap " << hostap_mac << " ire mac=" << ire_mac;
 
         /*
              * start load balancing
              */
         if (database.is_radio_active(tlvf::mac_from_string(hostap_mac)) &&
-            database.get_node_state(ire_mac) == beerocks::STATE_CONNECTED) {
+            database.get_agent_state(ire_mac) == beerocks::STATE_CONNECTED) {
             /*
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                  * therefore, we need to create a load balancing task to optimize the network
                  */
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
+            int prev_task_id = database.get_load_balancer_task_id(ire_mac_str);
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(TRACE) << "CLI load balancer task already running for " << ire_mac;
             } else {
                 auto new_task = std::make_shared<load_balancer_task>(database, cmdu_tx, tasks,
-                                                                     ire_mac, "load_balancer");
+                                                                     ire_mac_str, "load_balancer");
                 tasks.add_task(new_task);
             }
         } else {
@@ -1647,7 +1648,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         // In case bridge is not yet connected (bus not active) query will not
         // be sent to a local agent, sending empty bml response instead.
         if ((database.get_local_bridge_mac() == al_mac) &&
-            (database.get_node_state(tlvf::mac_to_string(al_mac)) != beerocks::STATE_CONNECTED)) {
+            (database.get_agent_state(al_mac) != beerocks::STATE_CONNECTED)) {
             LOG(WARNING) << "Bridge is not connected yet, TOPOLOGY_QUERY_MESSAGE will not be sent";
             auto response =
                 message_com::create_vs_message<beerocks_message::cACTION_BML_TOPOLOGY_RESPONSE>(

@@ -411,7 +411,7 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     }
 
     for (auto reported_neighbor_mac : reported_neighbor_al_macs) {
-        if (!database.has_node(reported_neighbor_mac) &&
+        if (!database.get_agent(reported_neighbor_mac) &&
             recently_reported_neighbors.find(reported_neighbor_mac) ==
                 recently_reported_neighbors.end()) {
             // Send a Topology Query if any new neighbor was detected.

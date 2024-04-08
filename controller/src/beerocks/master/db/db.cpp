@@ -222,40 +222,7 @@ void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &n
 }
 
 // General set/get
-
-bool db::has_node(const sMacAddr &mac)
-{
-    auto n = get_node(mac);
-    return (n != nullptr);
-}
-
 bool db::has_station(const sMacAddr &mac) { return (get_station(mac) != nullptr); }
-
-bool db::add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac)
-{
-    //TODO prototype code, untested
-    if (mac == network_utils::ZERO_MAC) {
-        LOG(ERROR) << "can't insert node with empty mac";
-        return false;
-    }
-
-    auto real_node = get_node(real_node_mac);
-
-    if (!real_node) {
-        LOG(ERROR) << "node " << real_node_mac << " does not exist";
-        return false;
-    }
-
-    /*
-     * TODO
-     * the regular add_node() function should take care of a situation where the real node
-     * already exists and is moved to a different hierarchy
-     * it should be able to find its virtual nodes and move them to the appropriate hierarchy as well
-     */
-
-    nodes[real_node->hierarchy].insert(std::make_pair(tlvf::mac_to_string(mac), real_node));
-    return true;
-}
 
 bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eType type)
 {
@@ -403,7 +370,7 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
     // Save stations's parent
     std::shared_ptr<Agent::sRadio::sBss> parent_bss = get_bss(parent_mac);
     if (parent_bss) {
-        station->set_bss(parent_bss);
+        set_station_bss(station, parent_bss);
     } else {
         std::shared_ptr<Agent::sEthSwitch> parent_switch = get_eth_switch(parent_mac);
         if (parent_switch) {
@@ -533,11 +500,6 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
 
 bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_SLAVE)) {
-        LOG(ERROR) << "Failed to add radio node, mac: " << mac;
-        return false;
-    }
-
     auto agent = m_agents.get(parent_mac);
     if (!agent) {
         LOG(ERROR) << "While adding radio " << mac << " parent agent " << parent_mac
@@ -563,7 +525,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
         LOG(ERROR) << "Failed to get sBss: " << parent_mac;
     } else {
         LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
-        station->set_bss(bss);
+        set_station_bss(station, bss);
     }
     if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
         LOG(ERROR) << "Failed to add client node, mac: " << mac;
@@ -582,6 +544,20 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
     }
 
     return station;
+}
+
+void db::set_station_bss(std::shared_ptr<Station> station, std::shared_ptr<Agent::sRadio::sBss> bss)
+{
+    if (!station || !bss) {
+        LOG(ERROR) << "Invalid station or bss";
+        return;
+    }
+    std::shared_ptr<Agent::sRadio::sBss> old_parent = station->get_bss();
+    if (old_parent) {
+        old_parent->connected_stations.erase(station->mac);
+    }
+    station->set_bss(bss);
+    bss->connected_stations.add(station);
 }
 
 bool db::remove_node(const sMacAddr &mac)
@@ -615,6 +591,12 @@ bool db::remove_node(const sMacAddr &mac)
     }
 
     return false;
+}
+
+bool db::remove_sta(const sMacAddr &mac)
+{
+    m_stations.erase(mac);
+    return true;
 }
 
 bool db::set_node_type(const std::string &mac, beerocks::eType type)
@@ -857,19 +839,6 @@ db::get_sta_beacon_measurement_support_level(const std::string &mac)
     return pSta->supports_beacon_measurement;
 }
 
-bool db::set_node_name(const std::string &mac, const std::string &name)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->name = name;
-    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
-        set_agent_name(mac, name);
-    }
-    return true;
-}
-
 bool db::set_agent_name(const std::string &al_mac, const std::string &name)
 {
     std::shared_ptr<Agent> agent = get_agent(tlvf::mac_from_string(al_mac));
@@ -884,28 +853,21 @@ bool db::set_sta_name(const std::string &mac, const std::string &name)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
     if (!pSta) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+        LOG(WARNING) << __FUNCTION__ << " - sta " << mac << " does not exist!";
         return false;
     }
     pSta->name = name;
-    return set_node_name(mac, name); // temporary
+    return true;
 }
 
-bool db::set_node_state(const std::string &mac, beerocks::eNodeState state)
+bool db::set_eth_switch_name(const sMacAddr &mac, const std::string &name)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent::sEthSwitch> eth_switch = get_eth_switch(mac);
+    if (!eth_switch) {
+        LOG(WARNING) << __FUNCTION__ << " - eth_switch " << mac << " does not exist!";
         return false;
     }
-    n->state             = state;
-    n->last_state_change = std::chrono::steady_clock::now();
-
-    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
-        set_agent_state(mac, state);
-    } else if (n->get_type() == beerocks::TYPE_SLAVE) {
-        set_radio_state(mac, state);
-    }
+    eth_switch->name = name;
     return true;
 }
 
@@ -933,6 +895,17 @@ bool db::set_radio_state(const std::string &ruid, beerocks::eNodeState state)
     return true;
 }
 
+bool db::set_eth_switch_state(const std::string &mac, beerocks::eNodeState state)
+{
+    std::shared_ptr<Agent::sEthSwitch> eth_switch = get_eth_switch(tlvf::mac_from_string(mac));
+    if (!eth_switch) {
+        LOG(ERROR) << __FUNCTION__ << " - eth_switch " << mac << "does not exist!";
+        return false;
+    }
+    eth_switch->state = state;
+    return true;
+}
+
 beerocks::eNodeState db::get_node_state(const std::string &mac)
 {
     auto n = get_node(mac);
@@ -943,6 +916,26 @@ beerocks::eNodeState db::get_node_state(const std::string &mac)
     return n->state;
 }
 
+beerocks::eNodeState db::get_agent_state(const sMacAddr &mac)
+{
+    std::shared_ptr<Agent> agent = get_agent(mac);
+    if (!agent) {
+        LOG(WARNING) << __FUNCTION__ << " - agent " << mac << " does not exist!";
+        return beerocks::STATE_MAX;
+    }
+    return agent->state;
+}
+
+beerocks::eNodeState db::get_radio_state(const sMacAddr &ruid)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(ruid);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << ruid << " does not exist!";
+        return beerocks::STATE_MAX;
+    }
+    return radio->state;
+}
+
 bool db::set_sta_state(const std::string &mac, beerocks::eNodeState state)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
@@ -951,7 +944,7 @@ bool db::set_sta_state(const std::string &mac, beerocks::eNodeState state)
         return false;
     }
     pSta->state = state;
-    return set_node_state(mac, state);
+    return true;
 }
 
 beerocks::eNodeState db::get_sta_state(const std::string &mac)
@@ -1061,7 +1054,7 @@ bool db::set_radio_active(const sMacAddr &mac, const bool active)
         return false;
     }
 
-    LOG(DEBUG) << "Setting node '" << mac << "' as " << (active ? "active" : "inactive");
+    LOG(DEBUG) << "Setting radio '" << mac << "' as " << (active ? "active" : "inactive");
     radio->active = active;
 
     // Enabled variable is a part of Radio data element and
@@ -1160,7 +1153,10 @@ std::set<std::string> db::get_active_hostaps()
     std::set<std::string> ret;
     for (const auto &agent : m_agents) {
         for (const auto &radio : agent.second->radios) {
-            ret.insert(tlvf::mac_to_string(radio.first));
+            if (get_radio_state(radio.first) == beerocks::STATE_CONNECTED &&
+                is_radio_active(radio.first)) {
+                ret.insert(tlvf::mac_to_string(radio.first));
+            }
         }
     }
     return ret;
@@ -1357,6 +1353,25 @@ std::set<std::string> db::get_node_siblings(const std::string &mac, int type)
     return siblings;
 }
 
+std::set<std::string> db::get_radio_siblings(const sMacAddr &ruid)
+{
+    std::set<std::string> siblings;
+    std::shared_ptr<Agent> parent_agent = get_agent_by_radio_uid(ruid);
+    if (!parent_agent) {
+        LOG(ERROR) << "No parent agent found for RUID " << ruid;
+        return siblings;
+    }
+
+    for (const auto &radio : parent_agent->radios) {
+        if (radio.first == ruid) {
+            continue;
+        }
+        siblings.insert(tlvf::mac_to_string(radio.first));
+    }
+
+    return siblings;
+}
+
 std::set<std::string> db::get_node_children(const std::string &mac, int type, int state)
 {
     std::set<std::string> children_macs;
@@ -1377,6 +1392,24 @@ std::set<std::string> db::get_node_children(const std::string &mac, int type, in
         children_macs.insert(c->mac);
     }
     return children_macs;
+}
+
+std::set<std::string> db::get_stations_on_radio(const sMacAddr &ruid, int state)
+{
+    std::set<std::string> stations_mac;
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(ruid);
+    if (!radio) {
+        LOG(ERROR) << "No radio found with RUID " << ruid;
+        return stations_mac;
+    }
+    for (const auto &bss : radio->bsses) {
+        for (const auto &station : bss.second->connected_stations) {
+            if (state != STATE_CONNECTED || station.second->state == STATE_CONNECTED) {
+                stations_mac.insert(tlvf::mac_to_string(station.first));
+            }
+        }
+    }
+    return stations_mac;
 }
 
 std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
@@ -2856,7 +2889,7 @@ beerocks::eIfaceType db::get_node_backhaul_iface_type(const std::string &mac)
 
 std::string db::get_5ghz_sibling_bss(const std::string &mac)
 {
-    std::shared_ptr<Agent> agent             = get_agent_by_bssid(tlvf::mac_from_string(mac));
+    std::shared_ptr<Agent> agent = get_agent(get_radio_parent_agent(tlvf::mac_from_string(mac)));
     std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(tlvf::mac_from_string(mac));
     if (!bss) {
         return std::string();
@@ -5298,8 +5331,7 @@ bool db::set_radio_wifi_channel(const sMacAddr &radio_mac,
         break;
     }
 
-    // Temporary
-    return set_node_wifi_channel(radio_mac, wifi_channel);
+    return true;
 }
 
 bool db::set_sta_wifi_channel(const sMacAddr &sta_mac, const beerocks::WifiChannel &wifi_channel)
@@ -6060,12 +6092,11 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
     } else if (initial_radio != network_utils::ZERO_MAC) {
         // If stay-on-initial-radio is set to enable and initial_radio is provided.
         client->initial_radio = initial_radio;
-    } else if (node->state == STATE_CONNECTED) {
+    } else if (client->state == STATE_CONNECTED) {
         // If stay-on-initial-radio is enabled and initial_radio is not set and client is already connected:
         // Set the initial_radio from parent radio mac (not bssid).
-        auto bssid            = node->parent_mac;
-        auto parent_radio_mac = get_bss_parent_radio(bssid);
-        client->initial_radio = tlvf::mac_from_string(parent_radio_mac);
+        std::shared_ptr<Agent::sRadio::sBss> parent_bss = client->get_bss();
+        client->initial_radio                           = parent_bss->radio.radio_uid;
         LOG(DEBUG) << "Setting client " << mac << " initial-radio to " << client->initial_radio;
     }
 
@@ -6196,13 +6227,13 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 is_aging_candidate_available = true;
                 // Set disconnected-candidate-available
                 is_disconnected_candidate_available =
-                    (client->state == beerocks::STATE_DISCONNECTED);
+                    (station->state == beerocks::STATE_DISCONNECTED);
                 continue;
             }
 
             // Preferring disconnected clients over connected ones (even if less aged).
             if (is_disconnected_candidate_available &&
-                client->state != beerocks::STATE_DISCONNECTED) {
+                station->state != beerocks::STATE_DISCONNECTED) {
                 continue;
             }
 
@@ -6215,7 +6246,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 candidate_client_to_be_removed = client_mac;
                 // Set disconnected-candidate-available
                 is_disconnected_candidate_available =
-                    (client->state == beerocks::STATE_DISCONNECTED);
+                    (station->state == beerocks::STATE_DISCONNECTED);
             }
         }
     }
