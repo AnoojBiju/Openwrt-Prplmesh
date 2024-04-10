@@ -403,18 +403,22 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
     // Save stations's parent
     std::shared_ptr<Agent::sRadio::sBss> parent_bss = get_bss(parent_mac);
     if (parent_bss) {
+        LOG(DEBUG) << "Badhri Setting Wireless station: " << mac
+                   << " bssid as: " << parent_bss->bssid;
         station->set_bss(parent_bss);
     } else {
         std::shared_ptr<Agent::sEthSwitch> parent_switch = get_eth_switch(parent_mac);
         if (parent_switch) {
+            LOG(DEBUG) << "Badhri Setting Wired station: " << mac
+                       << " bssid as: " << parent_switch->mac;
             station->set_eth_switch(parent_switch);
         }
     }
 
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
+    /*if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
         LOG(ERROR) << "Failed to add wireless_backhaul node, mac: " << mac;
         return station;
-    }
+    }*/
 
     // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
     return station;

@@ -2857,8 +2857,9 @@ bool Controller::handle_non_intel_slave_join(
 
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
+    /*database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
                                         tlvf::mac_from_string(gw_lan_switch));
+    */
     database.set_sta_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
