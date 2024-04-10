@@ -280,7 +280,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac, tlvf::mac_to_string(agent->parent_mac));
     LOG(DEBUG) << "Badhri agent->parent_mac = " << agent->parent_mac;
 
-    /*std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
+    std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
     if (backhaul) {
         if (backhaul->get_bss()) {
             LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
@@ -311,7 +311,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
                                   tlvf::mac_to_string(database.get_eth_switch_parent_agent(
                                       backhaul->get_eth_switch()->mac)));
         }
-    }*/
+    }
 
     network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
     string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
