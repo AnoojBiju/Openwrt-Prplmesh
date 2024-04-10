@@ -17,12 +17,13 @@ public:
     static void send_bml_network_map_message(db &database, int fd,
                                              ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id);
 
-    static std::ptrdiff_t fill_bml_node_data(db &database, std::shared_ptr<node> n,
-                                             uint8_t *tx_buffer, const std::ptrdiff_t &buffer_size,
-                                             bool force_client_disconnect = false);
     static std::ptrdiff_t fill_bml_node_data(db &database, std::string node_mac, uint8_t *tx_buffer,
                                              const std::ptrdiff_t &buffer_size,
                                              bool force_client_disconnect);
+    static std::ptrdiff_t fill_bml_station_data(db &database, std::shared_ptr<Station> station,
+                                                uint8_t *tx_buffer,
+                                                const std::ptrdiff_t &buffer_size,
+                                                bool force_client_disconnect = false);
     static std::ptrdiff_t fill_bml_agent_data(db &database, std::shared_ptr<Agent> agent,
                                               uint8_t *tx_buffer, const std::ptrdiff_t &buffer_size,
                                               bool force_client_disconnect = false);
@@ -31,8 +32,11 @@ public:
     send_bml_nodes_statistics_message_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                                    const std::vector<int> &bml_listeners,
                                                    std::set<std::string> valid_hostaps);
-    static std::ptrdiff_t fill_bml_node_statistics(db &database, std::shared_ptr<node> n,
-                                                   uint8_t *tx_buffer, std::ptrdiff_t buf_size);
+    static std::ptrdiff_t fill_bml_radio_statistics(db &database,
+                                                    std::shared_ptr<Agent::sRadio> radio,
+                                                    uint8_t *tx_buffer, std::ptrdiff_t buf_size);
+    static std::ptrdiff_t fill_bml_station_statistics(db &database, std::shared_ptr<Station> pSta,
+                                                      uint8_t *tx_buffer, std::ptrdiff_t buf_size);
     static std::ptrdiff_t get_bml_node_statistics_len(std::shared_ptr<node> n);
 
     static void send_bml_event_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,

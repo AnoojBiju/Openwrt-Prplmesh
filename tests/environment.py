@@ -667,6 +667,7 @@ class ALEntityDocker(ALEntity):
 
         conn_map = {}
         for line in self.beerocks_cli_command("bml_conn_map").split('\n'):
+            debug("Parsing line " + line)
             # TODO we need to parse indentation to get the exact topology.
             # For the time being, just parse the repeaters.
             bridge = re.search(r' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
@@ -676,6 +677,7 @@ class ALEntityDocker(ALEntity):
             if bridge:
                 cur_agent = MapDevice(bridge.group('mac'))
                 conn_map[cur_agent.mac] = cur_agent
+                debug("Adding agent " + cur_agent.mac)
             elif radio:
                 cur_radio = cur_agent.add_radio(radio.group('mac'))
             elif vap:
