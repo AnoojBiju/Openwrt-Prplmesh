@@ -8,7 +8,7 @@ PPM_VERSION=$(grep -E -o "prplmesh_VERSION \"[0-9]\.[0-9]\.[0-9]\"" "${rootdir}/
 [ -z "$VERSION" ] && VERSION="${PPM_VERSION}-custom-$(date -Iminutes)"
 
 mkdir -p "${rootdir}/build"
-amxo-cg -G xml,"${rootdir}/build" "${rootdir}/build/install/config/odl/controller.odl" "${rootdir}/build/install/config/odl/agent.odl" "${rootdir}/build/install/config/odl/"
+amxo-cg -r -G xml,"${rootdir}/build" "${rootdir}/build/install/config/odl/controller.odl" "${rootdir}/build/install/config/odl/agent.odl" "${rootdir}/build/install/config/odl/"
 
 if [ ! -r "${rootdir}/build/controller.odl.xml" ]; then
     echo -e "\\033[1;31mXML generation failed -- ODL syntax issue?\\033[0m"
