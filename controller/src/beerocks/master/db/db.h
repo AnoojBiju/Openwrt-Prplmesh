@@ -3050,10 +3050,10 @@ private:
      * @param non_operable_channels list of non oparable channels.
      * @return true on success, false otherwise.
      */
-    bool dm_add_ap_capable_operating_class_profile(const std::string &radio_mac,
-	    uint8_t max_tx_power,
-        uint8_t op_class,
-        const std::vector<uint8_t> &non_operable_channels);
+    bool
+    dm_add_ap_capable_operating_class_profile(const std::string &radio_mac, uint8_t max_tx_power,
+                                              uint8_t op_class,
+                                              const std::vector<uint8_t> &non_operable_channels);
 
     /**
      * @brief Add or update instance of "BSS" data element, set values for its parameters.

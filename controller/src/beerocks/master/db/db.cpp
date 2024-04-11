@@ -1334,9 +1334,8 @@ bool db::set_ap_vht_capabilities(wfa_map::tlvApVhtCapabilities &vht_caps_tlv)
     return ret_val;
 }
 
-bool db::dm_add_ap_capable_operating_class_profile(const std::string &radio_mac,
-    uint8_t max_tx_power,
-    uint8_t op_class,
+bool db::dm_add_ap_capable_operating_class_profile(
+    const std::string &radio_mac, uint8_t max_tx_power, uint8_t op_class,
     const std::vector<uint8_t> &non_operable_channels)
 {
     auto radio        = get_radio_by_uid(tlvf::mac_from_string(radio_mac));
@@ -2157,7 +2156,7 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
 
     // Set values for D.W.DE.Network.Device.Radio.Capabilities.CapableOperatingClassProfile
     dm_add_ap_capable_operating_class_profile(tlvf::mac_to_string(radio_mac), tx_power,
-	    operating_class, non_operable_channels);
+                                              operating_class, non_operable_channels);
 
     set_radio_supported_channels(radio_mac, &supported_channels[0], supported_channels.size());
     // dump new supported channels state

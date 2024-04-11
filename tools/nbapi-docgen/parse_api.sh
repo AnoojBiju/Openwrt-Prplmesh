@@ -3,7 +3,7 @@
 scriptdir="$(cd "${0%/*}" || exit 1; pwd)"
 rootdir="${scriptdir%/*/*}"
 
-PPM_VERSION=$(egrep -o "prplmesh_VERSION \"[0-9]\.[0-9]\.[0-9]\"" ${rootdir}/cmake/multiap-helpers.cmake | cut -d\" -f2)
+PPM_VERSION=$(grep -E -o "prplmesh_VERSION \"[0-9]\.[0-9]\.[0-9]\"" "${rootdir}/cmake/multiap-helpers.cmake" | cut -d\" -f2)
 
 [ -z "$VERSION" ] && VERSION="${PPM_VERSION}-custom-$(date -Iminutes)"
 
