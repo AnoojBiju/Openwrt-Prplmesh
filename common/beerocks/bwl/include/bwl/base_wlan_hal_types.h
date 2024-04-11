@@ -189,6 +189,8 @@ struct RadioInfo {
     // Key = channel
     std::map<uint8_t, sChannelInfo> channels_list;
     std::unordered_map<int, VAPElement> available_vaps; // key = vap_id
+
+    uint8_t radio_max_bss_supported = 0;
 };
 
 struct hal_conf_t {

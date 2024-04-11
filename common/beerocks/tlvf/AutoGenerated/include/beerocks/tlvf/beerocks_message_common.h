@@ -356,6 +356,7 @@ typedef struct sNodeHostap {
     uint8_t zwdfs;
     //Boolean
     uint8_t hybrid_mode_supported;
+    uint8_t radio_max_bss;
     void struct_swap(){
         iface_mac.struct_swap();
         tlvf_swap(8*sizeof(beerocks::eFreqType), reinterpret_cast<uint8_t*>(&frequency_band));
@@ -366,6 +367,7 @@ typedef struct sNodeHostap {
     }
     void struct_init(){
         iface_mac.struct_init();
+        radio_max_bss = 0x0;
     }
 } __attribute__((packed)) sNodeHostap;
 
