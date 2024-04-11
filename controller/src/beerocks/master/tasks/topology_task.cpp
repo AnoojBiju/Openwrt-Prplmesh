@@ -640,13 +640,6 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
-        if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_sta_handoff_flag(*client))) {
-            // The node is not an IRE in handoff
-            LOG(DEBUG) << "Badhri Setting " << client_mac_str << " as type CLIENT";
-            database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
-        }
-
         database.set_sta_iface_type(client_mac_str, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
         if (vs_tlv) {

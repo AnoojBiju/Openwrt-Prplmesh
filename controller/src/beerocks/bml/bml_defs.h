@@ -212,9 +212,10 @@ struct BML_NODE {
 
     /* DL_RSSI of the node*/
     int8_t rx_rssi;
+    int8_t isWiFiBH;
 
     /* Reserved bytes for alignment */
-    uint8_t reserved[3];
+    uint8_t reserved[2];
 
     /* Extra information for the specific node. */
     union N_DATA {

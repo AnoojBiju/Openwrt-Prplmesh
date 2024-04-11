@@ -108,35 +108,33 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
         response->node_num()++;
         size += node_len;
-
-        for (const auto &station : database.m_stations) {
-            LOG(ERROR) << "Handling station " << station.second->mac;
-            if (station.second->state != beerocks::STATE_CONNECTED) {
-                LOG(ERROR) << "State not connected for STA " << station.second->mac;
-                continue;
-            }
-            node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
-            size_left =
-                beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
-
-            if (!send_nw_map_message_if_needed()) {
-                return;
-            }
-
-            if (!response->alloc_buffer(node_len)) {
-                LOG(ERROR) << "Failed allocating buffer!";
-                return;
-            }
-
-            if (data_start == nullptr) {
-                data_start = (uint8_t *)response->buffer(0);
-            }
-
-            fill_bml_station_data(database, station.second, data_start + size, size_left);
-
-            response->node_num()++;
-            size += node_len;
+    }
+    for (const auto &station : database.m_stations) {
+        LOG(ERROR) << "Handling station " << station.second->mac;
+        if (station.second->state != beerocks::STATE_CONNECTED) {
+            LOG(ERROR) << "State not connected for STA " << station.second->mac;
+            continue;
         }
+        node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
+        size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+
+        if (!send_nw_map_message_if_needed()) {
+            return;
+        }
+
+        if (!response->alloc_buffer(node_len)) {
+            LOG(ERROR) << "Failed allocating buffer!";
+            return;
+        }
+
+        if (data_start == nullptr) {
+            data_start = (uint8_t *)response->buffer(0);
+        }
+
+        fill_bml_station_data(database, station.second, data_start + size, size_left);
+
+        response->node_num()++;
+        size += node_len;
     }
 
     beerocks_header->actionhdr()->last() = 1;
@@ -202,7 +200,7 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
     }
 
     if (station->wifi_channel.is_empty()) {
-        LOG(WARNING) << "wifi channel is empty";
+        LOG(WARNING) << "Station : " << node->mac << " has empty wifi channel";
     }
     node->channel                     = station->wifi_channel.get_channel();
     node->bw                          = station->wifi_channel.get_bandwidth();
@@ -283,6 +281,8 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
 
     std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
     if (backhaul) {
+        node->isWiFiBH = utils::is_node_wireless(backhaul->iface_type);
+        LOG(DEBUG) << "Badhri Checking " << agent->parent_mac << " is wireless: " << node->isWiFiBH;
         if (backhaul->get_bss()) {
             LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
             LOG(DEBUG) << "Badhri Backhaul Radio_uid: " << backhaul->get_bss()->radio.radio_uid;
@@ -327,6 +327,9 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
         LOG(DEBUG) << "Badhri radio.first: " << radio.first;
         std::shared_ptr<Station> backhaul = database.get_station(radio.first);
         if (backhaul) {
+            node->isWiFiBH = utils::is_node_wireless(backhaul->iface_type);
+            LOG(DEBUG) << "Badhri Checking " << agent->parent_mac
+                       << " is wireless: " << node->isWiFiBH;
             if (backhaul->get_bss()) {
                 LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
                 LOG(DEBUG) << "Badhri Backhaul Radio_uid: " << backhaul->get_bss()->radio.radio_uid;

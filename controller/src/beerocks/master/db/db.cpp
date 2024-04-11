@@ -1099,7 +1099,7 @@ bool db::set_radio_active(const sMacAddr &mac, const bool active)
         return false;
     }
 
-    LOG(DEBUG) << "Setting node '" << mac << "' as " << (active ? "active" : "inactive");
+    LOG(DEBUG) << "Setting radio '" << mac << "' as " << (active ? "active" : "inactive");
     radio->active = active;
 
     // Enabled variable is a part of Radio data element and
