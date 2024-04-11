@@ -11,11 +11,7 @@ mkdir -p "${rootdir}/build"
 amxo-cg -G xml,"${rootdir}/build" "${rootdir}/build/install/config/odl/controller.odl" "${rootdir}/build/install/config/odl/agent.odl" "${rootdir}/build/install/config/odl/"
 
 if [ ! -r "${rootdir}/build/controller.odl.xml" ]; then
-    echo -e "\\033[1;31mXML generation failed (controller DM) -- ODL syntax issue?\\033[0m"
-    exit 1
-fi
-if [ ! -r "${rootdir}/build/agent.odl.xml" ]; then
-    echo -e "\\033[1;31mXML generation failed (agent DM) -- ODL syntax issue?\\033[0m"
+    echo -e "\\033[1;31mXML generation failed -- ODL syntax issue?\\033[0m"
     exit 1
 fi
 
@@ -27,5 +23,5 @@ amxo-xml-to -x html\
                   -o version="$VERSION"\
                   -o stylesheet="prpl_style.css"\
                   -o copyrights="Prpl"\
-                  "${rootdir}/build/controller.odl.xml" "${rootdir}/build/agent.odl.xml"
+                  "${rootdir}/build/controller.odl.xml"
 
