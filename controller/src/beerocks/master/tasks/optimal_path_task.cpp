@@ -139,7 +139,7 @@ void optimal_path_task::work()
             return;
         }
 
-        current_hostap = database.get_node_parent_radio(current_hostap_vap);
+        current_hostap = database.get_bss_parent_radio(current_hostap_vap);
         auto current_radio_wifi_channel =
             database.get_radio_wifi_channel(tlvf::mac_from_string(current_hostap));
         if (current_radio_wifi_channel.is_empty()) {
@@ -152,7 +152,7 @@ void optimal_path_task::work()
             finish();
             return;
         }
-        current_hostap_ssid = database.get_hostap_ssid(tlvf::mac_from_string(current_hostap_vap));
+        current_hostap_ssid = database.get_bss_ssid(tlvf::mac_from_string(current_hostap_vap));
 
         sta_support_11k =
             database.settings_client_11k_roaming() &&
@@ -233,8 +233,8 @@ void optimal_path_task::work()
         auto it = potential_11k_aps.begin();
         while (it != potential_11k_aps.end()) {
 
-            std::string candidate_bssid = database.get_hostap_vap_with_ssid(
-                tlvf::mac_from_string(it->first), current_hostap_ssid);
+            std::string candidate_bssid =
+                database.get_bss_by_ssid(tlvf::mac_from_string(it->first), current_hostap_ssid);
 
             if (candidate_bssid.empty()) {
                 LOG(INFO) << "Remove candidate " << it->first
@@ -269,9 +269,8 @@ void optimal_path_task::work()
             if (potential_11k_aps.find(tlvf::mac_to_string(client_initial_radio)) !=
                 potential_11k_aps.end()) {
                 // Initial client hostap is on the candidate list, force steer the client there.
-                chosen_bssid =
-                    database.get_hostap_vap_with_ssid(client_initial_radio, current_hostap_ssid);
-                state          = SEND_STEER_ACTION;
+                chosen_bssid = database.get_bss_by_ssid(client_initial_radio, current_hostap_ssid);
+                state        = SEND_STEER_ACTION;
                 is_force_steer = true;
 
                 chosen_method.append("Steer client imminently to initial radio " +
@@ -306,7 +305,7 @@ void optimal_path_task::work()
                                  });
 
                 if (sibling_it != current_hostap_siblings.end()) {
-                    chosen_bssid = database.get_hostap_vap_with_ssid(
+                    chosen_bssid = database.get_bss_by_ssid(
                         tlvf::mac_from_string(sibling_it->data()), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
@@ -412,7 +411,7 @@ void optimal_path_task::work()
                             beerocks::BEACON_MEASURE_DEFAULT_ACTIVE_DURATION;
                     }
                     // ap_mac is a radio mac, but we need to request measurement on some vap since radio don't beacon
-                    const std::string vap_mac = database.get_hostap_vap_with_ssid(
+                    const std::string vap_mac = database.get_bss_by_ssid(
                         tlvf::mac_from_string(ap_mac), current_hostap_ssid);
                     if (vap_mac.empty()) {
                         LOG(ERROR) << "Failed to get vap for client beacon request, skipping "
@@ -794,8 +793,8 @@ void optimal_path_task::work()
                 CONTROLLER_ROOT_DM ".Network.MultiAPSteeringSummaryStats", "NoCandidateAPFailures");
             finish();
         } else {
-            chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
-                                                             current_hostap_ssid);
+            chosen_bssid =
+                database.get_bss_by_ssid(tlvf::mac_from_string(chosen_hostap), current_hostap_ssid);
             if (!database.settings_client_optimal_path_roaming_prefer_signal_strength()) {
                 // The following log print is used by the automated testing
                 // Please do NOT change
@@ -1107,8 +1106,8 @@ void optimal_path_task::work()
         // Check if hostap has suitable ssid
         auto it = hostap_candidates.begin();
         while (it != hostap_candidates.end()) {
-            std::string candidate_bssid = database.get_hostap_vap_with_ssid(
-                tlvf::mac_from_string(it->first), current_hostap_ssid);
+            std::string candidate_bssid =
+                database.get_bss_by_ssid(tlvf::mac_from_string(it->first), current_hostap_ssid);
 
             if (candidate_bssid.empty()) {
                 LOG(INFO) << "Remove candidate " << it->first
@@ -1151,8 +1150,8 @@ void optimal_path_task::work()
 
             if (hostap_it != hostap_candidates.end()) {
                 // Initial client radio is on the candidate list, force steer the client there.
-                chosen_bssid = database.get_hostap_vap_with_ssid(
-                    tlvf::mac_from_string(hostap_it->first), current_hostap_ssid);
+                chosen_bssid   = database.get_bss_by_ssid(tlvf::mac_from_string(hostap_it->first),
+                                                        current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
                 chosen_method.append("Steer client imminently to initial radio " +
@@ -1187,7 +1186,7 @@ void optimal_path_task::work()
                                  });
 
                 if (sibling_it != current_hostap_siblings.end()) {
-                    chosen_bssid = database.get_hostap_vap_with_ssid(
+                    chosen_bssid = database.get_bss_by_ssid(
                         tlvf::mac_from_string(sibling_it->data()), current_hostap_ssid);
                     state          = SEND_STEER_ACTION;
                     is_force_steer = true;
@@ -1500,8 +1499,8 @@ void optimal_path_task::work()
             }
         }
 
-        chosen_bssid = database.get_hostap_vap_with_ssid(tlvf::mac_from_string(chosen_hostap),
-                                                         current_hostap_ssid);
+        chosen_bssid =
+            database.get_bss_by_ssid(tlvf::mac_from_string(chosen_hostap), current_hostap_ssid);
 
         if (chosen_hostap.empty() || (chosen_hostap == current_hostap) || chosen_bssid.empty()) {
             LOG_CLI(DEBUG, "optimal_path_task:" << std::endl
@@ -1746,7 +1745,7 @@ void optimal_path_task::handle_response(std::string mac,
         }
 
         auto bssid     = tlvf::mac_to_string(response->params().bssid);
-        auto radio_mac = database.get_node_parent_radio(bssid);
+        auto radio_mac = database.get_bss_parent_radio(bssid);
         TASK_LOG(INFO) << "response for beacon measurement request was received on bssid " << bssid;
         if (potential_11k_aps.find(radio_mac) == potential_11k_aps.end()) {
             TASK_LOG(WARNING) << "unexpected measurement on bssid " << bssid;
@@ -1855,7 +1854,7 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
 
         std::string hostap_tmp = hostap;
         if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
-            hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
+            hostap_tmp = database.get_5ghz_sibling_bss(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap =" << hostap_tmp;
@@ -1898,7 +1897,7 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
 
         std::string hostap_tmp = hostap;
         if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
-            hostap_tmp = database.get_5ghz_sibling_hostap(hostap);
+            hostap_tmp = database.get_5ghz_sibling_bss(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
             TASK_LOG(ERROR) << "can't get cross_rx_rssi for hostap =" << hostap_tmp;

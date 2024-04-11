@@ -117,7 +117,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
 
     auto hostaps              = database.get_active_hostaps();
     const auto &current_bssid = database.get_node_parent(sta_mac);
-    const auto &ssid          = database.get_hostap_ssid(tlvf::mac_from_string(current_bssid));
+    const auto &ssid          = database.get_bss_ssid(tlvf::mac_from_string(current_bssid));
 
     std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(sta_mac)};
 
@@ -125,17 +125,24 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
         /*
          * unblock client from all hostaps to prevent it from getting locked out
          */
-        const auto &hostap_vaps = database.get_hostap_vap_list(tlvf::mac_from_string(hostap));
+        std::shared_ptr<Agent::sRadio> radio =
+            database.get_radio_by_uid(tlvf::mac_from_string(hostap));
+        if (!radio) {
+            continue;
+        }
 
-        for (const auto &hostap_vap : hostap_vaps) {
-            if (hostap_vap.second.ssid != ssid) {
+        for (const auto &bss : radio->bsses) {
+            if (bss.second->ssid != ssid) {
                 continue;
             }
-            auto agent_mac = database.get_node_parent_ire(hostap);
+            std::shared_ptr<Agent> agent = database.get_agent_by_radio_uid(radio->radio_uid);
+            if (!agent) {
+                continue;
+            }
 
             son_actions::send_client_association_control(
-                database, cmdu_tx, agent_mac, tlvf::mac_from_string(hostap_vap.second.mac),
-                unblock_list, 0, wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
+                database, cmdu_tx, agent->al_mac, bss.second->bssid, unblock_list, 0,
+                wfa_map::tlvClientAssociationControlRequest::UNBLOCK);
         }
     }
 }
@@ -201,12 +208,12 @@ void son_actions::disconnect_client(db &database, ieee1905_1::CmduMessageTx &cmd
         return;
     }
     request->mac()    = tlvf::mac_from_string(client_mac);
-    request->vap_id() = database.get_hostap_vap_id(tlvf::mac_from_string(bssid));
+    request->vap_id() = database.get_bss_vap_id(tlvf::mac_from_string(bssid));
     request->type()   = type;
     request->reason() = reason;
     request->src()    = src;
 
-    const auto parent_radio = database.get_node_parent_radio(bssid);
+    const auto parent_radio = database.get_bss_parent_radio(bssid);
     son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
     LOG(DEBUG) << "sending DISASSOCIATE request, client " << client_mac << " bssid " << bssid;
 }

@@ -252,7 +252,7 @@ bool client_association_task::dm_add_sta_association_event_caps(const sMacAddr &
 
     auto sta_mac_str = tlvf::mac_to_string(sta_mac);
 
-    auto parent_radio = m_database.get_node_parent_radio(tlvf::mac_to_string(bssid));
+    auto parent_radio = m_database.get_bss_parent_radio(tlvf::mac_to_string(bssid));
     if (parent_radio.empty()) {
         return false;
     }

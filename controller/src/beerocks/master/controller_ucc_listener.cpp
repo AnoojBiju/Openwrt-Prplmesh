@@ -102,16 +102,19 @@ bool controller_ucc_listener::handle_dev_get_param(
             value = "missing ssid";
             return false;
         }
-        auto ruid = tlvf::mac_from_string(params["ruid"]);
-        auto ssid = params["ssid"];
-        auto vaps = m_database.get_hostap_vap_list(ruid);
-        if (vaps.empty()) {
+        auto ruid                            = tlvf::mac_from_string(params["ruid"]);
+        auto ssid                            = params["ssid"];
+        std::shared_ptr<Agent::sRadio> radio = m_database.get_radio_by_uid(ruid);
+        if (!radio) {
+            return false;
+        }
+        if (radio->bsses.empty()) {
             value = "ruid " + tlvf::mac_to_string(ruid) + " not found";
             return false;
         }
-        for (const auto &vap : vaps) {
-            if (std::string(vap.second.ssid) == ssid) {
-                value = vap.second.mac;
+        for (const auto &bss : radio->bsses) {
+            if (bss.second->ssid == ssid) {
+                value = tlvf::mac_to_string(bss.first);
                 return true;
             }
         }
