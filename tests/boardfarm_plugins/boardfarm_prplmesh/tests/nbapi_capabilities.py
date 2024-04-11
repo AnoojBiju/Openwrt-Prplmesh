@@ -129,27 +129,58 @@ class NbapiCapabilities(PrplMeshBaseTest):
                                         tlv.vht_supported_rx_mcs)
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HE_CAPABILITIES']:
                     radio = repeater.radios[tlv.ap_he_capability_radio_id]
-                    he_caps = controller.nbapi_get(radio.path + ".Capabilities.WiFi6Capabilities")
+
+                    # Assuming the radio has both AP and STA roles, and the paths are:
+                    wifi6_ap_role_path = radio.path + ".Capabilities.WiFi6APRole"
+                    wifi6_sta_role_path = radio.path + ".Capabilities.WiFi6bSTARole"
+
+                    # Fetch capabilities for both roles
+                    wifi6_ap_caps = controller.nbapi_get(wifi6_ap_role_path)
+                    wifi6_sta_caps = controller.nbapi_get(wifi6_sta_role_path)
+
+                    # Compare AP role capabilities
                     self.assertEqualInt("MaxNumberOfRxSpatialStreams",
-                                        he_caps['MaxNumberOfRxSpatialStreams'] - 1,
-                                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
+                                    wifi6_ap_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
                     self.assertEqualInt("MaxNumberOfTxSpatialStreams",
-                                        he_caps['MaxNumberOfTxSpatialStreams'] - 1,
-                                        tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
-                    self.assertEqualInt("HE160", he_caps['HE160'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
-                    self.assertEqualInt("HE8080", he_caps['HE8080'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
-                    self.assertEqualInt("SUBeamformer", he_caps['SUBeamformer'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
-                    self.assertEqualInt("MUBeamformer", he_caps['MUBeamformer'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
-                    self.assertEqualInt("ULMUMIMO", he_caps['ULMUMIMO'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
-                    self.assertEqualInt("ULOFDMA", he_caps['ULOFDMA'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
-                    self.assertEqualInt("DLOFDMA", he_caps['DLOFDMA'],
-                                        tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
+                                    wifi6_ap_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
+                    self.assertEqualInt("HE160", wifi6_ap_caps['HE160'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
+                    self.assertEqualInt("HE8080", wifi6_ap_caps['HE8080'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
+                    self.assertEqualInt("SUBeamformer", wifi6_ap_caps['SUBeamformer'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
+                    self.assertEqualInt("MUBeamformer", wifi6_ap_caps['MUBeamformer'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
+                    self.assertEqualInt("ULMUMIMO", wifi6_ap_caps['ULMUMIMO'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
+                    self.assertEqualInt("ULOFDMA", wifi6_ap_caps['ULOFDMA'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
+                    self.assertEqualInt("DLOFDMA", wifi6_ap_caps['DLOFDMA'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
+
+                    # Compare STA role capabilities if applicable
+                    self.assertEqualInt("MaxNumberOfRxSpatialStreams",
+                                    wifi6_sta_caps['MaxNumberOfRxSpatialStreams'] - 1,
+                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
+                    self.assertEqualInt("MaxNumberOfTxSpatialStreams",
+                                    wifi6_sta_caps['MaxNumberOfTxSpatialStreams'] - 1,
+                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
+                    self.assertEqualInt("HE160", wifi6_sta_caps['HE160'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
+                    self.assertEqualInt("HE8080", wifi6_sta_caps['HE8080'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
+                    self.assertEqualInt("SUBeamformer", wifi6_sta_caps['SUBeamformer'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
+                    self.assertEqualInt("MUBeamformer", wifi6_sta_caps['MUBeamformer'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
+                    self.assertEqualInt("ULMUMIMO", wifi6_sta_caps['ULMUMIMO'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
+                    self.assertEqualInt("ULOFDMA", wifi6_sta_caps['ULOFDMA'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
+                    self.assertEqualInt("DLOFDMA", wifi6_sta_caps['DLOFDMA'],
+                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_CAPABILITIES']:
                     debug("Checking Profile-2 CAC Capabilities TLV")
                     # TODO: Check Profile-2 CAC Capabilities TLV and related DM objects (PPM-2289).
