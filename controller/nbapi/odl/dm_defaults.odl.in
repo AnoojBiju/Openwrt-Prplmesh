@@ -16,10 +16,8 @@
                     }
 
                     object Capabilities {
-                        instance add() {
-                            object OperatingClasses {
-                                instance add() {}
-                            }
+                        object CapableOperatingClassProfile {
+                            instance add() {}
                         }
                     }
 

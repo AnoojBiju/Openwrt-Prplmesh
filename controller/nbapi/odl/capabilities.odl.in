@@ -41,8 +41,8 @@
             }
         }
 
-        object OperatingClasses [] {
-            counted with OperatingClassesNumberOfEntries;
+        object CapableOperatingClassProfile [] {
+            counted with CapableOperatingClassProfileNumberOfEntries;
             %read-only uint32 Class = 0 {
                 on action validate call check_range [0, 255];
             }

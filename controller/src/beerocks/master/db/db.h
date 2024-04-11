@@ -3040,9 +3040,9 @@ private:
     bool dm_set_device_multi_ap_capabilities(const std::string &device_mac);
 
     /**
-     * @brief Add instance of 'OperatingClasses' data element, set values for its parameters.
+     * @brief Add instance of 'CapableOperatingClassProfile' data element, set values for its parameters.
      *
-     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.OperatingClasses.1."
+     * Data model path example: "Device.WiFi.DataElements.Network.Device.1.Radio.1.Capabilities.CapableOperatingClassProfile.1."
      *
      * @param radio_mac mac address of radio which reporting operating class.
      * @param max_tx_power max transmit power.
@@ -3050,9 +3050,10 @@ private:
      * @param non_operable_channels list of non oparable channels.
      * @return true on success, false otherwise.
      */
-    bool dm_add_ap_operating_classes(const std::string &radio_mac, uint8_t max_tx_power,
-                                     uint8_t op_class,
-                                     const std::vector<uint8_t> &non_operable_channels);
+    bool dm_add_ap_capable_operating_class_profile(const std::string &radio_mac,
+	    uint8_t max_tx_power,
+        uint8_t op_class,
+        const std::vector<uint8_t> &non_operable_channels);
 
     /**
      * @brief Add or update instance of "BSS" data element, set values for its parameters.
