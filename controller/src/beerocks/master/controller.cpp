@@ -2404,11 +2404,14 @@ bool Controller::handle_intel_slave_join(
         // if not local GW but local master - then the parent bssid is remote AP (aka "far AP")
         // and is not yet in map
         if (!notification->platform_settings().local_master) {
+            //parent_bssid_mac is basically the vap where the agent is connected.
+            auto parent_radio =
+                database.get_bss_parent_radio(tlvf::mac_to_string(parent_bssid_mac));
+            LOG(DEBUG) << "Badhri Parent Radio: " << parent_radio
+                       << " Connection State: " << (int)database.get_radio_state(parent_radio);
             // rejecting join if gw haven't joined yet
-            if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) &&
-                (!database.has_node(parent_bssid_mac) ||
-                 (database.get_node_state(tlvf::mac_to_string(parent_bssid_mac)) !=
-                  beerocks::STATE_CONNECTED))) {
+            if ((parent_radio == std::string()) ||
+                (database.get_radio_state(parent_radio) != beerocks::STATE_CONNECTED)) {
                 LOG(DEBUG) << "sending back join reject!";
                 LOG(DEBUG) << "reject_debug: parent_bssid_has_node="
                            << (int)(database.has_node(parent_bssid_mac));

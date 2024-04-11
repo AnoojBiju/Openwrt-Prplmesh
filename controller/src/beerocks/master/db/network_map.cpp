@@ -108,34 +108,35 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
         response->node_num()++;
         size += node_len;
-    }
 
-    for (const auto &station : database.m_stations) {
-        LOG(ERROR) << "Handling station " << station.second->mac;
-        if (station.second->state != beerocks::STATE_CONNECTED) {
-            LOG(ERROR) << "State not connected for STA " << station.second->mac;
-            continue;
+        for (const auto &station : database.m_stations) {
+            LOG(ERROR) << "Handling station " << station.second->mac;
+            if (station.second->state != beerocks::STATE_CONNECTED) {
+                LOG(ERROR) << "State not connected for STA " << station.second->mac;
+                continue;
+            }
+            node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
+            size_left =
+                beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+
+            if (!send_nw_map_message_if_needed()) {
+                return;
+            }
+
+            if (!response->alloc_buffer(node_len)) {
+                LOG(ERROR) << "Failed allocating buffer!";
+                return;
+            }
+
+            if (data_start == nullptr) {
+                data_start = (uint8_t *)response->buffer(0);
+            }
+
+            fill_bml_station_data(database, station.second, data_start + size, size_left);
+
+            response->node_num()++;
+            size += node_len;
         }
-        node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
-        size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
-
-        if (!send_nw_map_message_if_needed()) {
-            return;
-        }
-
-        if (!response->alloc_buffer(node_len)) {
-            LOG(ERROR) << "Failed allocating buffer!";
-            return;
-        }
-
-        if (data_start == nullptr) {
-            data_start = (uint8_t *)response->buffer(0);
-        }
-
-        fill_bml_station_data(database, station.second, data_start + size, size_left);
-
-        response->node_num()++;
-        size += node_len;
     }
 
     beerocks_header->actionhdr()->last() = 1;

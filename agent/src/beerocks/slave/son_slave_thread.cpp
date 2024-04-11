@@ -558,6 +558,8 @@ bool slave_thread::read_platform_configuration()
         return false;
     }
     db->device_conf.local_controller = temp_int;
+    LOG(DEBUG) << "Badhri db->device_conf.local_controller = "
+               << (bool)db->device_conf.local_controller;
 
     std::string mgmt_mode;
     bpl::cfg_get_management_mode(mgmt_mode);

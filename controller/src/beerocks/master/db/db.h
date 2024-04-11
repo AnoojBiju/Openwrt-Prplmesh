@@ -694,6 +694,7 @@ public:
 
     bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     bool set_agent_state(const std::string &al_mac, beerocks::eNodeState state);
+    beerocks::eNodeState get_radio_state(const std::string &ruid);
     bool set_radio_state(const std::string &ruid, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
 

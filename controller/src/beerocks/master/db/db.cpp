@@ -949,6 +949,16 @@ bool db::set_radio_state(const std::string &ruid, beerocks::eNodeState state)
     return true;
 }
 
+beerocks::eNodeState db::get_radio_state(const std::string &ruid)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(tlvf::mac_from_string(ruid));
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << ruid << " does not exist!";
+        return eNodeState::STATE_MAX;
+    }
+    return radio->state;
+}
+
 beerocks::eNodeState db::get_node_state(const std::string &mac)
 {
     auto n = get_node(mac);
