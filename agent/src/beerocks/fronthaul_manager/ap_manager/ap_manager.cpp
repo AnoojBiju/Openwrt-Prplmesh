@@ -2776,6 +2776,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             std::string sta_mac      = tlvf::mac_to_string(mgmt_frame->mac);
             std::string target_bssid = tlvf::mac_to_string(mgmt_frame->bssid);
 
+
             LOG(DEBUG) << "CLIENT_BSS_STEER (802.11v) for sta_mac = " << sta_mac
                        << " to bssid = " << target_bssid << " channel = " << 36;
             ap_wlan_hal->sta_bss_steer(it->first, sta_mac, target_bssid, 115, 36, 0, 2, 0);
