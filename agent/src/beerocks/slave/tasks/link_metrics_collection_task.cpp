@@ -1358,6 +1358,7 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     }
 
     for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
+        LOG(DEBUG) << "bh_wifi_info.iface_name - " << bh_wifi_info.iface_name << " !";
         if (bh_wifi_info.iface_name.empty()) {
             continue;
         }
