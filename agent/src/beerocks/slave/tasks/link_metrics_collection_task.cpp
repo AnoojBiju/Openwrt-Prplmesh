@@ -1357,6 +1357,11 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
     for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
         auto radio = db->radio(bh_wifi_info.iface_name);
+        if (radio->back.iface_name.empty()) {
+            LOG(WARNING) << "Found empty backhaul link name!";
+            continue;
+        }
+
         if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
             // Error message inside the lambda function.
             return false;
