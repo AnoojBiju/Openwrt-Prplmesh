@@ -146,6 +146,11 @@ std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 void Station::clear_sta_stats_info() { stats_info = std::make_shared<sta_stats_params>(); }
 
 bool Station::is_bSta() { return m_is_bSta; }
+void Station::set_eth_switch(std::shared_ptr<Agent::sEthSwitch> eth_switch)
+{
+    m_eth_switch = eth_switch;
+}
+std::shared_ptr<Agent::sEthSwitch> Station::get_eth_switch() { return m_eth_switch.lock(); }
 
 } // namespace db
 } // namespace controller

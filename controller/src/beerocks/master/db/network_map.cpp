@@ -179,20 +179,17 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         return 0;
     }
 
-    uint8_t node_type;
     auto n_type = n->get_type();
-    std::ptrdiff_t node_len;
-
-    if (n_type == beerocks::TYPE_GW) {
-        node_len  = sizeof(BML_NODE);
-        node_type = BML_NODE_TYPE_GW;
-    } else if (n_type == beerocks::TYPE_IRE) {
-        node_len  = sizeof(BML_NODE);
-        node_type = BML_NODE_TYPE_IRE;
-    } else {
-        node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
-        node_type = BML_NODE_TYPE_CLIENT;
+    if (n_type == beerocks::TYPE_GW || n_type == beerocks::TYPE_IRE) {
+        std::shared_ptr<Agent> agent = database.get_agent(tlvf::mac_from_string(n->mac));
+        if (!agent) {
+            return 0;
+        }
+        return fill_bml_agent_data(database, agent, tx_buffer, buffer_size,
+                                   force_client_disconnect);
     }
+    std::ptrdiff_t node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
+    uint8_t node_type       = BML_NODE_TYPE_CLIENT;
 
     if (node_len > buffer_size) {
         //LOG(DEBUG) << "buffer overflow!";
@@ -225,27 +222,13 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
         }
     }
 
-    if (n_type == beerocks::TYPE_IRE &&
-        database.is_node_wireless(database.get_node_parent(n->mac))) {
-        auto parent_backhaul_mac = database.get_node_parent_backhaul(n->mac);
-        auto parent_backhaul_wifi_channel =
-            database.get_radio_wifi_channel(tlvf::mac_from_string(parent_backhaul_mac));
-        if (parent_backhaul_wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << parent_backhaul_mac;
-        }
-        node->channel                     = parent_backhaul_wifi_channel.get_channel();
-        node->bw                          = parent_backhaul_wifi_channel.get_bandwidth();
-        node->freq_type                   = parent_backhaul_wifi_channel.get_freq_type();
-        node->channel_ext_above_secondary = parent_backhaul_wifi_channel.get_ext_above_secondary();
-    } else {
-        if (n->wifi_channel.is_empty()) {
-            LOG(WARNING) << "wifi channel is empty";
-        }
-        node->channel                     = n->wifi_channel.get_channel();
-        node->bw                          = n->wifi_channel.get_bandwidth();
-        node->freq_type                   = n->wifi_channel.get_freq_type();
-        node->channel_ext_above_secondary = n->wifi_channel.get_ext_above_secondary();
+    if (n->wifi_channel.is_empty()) {
+        LOG(WARNING) << "wifi channel is empty";
     }
+    node->channel                     = n->wifi_channel.get_channel();
+    node->bw                          = n->wifi_channel.get_bandwidth();
+    node->freq_type                   = n->wifi_channel.get_freq_type();
+    node->channel_ext_above_secondary = n->wifi_channel.get_ext_above_secondary();
 
     tlvf::mac_from_string(node->mac, n->mac); // if IRE->bridge, else if STA->sta mac
 
@@ -348,6 +331,151 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::shared_ptr<nod
 
                 ++i;
             }
+        }
+    }
+    return node_len;
+}
+
+std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Agent> agent,
+                                                uint8_t *tx_buffer,
+                                                const std::ptrdiff_t &buffer_size,
+                                                bool force_client_disconnect)
+{
+    auto node = (BML_NODE *)tx_buffer;
+
+    if (!agent) {
+        LOG(ERROR) << "invalid agent";
+        return 0;
+    }
+
+    std::ptrdiff_t node_len = sizeof(BML_NODE);
+    if (node_len > buffer_size) {
+        //LOG(DEBUG) << "buffer overflow!";
+        return 0;
+    }
+    memset(node, 0, node_len);
+
+    node->type = agent->is_gateway ? BML_NODE_TYPE_GW : BML_NODE_TYPE_IRE;
+
+    if (force_client_disconnect) {
+        node->state = BML_NODE_STATE_DISCONNECTED;
+    } else {
+        switch (agent->state) {
+        case beerocks::STATE_DISCONNECTED:
+            node->state = BML_NODE_STATE_DISCONNECTED;
+            break;
+
+        case beerocks::STATE_CONNECTING:
+            node->state = BML_NODE_STATE_CONNECTING;
+            break;
+
+        case beerocks::STATE_CONNECTED:
+            node->state = BML_NODE_STATE_CONNECTED;
+            break;
+
+        default:
+            node->state = BML_NODE_STATE_UNKNOWN;
+        }
+    }
+
+    tlvf::mac_from_string(node->mac, tlvf::mac_to_string(agent->al_mac));
+
+    // remote bridge
+    tlvf::mac_from_string(node->data.gw_ire.backhaul_mac, tlvf::mac_to_string(agent->parent_mac));
+
+    std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
+    if (backhaul) {
+        if (backhaul->get_bss()) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_bss()->bssid));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_radio_parent_agent(
+                                      backhaul->get_bss()->radio.radio_uid)));
+
+            if (!agent->is_gateway) {
+                auto parent_backhaul_wifi_channel =
+                    database.get_radio_wifi_channel(backhaul->get_bss()->radio.radio_uid);
+                if (parent_backhaul_wifi_channel.is_empty()) {
+                    LOG(WARNING) << "empty wifi channel of "
+                                 << backhaul->get_bss()->radio.radio_uid;
+                }
+                node->channel   = parent_backhaul_wifi_channel.get_channel();
+                node->bw        = parent_backhaul_wifi_channel.get_bandwidth();
+                node->freq_type = parent_backhaul_wifi_channel.get_freq_type();
+                node->channel_ext_above_secondary =
+                    parent_backhaul_wifi_channel.get_ext_above_secondary();
+            }
+        } else if (backhaul->get_eth_switch()) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_eth_switch()->mac));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_eth_switch_parent_agent(
+                                      backhaul->get_eth_switch()->mac)));
+        }
+    }
+
+    network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
+    string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
+
+    size_t i = 0;
+    for (const auto &radio : agent->radios) {
+        if (i >= beerocks::utils::array_length(node->data.gw_ire.radio)) {
+            LOG(ERROR) << "exceeded size of data.gw_ire.radio[]";
+            break;
+        }
+        tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
+
+        unsigned vap_id = 0;
+        for (const auto &bss : radio.second->bsses) {
+            if (bss.second->get_vap_id() >= 0) {
+                // If vap_id is set, use it. Normally if one BSS has vap_id set, all of them
+                // should have it set. Still, we increment vap_id at the end of the loop so we
+                // can deal with unset vap_id as well.
+                vap_id = bss.second->get_vap_id();
+            }
+            if (vap_id >= beerocks::utils::array_length(node->data.gw_ire.radio[i].vap)) {
+                LOG(ERROR) << "exceeded size of data.gw_ire.radio[i].vap[] on " << radio.first;
+                break;
+            }
+            tlvf::mac_to_array(bss.first, node->data.gw_ire.radio[i].vap[vap_id].bssid);
+            string_utils::copy_string(node->data.gw_ire.radio[i].vap[vap_id].ssid,
+                                      bss.second->ssid.c_str(),
+                                      sizeof(node->data.gw_ire.radio[i].vap[0].ssid));
+            node->data.gw_ire.radio[i].vap[vap_id].backhaul_vap = bss.second->backhaul;
+            vap_id++;
+        }
+
+        if (radio.second->state == beerocks::STATE_CONNECTED) {
+
+            // Copy the interface name
+            string_utils::copy_string(node->data.gw_ire.radio[i].iface_name,
+                                      database.get_radio_iface_name(radio.first).c_str(),
+                                      BML_NODE_IFACE_NAME_LEN);
+
+            // Radio Vendor
+            switch (database.get_radio_iface_type(radio.first)) {
+            case beerocks::eIfaceType::IFACE_TYPE_WIFI_INTEL:
+                node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_INTEL;
+                break;
+            default:
+                node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
+            }
+
+            node->data.gw_ire.radio[i].channel = (radio.second->wifi_channel.is_empty())
+                                                     ? 255
+                                                     : radio.second->wifi_channel.get_channel();
+            node->data.gw_ire.radio[i].cac_completed = radio.second->cac_completed;
+            node->data.gw_ire.radio[i].bw            = radio.second->wifi_channel.get_bandwidth();
+            node->data.gw_ire.radio[i].freq_type     = radio.second->wifi_channel.get_freq_type();
+            node->data.gw_ire.radio[i].channel_ext_above_secondary =
+                radio.second->wifi_channel.get_ext_above_secondary();
+            node->data.gw_ire.radio[i].ap_active = radio.second->active;
+
+            // Copy the radio identifier string
+            tlvf::mac_from_string(node->data.gw_ire.radio[i].radio_identifier,
+                                  tlvf::mac_to_string(radio.first));
+
+            ++i;
         }
     }
     return node_len;

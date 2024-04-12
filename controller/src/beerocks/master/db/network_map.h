@@ -23,6 +23,9 @@ public:
     static std::ptrdiff_t fill_bml_node_data(db &database, std::string node_mac, uint8_t *tx_buffer,
                                              const std::ptrdiff_t &buffer_size,
                                              bool force_client_disconnect);
+    static std::ptrdiff_t fill_bml_agent_data(db &database, std::shared_ptr<Agent> agent,
+                                              uint8_t *tx_buffer, const std::ptrdiff_t &buffer_size,
+                                              bool force_client_disconnect = false);
 
     static void
     send_bml_nodes_statistics_message_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,

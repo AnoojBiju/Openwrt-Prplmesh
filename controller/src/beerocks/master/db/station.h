@@ -173,6 +173,8 @@ public:
     void clear_sta_stats_info();
     bool is_bSta();
     void set_bSta(bool bSta);
+    void set_eth_switch(std::shared_ptr<Agent::sEthSwitch> eth_switch);
+    std::shared_ptr<Agent::sEthSwitch> get_eth_switch();
 
     friend class ::son::db;
 
@@ -196,6 +198,7 @@ private:
     class rssi_measurement;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
+    std::weak_ptr<Agent::sEthSwitch> m_eth_switch;
     std::vector<uint8_t> m_assoc_frame;
 };
 

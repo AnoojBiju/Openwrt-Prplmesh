@@ -43,7 +43,7 @@ void statistics_polling_task::work()
                 return;
             }
 
-            auto agent_mac = database.get_node_parent_ire(hostap);
+            auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(hostap));
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, hostap);
             add_pending_mac(hostap,
                             beerocks_message::ACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_RESPONSE);
