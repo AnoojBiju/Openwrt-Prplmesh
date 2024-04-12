@@ -55,6 +55,7 @@ public:
     ~Station();
 
     const sMacAddr mac;
+    std::string parent_mac;
     std::string name;
     uint8_t operating_class = 0;
 

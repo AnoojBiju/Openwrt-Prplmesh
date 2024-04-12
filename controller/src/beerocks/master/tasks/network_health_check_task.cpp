@@ -167,7 +167,7 @@ bool network_health_check_task::send_arp_query(std::string mac)
     auto ipv4              = database.get_node_ipv4(mac);
     request->params().ipv4 = network_utils::ipv4_from_string(ipv4);
 
-    const auto parent_radio = database.get_node_parent_radio(mac);
+    const auto parent_radio = database.get_sta_parent_radio(mac);
 
     auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(parent_radio));
 
