@@ -1363,6 +1363,8 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
             continue;
         }
         auto radio = db->radio(bh_wifi_info.iface_name);
+        LOG(DEBUG) << "radio->back.iface_name - " << radio->back.iface_name << " !";
+        LOG(DEBUG) << "radio->back.iface_mac - " << radio->back.iface_mac << " !";
         if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
             // Error message inside the lambda function.
             return false;
