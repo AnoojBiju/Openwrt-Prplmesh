@@ -2758,6 +2758,40 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         // Send the tunnelled message
         send_cmdu(cmdu_tx);
 
+        if (mgmt_frame->type == bwl::eManagementFrameType::BTM_QUERY) {
+            // pwhm sets the following flags in the Request Mode Field of the 802.11 BTM Request :
+            // M_SWL_IEEE802_BTM_REQ_MODE_PREF_LIST_INCL | M_SWL_IEEE802_BTM_REQ_MODE_ABRIDGED | M_SWL_IEEE802_BTM_REQ_MODE_DISASSOC_IMMINENT
+
+            auto bssid                    = tlvf::mac_to_string(mgmt_frame->bssid);
+            const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
+            auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
+                                   [&](const std::pair<int, bwl::VAPElement> &element) {
+                                       return element.second.mac == bssid;
+                                   });
+
+            if (it == vap_unordered_map.end()) {
+                //AP does not have the requested vap, probably will be handled on the other AP
+                LOG(DEBUG) << "AP does not have the requested vap, probably will be handled on the "
+                              "other AP";
+                break;
+            }
+
+            std::string sta_mac      = tlvf::mac_to_string(mgmt_frame->mac);
+            std::string target_bssid = tlvf::mac_to_string(mgmt_frame->bssid);
+            uint8_t channel          = ap_wlan_hal->get_radio_info().channel;
+            auto freq_type           = ap_wlan_hal->get_radio_info().frequency_band;
+            auto bw_info =
+                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth);
+            beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info);
+
+            uint8_t op_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
+
+            LOG(DEBUG) << "CLIENT_BSS_STEER (802.11v) for sta_mac = " << sta_mac
+                       << " to bssid = " << target_bssid << " channel = " << channel
+                       << " op_class = " << op_class;
+            ap_wlan_hal->sta_bss_steer(it->first, sta_mac, target_bssid, op_class, channel, 0, 2,
+                                       0);
+        }
     } break;
     case Event::WPA_Event_EAP_Failure:
     case Event::WPA_Event_EAP_Failure2:
