@@ -1359,10 +1359,10 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
 
     for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
         LOG(DEBUG) << "bh_wifi_info.iface_name - " << bh_wifi_info.iface_name << " !";
-        if (bh_wifi_info.iface_name.empty()) {
+        auto radio = db->radio(bh_wifi_info.iface_name);
+        if (radio->back.iface_name.empty()) {
             continue;
         }
-        auto radio = db->radio(bh_wifi_info.iface_name);
         LOG(DEBUG) << "radio->back.iface_name - " << radio->back.iface_name << " !";
         LOG(DEBUG) << "radio->back.iface_mac - " << radio->back.iface_mac << " !";
         if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
