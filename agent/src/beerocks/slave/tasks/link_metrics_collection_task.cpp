@@ -1314,6 +1314,8 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
         wireless_interface.iface_name = iface_name;
         wireless_interface.iface_mac  = iface_mac;
 
+        LOG(DEBUG) << "iface_name=" << iface_name << " iface_mac=" << iface_mac;
+
         if (!MediaType::get_media_type(wireless_interface.iface_name,
                                        ieee1905_1::eMediaTypeGroup::IEEE_802_11,
                                        wireless_interface.media_type)) {
@@ -1356,6 +1358,9 @@ bool LinkMetricsCollectionTask::get_neighbor_links(
     }
 
     for (const auto &bh_wifi_info : db->backhaul.backhaul_links) {
+        if (bh_wifi_info.iface_name.empty()) {
+            continue;
+        }
         auto radio = db->radio(bh_wifi_info.iface_name);
         if (!add_wifi_neighbor(radio->back.iface_name, radio->back.iface_mac)) {
             // Error message inside the lambda function.

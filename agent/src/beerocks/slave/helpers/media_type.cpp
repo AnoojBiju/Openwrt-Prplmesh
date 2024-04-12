@@ -11,6 +11,10 @@
 namespace beerocks {
 ieee1905_1::eMediaType MediaType::get_802_11_media_type(const beerocks::AgentDB::sRadio &radio)
 {
+    LOG(DEBUG) << " ht_supported: " << radio.ht_supported << " vht_supported: " << radio.vht_supported
+               << " he_supported: " << radio.he_supported
+               << " freq_type: " << int(radio.wifi_channel.get_freq_type());
+
     if (radio.he_supported) {
         return ieee1905_1::eMediaType::IEEE_802_11AX;
     } else if (radio.vht_supported) {
