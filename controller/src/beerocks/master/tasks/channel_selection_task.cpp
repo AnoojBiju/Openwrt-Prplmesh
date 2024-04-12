@@ -350,7 +350,7 @@ void channel_selection_task::work()
             slave_joined_event->channel, vht_center_frequency,
             static_cast<beerocks::eWiFiBandwidth>(slave_joined_event->cs_params.bandwidth),
             channel_ext_above_secondary);
-
+        LOG(DEBUG) << "Badhri set_radio_wifi_channel for: " << radio_mac;
         if (!database.set_radio_wifi_channel(radio_mac, wifi_channel)) {
             TASK_LOG(ERROR) << "set radio wifi channel failed, mac=" << radio_mac;
         } else {
@@ -685,7 +685,7 @@ void channel_selection_task::work()
             csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
             static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
             csa_event->cs_params.channel_ext_above_primary > 0 ? true : false);
-
+        LOG(DEBUG) << "Badhri set_radio_wifi_channel for: " << radio_mac;
         if (!database.set_radio_wifi_channel(radio_mac, wifi_channel)) {
             TASK_LOG(ERROR) << "set radio wifi channel failed, mac=" << radio_mac;
         }
@@ -852,7 +852,7 @@ void channel_selection_task::work()
             csa_event->cs_params.channel, csa_event->cs_params.vht_center_frequency,
             static_cast<beerocks::eWiFiBandwidth>(csa_event->cs_params.bandwidth),
             channel_ext_above_secondary);
-
+        LOG(DEBUG) << "Badhri set_radio_wifi_channel for: " << radio_mac;
         if (!database.set_radio_wifi_channel(radio_mac, wifi_channel)) {
             TASK_LOG(ERROR) << "set radio wifi channel failed, mac=" << radio_mac;
         }

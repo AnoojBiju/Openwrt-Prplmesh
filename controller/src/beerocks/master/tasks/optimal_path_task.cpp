@@ -71,7 +71,7 @@ void optimal_path_task::work()
         return;
     }
 
-    if ((database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
+    if (database.has_station(tlvf::mac_from_string(sta_mac)) &&
         (!database.settings_client_band_steering()) &&
         (!database.settings_client_optimal_path_roaming()) &&
         (!database.settings_client_11k_roaming())) {
@@ -127,7 +127,7 @@ void optimal_path_task::work()
         tasks.kill_task(prev_task_id);
         station->roaming_task_id = id;
 
-        if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
+        if (database.has_station(tlvf::mac_from_string(sta_mac))) {
             started_as_client = true;
         }
 

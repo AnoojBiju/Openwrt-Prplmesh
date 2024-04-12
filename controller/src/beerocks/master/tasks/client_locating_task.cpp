@@ -182,7 +182,7 @@ void client_locating_task::work()
                 auto backhaul_mac       = database.get_sta_parent(client_mac);
                 bool reported_by_parent = eth_switch == database.get_node_parent(backhaul_mac);
                 son_actions::handle_dead_node(backhaul_mac, reported_by_parent, database, tasks);
-            } else if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) ||
+            } else if ((database.has_station(tlvf::mac_from_string(client_mac))) ||
                        (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL)) {
                 bool reported_by_parent = eth_switch == database.get_sta_parent(client_mac);
                 son_actions::handle_dead_node(client_mac, reported_by_parent, database, tasks);

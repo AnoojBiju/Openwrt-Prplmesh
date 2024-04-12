@@ -579,7 +579,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                 LOG(TRACE) << "CLI roaming task already running for " << client_mac;
             } else {
 
-                if (database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) {
+                if (database.has_station(tlvf::mac_from_string(client_mac))) {
                     LOG(TRACE) << "CLI start roaming task for " << client_mac;
                     auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
                                                                         client_mac, 0, "");

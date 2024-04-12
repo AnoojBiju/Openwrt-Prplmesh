@@ -282,7 +282,6 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
     std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
     if (backhaul) {
         node->isWiFiBH = utils::is_node_wireless(backhaul->iface_type);
-        LOG(DEBUG) << "Badhri Checking " << agent->parent_mac << " is wireless: " << node->isWiFiBH;
         if (backhaul->get_bss()) {
             LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
             LOG(DEBUG) << "Badhri Backhaul Radio_uid: " << backhaul->get_bss()->radio.radio_uid;
@@ -328,8 +327,6 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
         std::shared_ptr<Station> backhaul = database.get_station(radio.first);
         if (backhaul) {
             node->isWiFiBH = utils::is_node_wireless(backhaul->iface_type);
-            LOG(DEBUG) << "Badhri Checking " << agent->parent_mac
-                       << " is wireless: " << node->isWiFiBH;
             if (backhaul->get_bss()) {
                 LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
                 LOG(DEBUG) << "Badhri Backhaul Radio_uid: " << backhaul->get_bss()->radio.radio_uid;

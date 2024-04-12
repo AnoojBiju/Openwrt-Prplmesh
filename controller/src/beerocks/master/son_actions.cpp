@@ -356,7 +356,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     }
                     agent->state = STATE_DISCONNECTED;
                 } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
-                           database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
+                           database.has_station(tlvf::mac_from_string(node_mac))) {
 
                     auto station = database.get_station(tlvf::mac_from_string(node_mac));
                     if (!station) {
@@ -376,7 +376,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                                  false); //implementation checks for hostap node type
 
                 if (database.get_node_type(node_mac) == beerocks::TYPE_IRE ||
-                    database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
+                    database.has_station(tlvf::mac_from_string(node_mac))) {
                     tasks.push_event(agent_monitoring_task_id, STATE_DISCONNECTED, &mac);
                     bml_task::connection_change_event new_event;
                     new_event.mac = node_mac;

@@ -3476,7 +3476,7 @@ bool Controller::handle_cmdu_control_message(
                     << " phy_rate_100kb (RX|TX)=" << int(notification->params().rx_phy_rate_100kb)
                     << " | " << int(notification->params().tx_phy_rate_100kb));
 
-        if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
+        if ((database.has_station(tlvf::mac_from_string(client_mac))) &&
             (database.get_sta_state(client_mac) == beerocks::STATE_CONNECTED) &&
             (!database.get_sta_handoff_flag(*client)) && is_parent) {
 
@@ -3541,7 +3541,7 @@ bool Controller::handle_cmdu_control_message(
             database.update_sta_last_seen(client_mac);
         }
 
-        if (database.get_node_type(client_mac) != beerocks::TYPE_CLIENT) {
+        if (!database.has_station(tlvf::mac_from_string(client_mac))) {
             LOG(INFO) << "Ignoring DHCP notification for mac " << client_mac
                       << ", as it's not a client";
             return true;

@@ -293,7 +293,7 @@ void association_handling_task::handle_response(std::string mac,
         if (database.settings_client_11k_roaming() &&
             (database.get_sta_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
-            (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
+            (database.has_station(tlvf::mac_from_string(sta_mac)))) {
 
             state        = CHECK_11K_BEACON_MEASURE_CAP;
             max_attempts = BEACON_MEASURE_MAX_ATTEMPTS;
