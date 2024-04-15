@@ -6696,6 +6696,7 @@ bool db::add_spatial_reuse_parameters(wfa_map::tlvSpatialReuseReport &spatial_re
 
     auto radio_path = radio->dm_path;
     if (radio_path.empty()) {
+        LOG(INFO) << "radio_path is empty";
         return true;
     }
 
@@ -6715,15 +6716,12 @@ bool db::add_spatial_reuse_parameters(wfa_map::tlvSpatialReuseReport &spatial_re
 
     // Do not set SpatialReuse parameters if they all are empty. Checking is cheaper than ambiorix call.
     if (!is_any_field_set) {
+        LOG(INFO) << "All parameters in spatial_reuse_report_tlv are empty";
         return true;
     }
 
-    // Prepare path to the SpatialReuse instance
-    if (!m_ambiorix_datamodel->remove_all_instances(radio_path + ".SpatialReuse")) {
-        return false;
-    }
     // Data model path example: Device.WiFi.DataElements.Network.Device.1.Radio.1.SpatialReuse
-    auto spatial_reuse_path = m_ambiorix_datamodel->add_instance(radio_path + ".SpatialReuse");
+    const auto spatial_reuse_path = radio_path + ".SpatialReuse";
 
     //Data model path: Device.WiFi.DataElements.Network.Device.1.Radio.1.SpatialReuse.BSSColor
     if (!m_ambiorix_datamodel->set(spatial_reuse_path, "BSSColor",
