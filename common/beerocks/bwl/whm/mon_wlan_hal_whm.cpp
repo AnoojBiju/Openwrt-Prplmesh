@@ -726,7 +726,7 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         //LOG(DEBUG) << "mac: " << mac_address_amx;
 
         if (mac_address_amx.empty()) {
-            LOG(DEBUG) << "MAC is empty: " << mac_address_amx;
+            // LOG(DEBUG) << "MAC is empty: " << mac_address_amx;
             continue;
         }
         non_ass_device.second.read_child(signal_strength, "SignalStrength");
