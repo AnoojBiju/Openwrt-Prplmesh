@@ -721,14 +721,21 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         uint8_t operating_class(0);
         std::string time_stamp_str;
         std::string mac_address_amx;
-        non_ass_device.second.read_child(mac_address_amx, "MACAddress");
+        LOG(DEBUG) << "MAC: " << non_ass_device.second.read_child(mac_address_amx, "macaddress");
+        LOG(DEBUG) << "MAC2: " << non_ass_device.second.read_child(mac_address_amx, "MACAddress");
+
+        non_ass_device.second.read_child(mac_address_amx, "macaddress");
         if (mac_address_amx.empty()) {
             continue;
         }
         non_ass_device.second.read_child(signal_strength, "SignalStrength");
+        LOG(DEBUG) << "signal_strength: " << signal_strength;
         non_ass_device.second.read_child(channel, "Channel");
+        LOG(DEBUG) << "channel: " << channel;
         non_ass_device.second.read_child(operating_class, "OperatingClass");
+        LOG(DEBUG) << "op_class: " << operating_class;
         non_ass_device.second.read_child(time_stamp_str, "TimeStamp");
+        LOG(DEBUG) << "timestamp_str: " << time_stamp_str;
 
         amxc_ts_t time;
         memset(&time, 0, sizeof(amxc_ts_t));
