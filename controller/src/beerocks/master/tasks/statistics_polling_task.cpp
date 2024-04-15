@@ -34,7 +34,7 @@ void statistics_polling_task::work()
             return;
         }
 
-        auto hostaps = database.get_active_hostaps();
+        auto hostaps = database.get_active_radios();
         for (auto &hostap : hostaps) {
             auto stats_request = message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_HOSTAP_STATS_MEASUREMENT_REQUEST>(cmdu_tx, id);

@@ -29,7 +29,7 @@ class son_actions {
 public:
     static void handle_completed_connection(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                             task_pool &tasks, std::string client_mac);
-    static bool add_node_to_default_location(db &database, std::string client_mac);
+    static bool add_station_to_default_location(db &database, std::string client_mac);
     static void unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, std::string sta_mac);
     static int steer_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, task_pool &tasks,
                          std::string sta_mac, std::string chosen_hostap,
@@ -46,8 +46,10 @@ public:
     static void send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                        std::stringstream &ss);
 
-    static void handle_dead_node(std::string mac, bool reported_by_parent, db &database,
-                                 task_pool &tasks);
+    static void handle_dead_radio(const sMacAddr &mac, bool reported_by_parent, db &database,
+                                  task_pool &tasks);
+    static void handle_dead_station(std::string mac, bool reported_by_parent, db &database,
+                                    task_pool &tasks);
     static bool validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,
                                                    const std::string &sta_mac,
                                                    const std::string &bssid);

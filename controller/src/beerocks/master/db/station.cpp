@@ -147,7 +147,11 @@ void Station::clear_cross_rssi()
 
 void Station::set_bSta(bool bSta) { m_is_bSta = bSta; }
 
-void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss) { m_bss = bss; }
+void Station::set_bss(std::shared_ptr<Agent::sRadio::sBss> bss)
+{
+    m_previous_bss = m_bss;
+    m_bss          = bss;
+}
 
 std::shared_ptr<Agent::sRadio::sBss> Station::get_bss() { return m_bss.lock(); }
 

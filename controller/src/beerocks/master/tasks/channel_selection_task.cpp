@@ -61,8 +61,8 @@ void channel_selection_task::handle_events_timeout(std::multiset<int> pending_ev
     for (std::multiset<int>::iterator it = pending_events.begin(); it != pending_events.end();
          ++it) {
         TASK_LOG(ERROR) << "event " << *it << " timed out on radio " << radio_mac
-                        << ", going to idle state -> handle_dead_node";
-        son_actions::handle_dead_node(tlvf::mac_to_string(radio_mac), true, database, tasks);
+                        << ", going to idle state -> handle_dead_radio";
+        son_actions::handle_dead_radio(radio_mac, true, database, tasks);
         //TODO check state of timeout event
         switch (fsm_state) {
         case eState::WAIT_FOR_RESTRICTED_CHANNEL_RESPONSE: {
@@ -281,9 +281,8 @@ void channel_selection_task::work()
                 dfs_cac_pending_hostap = reinterpret_cast<sDfsCacPendinghostap_event *>(event_obj);
                 auto cac_pending       = cac_pending_hostap_check();
                 if (dfs_cac_pending_hostap->timeout_expired) {
-                    TASK_LOG(DEBUG) << "handle_dead_node, radio mac = " << radio_mac;
-                    son_actions::handle_dead_node(tlvf::mac_to_string(radio_mac), true, database,
-                                                  tasks);
+                    TASK_LOG(DEBUG) << "handle_dead_radio, radio mac = " << radio_mac;
+                    son_actions::handle_dead_radio(radio_mac, true, database, tasks);
                 }
                 if (cac_pending) {
                     queue_pop_event();
@@ -1209,8 +1208,10 @@ void channel_selection_task::get_hostap_params()
             LOG(ERROR) << "empty wifi channel of " << hostap_params.backhaul_mac << " in DB";
             return;
         }
-        auto backhaul_mac = database.get_node_parent_backhaul(tlvf::mac_to_string(radio_mac));
-        hostap_params.backhaul_is_wireless = backhaul_mac.empty();
+
+        std::shared_ptr<Agent> agent       = database.get_agent_by_radio_uid(radio_mac);
+        std::shared_ptr<Station> bh_sta    = database.get_station(agent->parent_mac);
+        hostap_params.backhaul_is_wireless = (bh_sta && bh_sta->get_bss());
         hostap_params.backhaul_channel     = backhaul_wifi_channel.get_channel();
         hostap_params.backhaul_freq_type   = backhaul_wifi_channel.get_freq_type();
         //TODO add low_pass_filter_on to the DB, only needed for DFS
@@ -1271,10 +1272,7 @@ void channel_selection_task::ccl_fill_affected_supported_channels()
 void channel_selection_task::ccl_fill_active_channels()
 {
     TASK_LOG(DEBUG) << "*****************ccl_fill_active_channels**************************** :";
-    for (const auto &hostap : database.get_active_hostaps()) {
-        if (database.get_node_type(hostap) != beerocks::TYPE_SLAVE) {
-            TASK_LOG(WARNING) << "node " << hostap << " is not a valid hostap!";
-        }
+    for (const auto &hostap : database.get_active_radios()) {
         auto wifi_channel = database.get_radio_wifi_channel(tlvf::mac_from_string(hostap));
         if (wifi_channel.is_empty()) {
             LOG(ERROR) << "empty wifi channel of " << hostap

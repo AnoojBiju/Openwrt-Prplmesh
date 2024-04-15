@@ -12,7 +12,6 @@
 #include "config.h"
 
 #include "agent.h"
-#include "node.h"
 #include "station.h"
 #include "unassociatedStation.h"
 
@@ -23,10 +22,14 @@
 #include <bcl/son/son_wireless_utils.h>
 #include <bpl/bpl_board.h>
 
+#include <tlvf/common/sMacAddr.h>
+#include <tlvf/ieee_1905_1/tlvReceiverLinkMetric.h>
+#include <tlvf/ieee_1905_1/tlvTransmitterLinkMetric.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvApHeCapabilities.h>
 #include <tlvf/wfa_map/tlvApHtCapabilities.h>
+#include <tlvf/wfa_map/tlvApMetrics.h>
 #include <tlvf/wfa_map/tlvApOperationalBSS.h>
 #include <tlvf/wfa_map/tlvApRadioBasicCapabilities.h>
 #include <tlvf/wfa_map/tlvApVhtCapabilities.h>
@@ -37,6 +40,7 @@
 #include <tlvf/wfa_map/tlvProfile2CacCapabilities.h>
 #include <tlvf/wfa_map/tlvProfile2CacCompletionReport.h>
 #include <tlvf/wfa_map/tlvProfile2CacStatusReport.h>
+#include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvSpatialReuseReport.h>
 
 #include <algorithm>
@@ -430,6 +434,8 @@ public:
      */
     std::shared_ptr<Agent> get_agent_by_radio_uid(const sMacAddr &radio_uid);
 
+    std::shared_ptr<Agent> get_agent_by_parent(const sMacAddr &parent_mac);
+
     /**
      * @brief Get agent from its ALID
      *
@@ -548,14 +554,14 @@ public:
      */
     uint64_t get_client_remaining_sec(const std::pair<std::string, ValuesMap> &client);
     /**
-     * @brief A wrapper to add_node (to nodelist)
+     * @brief A wrapper to add_station
      *
      * @param client_entry A special identifier of a client.
      * @param ValuesMap The client information: timestamp, friendly status.
      * @param [out] results An error results for the persistent function report.
      */
-    void add_node_from_data(const std::string &client_entry, const ValuesMap &values_map,
-                            std::pair<uint16_t, uint16_t> &results);
+    void add_sta_from_data(const std::string &client_entry, const ValuesMap &values_map,
+                           std::pair<uint16_t, uint16_t> &results);
 
     /**
      * @brief add instance of data element 'radio'
@@ -601,7 +607,7 @@ public:
      * @param mac AL MAC of the gateway.
      * @return the existing Agent if it was already there or the newly added Agent otherwise.
      */
-    std::shared_ptr<Agent> add_node_gateway(const sMacAddr &mac);
+    std::shared_ptr<Agent> add_gateway(const sMacAddr &mac);
 
     /**
      * @brief add IRE node and Agent object.
@@ -613,8 +619,8 @@ public:
      * @return the existing Agent if it was already there or the newly added Agent otherwise.
      */
     std::shared_ptr<Agent>
-    add_node_ire(const sMacAddr &mac,
-                 const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    add_agent(const sMacAddr &mac,
+              const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief add wireless backhaul node and Station object.
@@ -626,13 +632,12 @@ public:
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
-    add_node_wireless_backhaul(const sMacAddr &mac,
-                               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-    bool
-    add_node_wired_backhaul(const sMacAddr &mac,
-                            const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
-    bool add_node_radio(const sMacAddr &mac,
+    add_backhaul_station(const sMacAddr &mac,
+                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    bool add_eth_switch(const sMacAddr &mac,
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    bool add_radio(const sMacAddr &mac,
+                   const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
      * @brief add client node and Station object.
@@ -650,7 +655,6 @@ public:
     void set_station_bss(std::shared_ptr<Station> station,
                          std::shared_ptr<Agent::sRadio::sBss> bss);
 
-    bool remove_node(const sMacAddr &mac);
     bool remove_sta(const sMacAddr &mac);
 
     /**
@@ -663,12 +667,7 @@ public:
      */
     bool clear_ap_capabilities(const sMacAddr &radio_id);
 
-    bool set_node_type(const std::string &mac, beerocks::eType type);
-    beerocks::eType get_node_type(const std::string &mac);
-
-    bool set_node_ipv4(const std::string &mac, const std::string &ipv4 = std::string());
     bool set_agent_ipv4(const std::string &al_mac, const std::string &ipv4 = std::string());
-    std::string get_node_ipv4(const std::string &mac);
 
     bool set_sta_ipv4(const std::string &mac, const std::string &ipv4);
     std::string get_sta_ipv4(const std::string &mac);
@@ -694,21 +693,19 @@ public:
     bool set_agent_state(const std::string &al_mac, beerocks::eNodeState state);
     bool set_radio_state(const std::string &ruid, beerocks::eNodeState state);
     bool set_eth_switch_state(const std::string &mac, beerocks::eNodeState state);
-    beerocks::eNodeState get_node_state(const std::string &mac);
     beerocks::eNodeState get_agent_state(const sMacAddr &mac);
     beerocks::eNodeState get_radio_state(const sMacAddr &ruid);
 
     bool set_sta_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_sta_state(const std::string &mac);
-    std::chrono::steady_clock::time_point get_last_state_change(const std::string &mac);
 
     bool set_sta_handoff_flag(Station &station, bool handoff);
     bool get_sta_handoff_flag(const Station &station);
 
-    bool update_node_last_seen(const std::string &mac);
+    bool update_radio_last_seen(const sMacAddr &mac);
     bool update_sta_last_seen(const std::string &mac);
 
-    std::chrono::steady_clock::time_point get_node_last_seen(const std::string &mac);
+    std::chrono::steady_clock::time_point get_radio_last_seen(const sMacAddr &mac);
     std::chrono::steady_clock::time_point get_sta_last_seen(const std::string &mac);
 
     bool set_radio_active(const sMacAddr &mac, const bool active);
@@ -716,9 +713,9 @@ public:
 
     bool is_ap_out_of_band(const std::string &mac, const std::string &sta_mac);
 
-    bool is_node_wireless(const std::string &mac);
+    bool is_sta_wireless(const std::string &mac);
 
-    std::string node_to_string(const std::string &mac);
+    std::string obj_to_string(const sMacAddr &mac);
 
     /**
      * @brief Get the link metric database
@@ -1086,27 +1083,20 @@ public:
     //
     // DB node functions (get only)
     //
-    int get_node_hierarchy(const std::string &mac);
-    std::set<std::string> get_nodes(int type = -1);
-    std::set<std::string> get_active_hostaps();
+    int get_agent_hierarchy(const sMacAddr &al_mac);
+    std::set<std::string> get_stations();
+    std::set<std::string> get_active_radios();
     std::vector<std::shared_ptr<Agent>> get_all_connected_agents();
-    std::set<std::string> get_nodes_from_hierarchy(int hierarchy, int type = -1);
+    std::set<std::string> get_backhauls_from_hierarchy(int hierarchy);
     std::shared_ptr<Agent> get_gw();
-    std::set<std::string> get_node_subtree(const std::string &mac);
-    std::string get_node_parent(const std::string &mac);
+    std::unordered_set<sMacAddr> get_agent_children(const sMacAddr &al_mac);
     std::string get_sta_parent(const std::string &mac);
 
-    std::string get_node_previous_parent(const std::string &mac);
-    sMacAddr get_node_parent_ire(const std::string &mac);
     sMacAddr get_radio_parent_agent(const sMacAddr &radio_mac);
     sMacAddr get_bss_parent_agent(const sMacAddr &bssid);
     sMacAddr get_agent_parent(const sMacAddr &al_mac);
     sMacAddr get_eth_switch_parent_agent(const sMacAddr &mac);
-    std::string get_node_parent_backhaul(const std::string &mac);
-    std::set<std::string> get_node_siblings(const std::string &mac, int type = beerocks::TYPE_ANY);
     std::set<std::string> get_radio_siblings(const sMacAddr &ruid);
-    std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,
-                                            int state = beerocks::STATE_ANY);
     std::set<std::string> get_stations_on_radio(const sMacAddr &ruid,
                                                 int state = beerocks::STATE_ANY);
     std::list<sMacAddr> get_1905_1_neighbors(const sMacAddr &al_mac);
@@ -1254,7 +1244,6 @@ public:
 
     bool capability_check(const std::string &mac, int channel);
 
-    bool get_node_6ghz_support(const std::string &mac);
     bool get_sta_5ghz_support(
         const std::string &mac); // TODO: add a real learning algorithm for per-channel support
     bool get_sta_6ghz_support(const std::string &mac);
@@ -1262,7 +1251,6 @@ public:
     beerocks::eFreqType get_radio_freq_type(const sMacAddr &radio_mac);
     bool get_sta_24ghz_support(const std::string &mac);
     bool is_radio_6ghz(const sMacAddr &radio_mac);
-    bool is_node_5ghz(const std::string &mac);
     bool is_radio_5ghz(const sMacAddr &radio_mac);
     bool is_radio_24ghz(const sMacAddr &radio_mac);
     bool is_sta_6ghz(const sMacAddr &sta_mac);
@@ -1331,7 +1319,6 @@ public:
     bool is_vap_on_steer_list(const sMacAddr &bssid);
     std::string get_bss_by_ssid(const sMacAddr &radio_mac, const std::string &ssid);
     sMacAddr get_radio_bss_mac(const sMacAddr &mac, int vap_id);
-    std::string get_node_parent_radio(const std::string &mac);
     std::string get_sta_parent_radio(const std::string &mac);
     std::string get_bss_parent_radio(const std::string &bssid);
 
@@ -1348,8 +1335,8 @@ public:
 
     int8_t get_bss_vap_id(const sMacAddr &bssid);
 
-    bool set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type);
-    beerocks::eIfaceType get_node_backhaul_iface_type(const std::string &mac);
+    bool set_sta_backhaul_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type);
+    beerocks::eIfaceType get_sta_backhaul_iface_type(const sMacAddr &mac);
 
     std::string get_5ghz_sibling_bss(const std::string &mac);
 
@@ -2023,40 +2010,25 @@ public:
                                 const beerocks::WifiChannel &wifi_channel);
 
     bool set_sta_wifi_channel(const sMacAddr &sta_mac, const beerocks::WifiChannel &wifi_channel);
-    beerocks::WifiChannel get_sta_wifi_channel(const std::string &mac);
     /**
-     * @brief Search a node that is identified by the mac
-     * and get a copy of the node's wifiChannel object
-     * @param mac the identifier of the node
-     * @return if the node is found, return a copy of node's wifiChannel object.
+     * @brief Search a STA that is identified by the mac
+     * and get a copy of the STA's wifiChannel object
+     * @param mac the identifier of the STA
+     * @return if the STA is found, return a copy of STA's wifiChannel object.
      * otherwise, return an empty wifiChannel object
      */
-    beerocks::WifiChannel get_node_wifi_channel(const std::string &mac);
+    beerocks::WifiChannel get_sta_wifi_channel(const std::string &mac);
 
     /**
-     * @brief Set the node and its children's wifiChannel object
-     * @param mac identifier of the node
-     * @param wifi_channel wifiChannel those values will be copied to the wifiChannel
-     * of the DB's node.
-     * @return true if the node that is identified by the mac was found and setting has succeed
-     * @return false in the following cases:
-     *      1. the node that is identified by the mac was not found
-     *      2. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
-     */
-    bool set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel);
-
-    /**
-     * @brief update the node and its children's wifiChannel objects
+     * @brief update the STA wifiChannel object
      * with the new bandwidth
-     * @param mac identifier of the node
-     * @param bw the new bandwidth that will be assigned to the node's wifiChannel object
-     * @return true if the node that is identified by the mac was found and setting has succeed
+     * @param mac identifier of the STA
+     * @param bw the new bandwidth that will be assigned to the STA's wifiChannel object
+     * @return true if the STA that is identified by the mac was found and setting has succeed
      * @return false in the following cases:
-     *      1. the node that is identified by the mac was not found
+     *      1. the STA that is identified by the mac was not found
      *      2. if the bandwidth is unknown,
-     *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
      */
-    bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
     bool update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
@@ -2632,8 +2604,10 @@ public:
     //
     // tasks
     //
-    bool assign_load_balancer_task_id(const std::string &mac, int new_task_id);
-    int get_load_balancer_task_id(const std::string &mac);
+    bool assign_agent_load_balancer_task_id(const sMacAddr &mac, int new_task_id);
+    int get_agent_load_balancer_task_id(const sMacAddr &mac);
+    bool assign_station_load_balancer_task_id(const sMacAddr &mac, int new_task_id);
+    int get_station_load_balancer_task_id(const sMacAddr &mac);
 
     bool assign_network_optimization_task_id(int new_task_id);
     int get_network_optimization_task_id();
@@ -2862,42 +2836,6 @@ public:
 
 private:
     /**
-     * @brief Adds node to the database.
-     *
-     * @param mac MAC address of the node.
-     * @param parent_mac
-     * @param type The type of node used for node-type verification.
-     * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
-     */
-    bool add_node(const sMacAddr &mac,
-                  const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC,
-                  beerocks::eType type       = beerocks::TYPE_CLIENT);
-    std::shared_ptr<node> get_node(const std::string &key); //key can be <mac> or <al_mac>_<ruid>
-    std::shared_ptr<node> get_node(const sMacAddr &mac);
-
-    /**
-     * @brief Returns the node object after verifing node type.
-     *
-     * if node is found but type is not requested type a nullptr is returned.
-     *
-     * @param mac MAC address of the node.
-     * @param type The type of node used for node-type verification.
-     * @return std::shared_ptr<node> pointer to the node on success, nullptr otherwise.
-     */
-    std::shared_ptr<node> get_node_verify_type(const sMacAddr &mac, beerocks::eType type);
-    int get_node_hierarchy(std::shared_ptr<node> n);
-    std::set<std::shared_ptr<node>> get_node_subtree(std::shared_ptr<node> n);
-    void adjust_subtree_hierarchy(std::shared_ptr<node> n);
-    void adjust_subtree_hierarchy(std::set<std::shared_ptr<node>> subtree, int offset);
-    std::set<std::shared_ptr<node>> get_node_children(std::shared_ptr<node> n,
-                                                      int type               = beerocks::TYPE_ANY,
-                                                      int state              = beerocks::STATE_ANY,
-                                                      std::string parent_mac = std::string());
-
-    void rewind();
-    bool get_next_node(std::shared_ptr<node> &n);
-
-    /**
      * @brief Updates the client values in the persistent db.
      *
      * @param mac MAC address of a client.
@@ -2913,7 +2851,7 @@ private:
      * @param values_map A map of client params and their values.
      * @return true on success, otherwise false.
      */
-    bool set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_map);
+    bool set_sta_params_from_map(const sMacAddr &mac, const ValuesMap &values_map);
 
     /**
      * @brief Adds a client entry to persistent_db with configured parameters and increments clients counter.
@@ -3100,12 +3038,7 @@ private:
     int vbss_task_id                           = -1;
     int link_metrics_task_id                   = -1;
 
-    std::shared_ptr<node> last_accessed_node;
-    std::string last_accessed_node_mac;
-
     std::mutex db_mutex;
-
-    std::unordered_map<std::string, std::shared_ptr<node>> nodes[beerocks::HIERARCHY_MAX];
 
     /**
     *  @brief This variable indicates that data is awaiting to be commited over to the persistentDB.
@@ -3113,13 +3046,6 @@ private:
     bool persistent_db_changes_made = false;
 
     int slaves_stop_on_failure_attempts = 0;
-
-    /**
-     * @brief some operations on unordered_map can cause iterators to be invalidated use the following with caution.
-     */
-    int current_hierarchy = 0;
-    std::unordered_map<std::string, std::shared_ptr<node>>::iterator db_it =
-        std::unordered_map<std::string, std::shared_ptr<node>>::iterator();
 
     std::vector<int> cli_debug_sockets;
     std::vector<sBmlListener> bml_listeners_sockets;

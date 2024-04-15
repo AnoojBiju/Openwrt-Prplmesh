@@ -46,7 +46,7 @@ void btm_request_task::work()
             finish();
             break;
         }
-        if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+        if (station->is_bSta()) {
             LOG(ERROR) << "Device with mac " << m_sta_mac
                        << " is of type Backhaul Station, do not use BTM Request";
             finish();
@@ -188,7 +188,7 @@ void btm_request_task::steer_sta()
         LOG(ERROR) << "Station " << m_sta_mac << " not found";
     }
 
-    if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
+    if (!station->is_bSta()) {
         if (station && !m_database.set_sta_handoff_flag(*station, true)) {
             LOG(ERROR) << "Can't set handoff flag for " << m_sta_mac;
         }
@@ -212,7 +212,7 @@ void btm_request_task::steer_sta()
     bml_task::client_allow_req_available_event client_allow_event;
     client_allow_event.sta_mac    = m_sta_mac;
     client_allow_event.hostap_mac = m_target_bssid;
-    client_allow_event.ip         = m_database.get_node_ipv4(m_sta_mac);
+    client_allow_event.ip         = m_database.get_sta_ipv4(m_sta_mac);
     m_tasks.push_event(m_database.get_bml_task_id(), bml_task::CLIENT_ALLOW_REQ_EVENT_AVAILABLE,
                        &client_allow_event);
 

@@ -763,11 +763,11 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            auto wifi_channel = m_database.get_radio_wifi_channel(
-                tlvf::mac_from_string(m_database.get_sta_parent_radio(client_mac)));
+            std::string parent_radio_uid = m_database.get_sta_parent_radio(client_mac);
+            auto wifi_channel =
+                m_database.get_radio_wifi_channel(tlvf::mac_from_string(parent_radio_uid));
             if (wifi_channel.is_empty()) {
-                TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_sta_parent_radio(client_mac)
-                                << " is empty";
+                TASK_LOG(ERROR) << "wifiChannel of " << parent_radio_uid << " is empty";
                 break;
             }
             auto freq_type   = wifi_channel.get_freq_type();

@@ -176,8 +176,9 @@ void bml_task::handle_event(int event_type, void *obj)
                     event_obj->bandwidth, event_obj->channel, event_obj->channel_ext_above_primary,
                     event_obj->vht_center_frequency);
             }
-            auto slave_parent_mac = database.get_node_parent(event_obj->hostap_mac);
-            update_bml_nw_map(slave_parent_mac);
+            auto slave_parent_mac =
+                database.get_radio_parent_agent(tlvf::mac_from_string(event_obj->hostap_mac));
+            update_bml_nw_map(tlvf::mac_to_string(slave_parent_mac));
         }
         break;
     }
@@ -190,8 +191,9 @@ void bml_task::handle_event(int event_type, void *obj)
                     database, cmdu_tx, events_updates_listeners, event_obj->hostap_mac,
                     event_obj->cac_completed);
             }
-            auto slave_parent_mac = database.get_node_parent(event_obj->hostap_mac);
-            update_bml_nw_map(slave_parent_mac);
+            auto slave_parent_mac =
+                database.get_radio_parent_agent(tlvf::mac_from_string(event_obj->hostap_mac));
+            update_bml_nw_map(tlvf::mac_to_string(slave_parent_mac));
         }
         break;
     }
@@ -385,8 +387,7 @@ void bml_task::update_bml_nw_map(std::string mac, bool force_client_disconnect)
         response->node_num() = 1;
 
         size_t node_size;
-        auto node_type = database.get_node_type(mac);
-        if (node_type == beerocks::TYPE_GW || node_type == beerocks::TYPE_IRE) {
+        if (database.get_agent(tlvf::mac_from_string(mac))) {
             node_size = sizeof(BML_NODE);
         } else {
             node_size = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);

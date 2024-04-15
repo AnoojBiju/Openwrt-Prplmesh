@@ -71,8 +71,7 @@ void optimal_path_task::work()
         return;
     }
 
-    if ((database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) &&
-        (!database.settings_client_band_steering()) &&
+    if (!station->is_bSta() && (!database.settings_client_band_steering()) &&
         (!database.settings_client_optimal_path_roaming()) &&
         (!database.settings_client_11k_roaming())) {
         LOG_CLI(DEBUG, "Band steering:"
@@ -84,7 +83,7 @@ void optimal_path_task::work()
                            << " | Roaming RX RSSI cutoff:"
                            << database.config.roaming_rssi_cutoff_db);
         task_enabled = false;
-    } else if (database.get_node_type(sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+    } else if (station->is_bSta()) {
         if (started_as_client) {
             LOG_CLI(DEBUG, sta_mac << " client changed to IRE, killing task");
             task_enabled = false;
@@ -127,7 +126,7 @@ void optimal_path_task::work()
         tasks.kill_task(prev_task_id);
         station->roaming_task_id = id;
 
-        if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
+        if (!station->is_bSta()) {
             started_as_client = true;
         }
 
@@ -194,16 +193,25 @@ void optimal_path_task::work()
         }
 
         // build pending mac list //
-        auto agents  = database.get_all_connected_agents();
-        auto subtree = database.get_node_subtree(sta_mac);
+        auto agents = database.get_all_connected_agents();
+        std::unordered_set<sMacAddr> children_agents;
+        std::shared_ptr<Agent::sRadio> host_radio =
+            database.get_radio_by_backhaul_cap(tlvf::mac_from_string(sta_mac));
+        if (host_radio) {
+            std::shared_ptr<Agent> host_agent =
+                database.get_agent_by_radio_uid(host_radio->radio_uid);
+            if (host_agent) {
+                children_agents = database.get_agent_children(host_agent->al_mac);
+            }
+        }
 
         std::vector<std::shared_ptr<Agent>> agents_outside_subtree;
 
-        // insert all ires that outside the subtree to "agents_outside_subtree",
-        // because it is impossible to move ire to a child ire. station doesn't has subtree.
+        // insert all agents that are outside the subtree to "agents_outside_subtree",
+        // because it is impossible to move agent to a child agent.
         std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
                      [&](std::shared_ptr<Agent> agent) {
-                         return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
+                         return (children_agents.find(agent->al_mac) == children_agents.end());
                      });
 
         potential_11k_aps.clear();
@@ -213,7 +221,7 @@ void optimal_path_task::work()
                 int8_t rx_rssi, dummy;
                 auto radio       = radio_map_element.second;
                 auto hostap      = tlvf::mac_to_string(radio->radio_uid);
-                bool sta_is_5ghz = database.is_node_5ghz(sta_mac);
+                bool sta_is_5ghz = database.is_sta_5ghz(tlvf::mac_from_string(sta_mac));
                 station->get_cross_rx_rssi(current_hostap, rx_rssi, dummy);
                 if ((!database.is_radio_active(tlvf::mac_from_string(hostap))) ||
                     (!check_if_sta_can_steer_to_ap(hostap)) ||
@@ -836,16 +844,25 @@ void optimal_path_task::work()
             break;
         }
         //build pending mac list //
-        auto agents  = database.get_all_connected_agents();
-        auto subtree = database.get_node_subtree(sta_mac);
+        auto agents = database.get_all_connected_agents();
+        std::unordered_set<sMacAddr> children_agents;
+        std::shared_ptr<Agent::sRadio> host_radio =
+            database.get_radio_by_backhaul_cap(tlvf::mac_from_string(sta_mac));
+        if (host_radio) {
+            std::shared_ptr<Agent> host_agent =
+                database.get_agent_by_radio_uid(host_radio->radio_uid);
+            if (host_agent) {
+                children_agents = database.get_agent_children(host_agent->al_mac);
+            }
+        }
 
         std::vector<std::shared_ptr<Agent>> agents_outside_subtree;
 
-        // insert all ires that outside the subtree to "agents_outside_subtree",
-        // because it is impossible to move ire to a child ire. station doesn't has subtree.
+        // insert all agents that are outside the subtree to "agents_outside_subtree",
+        // because it is impossible to move agent to a child agent.
         std::copy_if(agents.begin(), agents.end(), std::back_inserter(agents_outside_subtree),
                      [&](std::shared_ptr<Agent> agent) {
-                         return (subtree.find(tlvf::mac_to_string(agent->al_mac)) == subtree.end());
+                         return (children_agents.find(agent->al_mac) == children_agents.end());
                      });
 
         auto sta_wifi_channel = database.get_sta_wifi_channel(sta_mac);
@@ -903,11 +920,10 @@ void optimal_path_task::work()
 
             //when there is no 5Ghz hostap and backhaul direct Low/High match, searching for hostap Low/High support match
             if (!found_band_match && database.settings_front_measurements()) {
-                if (database.is_node_wireless(hostap_backhaul) &&
-                    (database.get_node_type(hostap_backhaul) != beerocks::TYPE_GW) &&
+                if (database.is_sta_wireless(hostap_backhaul) &&
                     sta_wifi_channel.get_freq_type() == eFreqType::FREQ_5G) {
                     auto hostap_backhaul_wifi_channel =
-                        database.get_node_wifi_channel(hostap_backhaul);
+                        database.get_sta_wifi_channel(hostap_backhaul);
                     if (hostap_backhaul_wifi_channel.is_empty()) {
                         LOG(ERROR) << "empty wifi channel of " << hostap_backhaul
                                    << " in DB. skip this iteration";
@@ -974,9 +990,9 @@ void optimal_path_task::work()
             LOG(WARNING) << "empty wifi channel of " << current_hostap << " in DB";
         }
 
-        request->params().mac  = tlvf::mac_from_string(sta_mac);
-        request->params().ipv4 = network_utils::ipv4_from_string(database.get_node_ipv4(sta_mac));
-        request->params().channel   = current_radio_wifi_channel.get_channel();
+        request->params().mac     = tlvf::mac_from_string(sta_mac);
+        request->params().ipv4    = network_utils::ipv4_from_string(database.get_sta_ipv4(sta_mac));
+        request->params().channel = current_radio_wifi_channel.get_channel();
         request->params().bandwidth = current_radio_wifi_channel.get_bandwidth();
         request->params().cross     = hostaps.empty() ? 0 : 1;
         request->params().mon_ping_burst_pkt_num =
@@ -1856,7 +1872,7 @@ bool optimal_path_task::is_measurement_valid(const std::set<std::string> &temp_c
              (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap)));
 
         std::string hostap_tmp = hostap;
-        if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
+        if (is_backhaul_manager && database.is_sta_5ghz(tlvf::mac_from_string(sta_mac))) {
             hostap_tmp = database.get_5ghz_sibling_bss(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
@@ -1899,7 +1915,7 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
              (agent->backhaul.wireless_backhaul_radio->radio_uid == tlvf::mac_from_string(hostap)));
 
         std::string hostap_tmp = hostap;
-        if (is_backhaul_manager && database.is_node_5ghz(sta_mac)) {
+        if (is_backhaul_manager && database.is_sta_5ghz(tlvf::mac_from_string(sta_mac))) {
             hostap_tmp = database.get_5ghz_sibling_bss(hostap);
         }
         if (hostap_tmp.empty() || !station->get_cross_rx_rssi(hostap_tmp, rx_rssi, rx_packets)) {
@@ -2118,7 +2134,7 @@ void optimal_path_task::print_station_capabilities(
 
 double optimal_path_task::calculate_weighted_phy_rate(const Station &client)
 {
-    auto if_type = database.get_node_backhaul_iface_type(tlvf::mac_to_string(client.mac));
+    auto if_type = database.get_sta_backhaul_iface_type(client.mac);
 
     if (if_type == beerocks::IFACE_TYPE_ETHERNET) {
         //TODO FIXME --> get ethernet speed

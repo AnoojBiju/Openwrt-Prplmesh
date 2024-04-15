@@ -32,7 +32,6 @@
 
 // Forward declaration of son::node
 namespace son {
-class node;
 class db;
 } // namespace son
 
@@ -100,7 +99,8 @@ public:
     bool is_gateway  = false;
     bool is_prplmesh = false;
 
-    bool does_support_vbss = false;
+    bool does_support_vbss    = false;
+    int load_balancer_task_id = -1;
 
     struct sDeviceInfo {
         std::string manufacturer;
@@ -155,6 +155,7 @@ public:
 
         beerocks::eNodeState state = beerocks::STATE_CONNECTED;
         std::chrono::steady_clock::time_point last_state_change;
+        std::chrono::steady_clock::time_point last_seen;
 
         bool is_acs_enabled = false;
 
@@ -176,9 +177,10 @@ public:
         bool supports_6ghz  = true;
         beerocks::WifiChannel wifi_channel;
         std::chrono::steady_clock::time_point measurement_sent_timestamp;
-        int measurement_recv_delta  = 0;
-        int measurement_delay       = 0;
-        int measurement_window_size = 60;
+        int measurement_recv_delta            = 0;
+        int measurement_delay                 = 0;
+        int measurement_window_size           = 60;
+        int dynamic_channel_selection_task_id = -1;
 
         /* The channel_scan_report structure holds channel scan report information
          * The channel_scan_report_key is comprised of an operating-class & channel-number pair
@@ -502,6 +504,7 @@ public:
         std::string ipv4;
         beerocks::eNodeState state = beerocks::STATE_DISCONNECTED;
     };
+    beerocks::mac_map<sEthSwitch> eth_switches;
 
     friend class ::son::db;
 
@@ -510,8 +513,6 @@ private:
      * @brief The last time that the Agent was contacted via the Multi-AP control protocol.
      */
     std::chrono::system_clock::time_point last_contact_time;
-
-    beerocks::mac_map<sEthSwitch> eth_switches;
 };
 
 } // namespace db

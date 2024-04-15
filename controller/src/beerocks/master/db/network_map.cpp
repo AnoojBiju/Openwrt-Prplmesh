@@ -736,28 +736,6 @@ void network_map::send_bml_cac_status_changed_notification_message_to_listeners(
     send_bml_event_to_listeners(database, cmdu_tx, bml_listeners);
 }
 
-std::ptrdiff_t network_map::get_bml_node_statistics_len(std::shared_ptr<node> n)
-{
-    auto n_type                   = n->get_type();
-    std::ptrdiff_t stats_bulk_len = 0;
-
-    switch (n_type) {
-    case beerocks::TYPE_SLAVE: {
-        stats_bulk_len =
-            sizeof(BML_STATS) - sizeof(BML_STATS::S_TYPE) + sizeof(BML_STATS::S_TYPE::S_RADIO);
-    } break;
-    case beerocks::TYPE_CLIENT: {
-        stats_bulk_len =
-            sizeof(BML_STATS) - sizeof(BML_STATS::S_TYPE) + sizeof(BML_STATS::S_TYPE::S_CLIENT);
-    } break;
-
-    default:
-        break;
-    }
-
-    return stats_bulk_len;
-}
-
 std::ptrdiff_t network_map::fill_bml_radio_statistics(db &database,
                                                       std::shared_ptr<Agent::sRadio> radio,
                                                       uint8_t *tx_buffer, std::ptrdiff_t buf_size)

@@ -52,20 +52,20 @@ void network_health_check_task::work()
                 continue;
             }
 
-            auto backhaul_manager_hostap =
-                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
-
-            auto last_seen = database.get_node_last_seen(backhaul_manager_hostap);
-            auto now       = std::chrono::steady_clock::now();
+            auto last_seen =
+                database.get_radio_last_seen(agent->backhaul.wireless_backhaul_radio->radio_uid);
+            auto now = std::chrono::steady_clock::now();
             auto last_seen_delta =
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - last_seen).count();
             if (last_seen_delta > ire_last_seen_timeout_ms) {
-                auto backhaul = database.get_node_parent(tlvf::mac_to_string(agent->al_mac));
-                TASK_LOG(DEBUG) << "handle_dead_node ire(backhaul) = " << agent->al_mac
-                                << " hostap = " << backhaul_manager_hostap
+                auto backhaul = database.get_agent_parent(agent->al_mac);
+                TASK_LOG(DEBUG) << "handle_dead_station ire(backhaul) = " << agent->al_mac
+                                << " hostap = "
+                                << agent->backhaul.wireless_backhaul_radio->radio_uid
                                 << " backhaul = " << backhaul
                                 << " last_seen_delta=" << int(last_seen_delta);
-                son_actions::handle_dead_node(backhaul, true, database, tasks);
+                son_actions::handle_dead_station(tlvf::mac_to_string(backhaul), true, database,
+                                                 tasks);
             }
         }
         state = CLIENT_HEALTH_CHECK;
@@ -73,10 +73,10 @@ void network_health_check_task::work()
     }
 
     case CLIENT_HEALTH_CHECK: {
-        auto clients = database.get_nodes(beerocks::TYPE_CLIENT);
+        auto clients = database.get_stations();
         for (auto &client : clients) {
             auto last_seen = database.get_sta_last_seen(client);
-            if (!database.is_node_wireless(client) &&
+            if (!database.is_sta_wireless(client) &&
                 (database.get_sta_state(client) == beerocks::STATE_CONNECTED)) {
                 auto now = std::chrono::steady_clock::now();
                 auto last_seen_delta =
@@ -132,7 +132,7 @@ void network_health_check_task::handle_response(std::string mac,
                         << "   arp_state=" << int(response->params().state)
                         << " arp_source=" << int(response->params().source);
 
-        database.update_node_last_seen(arp_mac);
+        database.update_sta_last_seen(arp_mac);
 
         if (suspected_dis_clients.find(arp_mac) != suspected_dis_clients.end()) {
             TASK_LOG(DEBUG) << "arp_mac = " << arp_mac
@@ -164,7 +164,7 @@ bool network_health_check_task::send_arp_query(std::string mac)
     }
 
     request->params().mac  = tlvf::mac_from_string(mac);
-    auto ipv4              = database.get_node_ipv4(mac);
+    auto ipv4              = database.get_sta_ipv4(mac);
     request->params().ipv4 = network_utils::ipv4_from_string(ipv4);
 
     const auto parent_radio = database.get_sta_parent_radio(mac);
@@ -204,7 +204,7 @@ void network_health_check_task::handle_responses_timeout(
                 //TASK_LOG(DEBUG) << "suspected_dis_clients.erase " << pending_node;
                 LOG(WARNING) << "CLIENT is not responding!! handle dead client mac = "
                              << pending_node;
-                son_actions::handle_dead_node(pending_node, true, database, tasks);
+                son_actions::handle_dead_station(pending_node, true, database, tasks);
                 pending_node.clear();
                 return;
             }

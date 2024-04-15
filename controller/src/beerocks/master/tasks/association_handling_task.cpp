@@ -42,7 +42,7 @@ void association_handling_task::work()
     switch (state) {
     case START: {
 
-        if (!database.is_node_wireless(sta_mac)) {
+        if (!database.is_sta_wireless(sta_mac)) {
             TASK_LOG(DEBUG) << "client " << sta_mac << " is not wireless, finish the task";
             finish();
             return;
@@ -87,9 +87,12 @@ void association_handling_task::work()
          * request constant RSSI monitoring for the new client
          */
 
-        std::string new_hostap_mac;
+        std::shared_ptr<Station> station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            return;
+        }
 
-        new_hostap_mac = database.get_sta_parent(sta_mac);
+        std::string new_hostap_mac = database.get_sta_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
             database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
@@ -110,16 +113,16 @@ void association_handling_task::work()
         }
 
         request->params().mac    = tlvf::mac_from_string(sta_mac);
-        request->params().ipv4   = network_utils::ipv4_from_string(database.get_node_ipv4(sta_mac));
+        request->params().ipv4   = network_utils::ipv4_from_string(database.get_sta_ipv4(sta_mac));
         request->params().is_ire = false;
 
         //add bridge mac for ires
-        if (database.get_node_type(sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
-            auto bridge_container = database.get_node_children(sta_mac, beerocks::TYPE_IRE);
-            if (!bridge_container.empty()) {
-                std::string bridge_4addr_mac       = *bridge_container.begin();
-                request->params().bridge_4addr_mac = tlvf::mac_from_string(bridge_4addr_mac);
-                LOG(DEBUG) << "IRE " << sta_mac << " is on a bridge with mac " << bridge_4addr_mac;
+        if (station->is_bSta()) {
+            auto bridge_container = database.get_agent_by_parent(tlvf::mac_from_string(sta_mac));
+            if (bridge_container) {
+                request->params().bridge_4addr_mac = bridge_container->al_mac;
+                LOG(DEBUG) << "IRE " << sta_mac << " is on a bridge with mac "
+                           << bridge_container->al_mac;
             }
         }
 
@@ -214,7 +217,7 @@ void association_handling_task::work()
             return;
         }
 
-        std::string ipv4 = database.get_node_ipv4(sta_mac);
+        std::string ipv4 = database.get_sta_ipv4(sta_mac);
 
         auto measurement_request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
@@ -290,10 +293,15 @@ void association_handling_task::handle_response(std::string mac,
             break;
         }
 
+        std::shared_ptr<Station> station = database.get_station(tlvf::mac_from_string(sta_mac));
+        if (!station) {
+            LOG(ERROR) << "No station found with mac " << sta_mac;
+            break;
+        }
         if (database.settings_client_11k_roaming() &&
             (database.get_sta_beacon_measurement_support_level(sta_mac) ==
              beerocks::BEACON_MEAS_UNSUPPORTED) &&
-            (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT)) {
+            !station->is_bSta()) {
 
             state        = CHECK_11K_BEACON_MEASURE_CAP;
             max_attempts = BEACON_MEASURE_MAX_ATTEMPTS;
@@ -388,7 +396,7 @@ void association_handling_task::finalize_new_connection()
      * see if special handling is required if client just came back from a handover
      */
     if (!database.get_sta_handoff_flag(*client)) {
-        if (database.get_node_type(sta_mac) == beerocks::TYPE_CLIENT) {
+        if (!client->is_bSta()) {
             // The client's stay-on-initial-radio can be enabled prior to the client connection.
             // If this is the case, when the client connects the initial-radio should be configured (if not already configured)
             // to allow the functionality of stay-on-initial-radio.
@@ -423,7 +431,8 @@ void association_handling_task::finalize_new_connection()
         /*
          * kill load balancer
          */
-        int prev_load_balancer_task = database.get_load_balancer_task_id(sta_mac);
+        int prev_load_balancer_task =
+            database.get_station_load_balancer_task_id(tlvf::mac_from_string(sta_mac));
         tasks.kill_task(prev_load_balancer_task);
 
         database.set_sta_handoff_flag(*client, false);

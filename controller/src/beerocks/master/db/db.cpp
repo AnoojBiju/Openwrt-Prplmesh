@@ -124,6 +124,17 @@ std::shared_ptr<Agent> db::get_agent_by_radio_uid(const sMacAddr &radio_uid)
     return {};
 }
 
+std::shared_ptr<Agent> db::get_agent_by_parent(const sMacAddr &parent_mac)
+{
+    for (const auto &agent : m_agents) {
+        if (agent.second->parent_mac == parent_mac) {
+            return agent.second;
+        }
+    }
+
+    return {};
+}
+
 std::shared_ptr<Agent> db::get_agent(const sMacAddr &al_mac)
 {
     auto agent = m_agents.get(al_mac);
@@ -224,55 +235,6 @@ void db::set_log_level_state(const beerocks::eLogLevel &log_level, const bool &n
 // General set/get
 bool db::has_station(const sMacAddr &mac) { return (get_station(mac) != nullptr); }
 
-bool db::add_node(const sMacAddr &mac, const sMacAddr &parent_mac, beerocks::eType type)
-{
-    if (mac == network_utils::ZERO_MAC) {
-        LOG(ERROR) << "can't insert node with empty mac";
-        return false;
-    }
-
-    auto parent_node = get_node(parent_mac);
-    // if parent node does not exist, new_hierarchy will be equal to 0
-    int new_hierarchy = get_node_hierarchy(parent_node) + 1;
-    if (new_hierarchy >= HIERARCHY_MAX) {
-        LOG(ERROR) << "hierarchy too high for node " << mac;
-        return false;
-    }
-
-    auto n = get_node(mac);
-    if (n) { // n is not nullptr
-        LOG(DEBUG) << "node with mac " << mac << " already exists, updating";
-        //check if node type is same, else set_type would return false
-        if (!n->set_type(type)) {
-            LOG(ERROR) << "Mac duplication detected as existing type is " << n->get_type()
-                       << " and received type is " << type;
-            return false;
-        }
-        if (n->parent_mac != tlvf::mac_to_string(parent_mac)) {
-            n->previous_parent_mac = n->parent_mac;
-            n->parent_mac          = tlvf::mac_to_string(parent_mac);
-        }
-        int old_hierarchy = get_node_hierarchy(n);
-        if (old_hierarchy >= 0 && old_hierarchy < HIERARCHY_MAX) {
-            nodes[old_hierarchy].erase(tlvf::mac_to_string(mac));
-        } else {
-            LOG(ERROR) << "old hierarchy " << old_hierarchy << " for node " << mac
-                       << " is invalid!!!";
-        }
-        auto subtree = get_node_subtree(n);
-        int offset   = new_hierarchy - old_hierarchy;
-        adjust_subtree_hierarchy(subtree, offset);
-    } else {
-        LOG(DEBUG) << "node with mac " << mac << " being created, the type is " << type;
-        n             = std::make_shared<node>(type, tlvf::mac_to_string(mac));
-        n->parent_mac = tlvf::mac_to_string(parent_mac);
-    }
-    n->hierarchy = new_hierarchy;
-    nodes[new_hierarchy].insert(std::make_pair(tlvf::mac_to_string(mac), n));
-
-    return true;
-}
-
 std::string db::get_sta_data_model_path(const std::string &mac)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
@@ -283,14 +245,9 @@ std::string db::get_sta_data_model_path(const std::string &mac)
     return pSta->dm_path;
 }
 
-std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
+std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
 {
     auto agent = m_agents.add(mac);
-
-    if (!add_node(mac, network_utils::ZERO_MAC, beerocks::TYPE_GW)) {
-        LOG(ERROR) << "Failed to add gateway node, mac: " << mac;
-        return agent;
-    }
 
     agent->is_gateway = true;
 
@@ -317,7 +274,7 @@ std::shared_ptr<Agent> db::add_node_gateway(const sMacAddr &mac)
     return agent;
 }
 
-std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto agent = m_agents.add(mac);
     if (!agent) {
@@ -326,11 +283,6 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
     }
 
     agent->parent_mac = parent_mac;
-
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE)) {
-        LOG(ERROR) << "Failed to add ire node, mac: " << mac;
-        return agent;
-    }
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
@@ -358,8 +310,7 @@ std::shared_ptr<Agent> db::add_node_ire(const sMacAddr &mac, const sMacAddr &par
     return agent;
 }
 
-std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
-                                                        const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto station = m_stations.add(mac);
     if (!station) {
@@ -378,22 +329,12 @@ std::shared_ptr<Station> db::add_node_wireless_backhaul(const sMacAddr &mac,
         }
     }
 
-    if (!add_node(mac, parent_mac, beerocks::TYPE_IRE_BACKHAUL)) {
-        LOG(ERROR) << "Failed to add wireless_backhaul node, mac: " << mac;
-        return station;
-    }
-
     // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
     return station;
 }
 
-bool db::add_node_wired_backhaul(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_eth_switch(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
-    if (!add_node(mac, parent_mac, beerocks::TYPE_ETH_SWITCH)) {
-        LOG(ERROR) << "Failed to add wired_backhaul node, mac: " << mac;
-        return false;
-    }
-
     std::shared_ptr<Agent> agent = get_agent(parent_mac);
     if (!agent) {
         LOG(ERROR) << "Failed to find Agent " << parent_mac;
@@ -498,7 +439,7 @@ bool db::dm_add_sta_beacon_measurement(const beerocks_message::sBeaconResponse11
     return ret_val;
 }
 
-bool db::add_node_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
+bool db::add_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
     auto agent = m_agents.get(parent_mac);
     if (!agent) {
@@ -526,10 +467,6 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
     } else {
         LOG(DEBUG) << "Setting the BSS of station " << mac << " to " << bss->dm_path;
         set_station_bss(station, bss);
-    }
-    if (!add_node(mac, parent_mac, beerocks::TYPE_CLIENT)) {
-        LOG(ERROR) << "Failed to add client node, mac: " << mac;
-        return station;
     }
 
     if (parent_mac == network_utils::ZERO_MAC && config.persistent_db) {
@@ -561,75 +498,9 @@ void db::set_station_bss(std::shared_ptr<Station> station, std::shared_ptr<Agent
     bss->connected_stations.add(station);
 }
 
-bool db::remove_node(const sMacAddr &mac)
-{
-    int i;
-    for (i = 0; i < HIERARCHY_MAX; i++) {
-        auto it = nodes[i].find(tlvf::mac_to_string(mac));
-        if (it != nodes[i].end()) {
-            if (last_accessed_node_mac == tlvf::mac_to_string(mac)) {
-                last_accessed_node_mac = std::string();
-                last_accessed_node     = nullptr;
-            }
-
-            it = nodes[i].erase(it);
-
-            auto index = m_ambiorix_datamodel->get_instance_index(
-                "Device.WiFi.DataElements.Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
-            if (!index) {
-                LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
-                return false;
-            }
-
-            if (!m_ambiorix_datamodel->remove_instance("Device.WiFi.DataElements.Network.Device",
-                                                       index)) {
-                LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
-                return false;
-            }
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool db::remove_sta(const sMacAddr &mac)
 {
     m_stations.erase(mac);
-    return true;
-}
-
-bool db::set_node_type(const std::string &mac, beerocks::eType type)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->set_type(type);
-    return true;
-}
-
-beerocks::eType db::get_node_type(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return beerocks::TYPE_UNDEFINED;
-    }
-    return n->get_type();
-}
-
-bool db::set_node_ipv4(const std::string &mac, const std::string &ipv4)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    n->ipv4 = ipv4;
-
-    if (n->get_type() == beerocks::TYPE_GW || n->get_type() == beerocks::TYPE_IRE) {
-        set_agent_ipv4(mac, ipv4);
-    }
     return true;
 }
 
@@ -643,15 +514,6 @@ bool db::set_agent_ipv4(const std::string &al_mac, const std::string &ipv4)
     return true;
 }
 
-std::string db::get_node_ipv4(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::string();
-    }
-    return n->ipv4;
-}
-
 bool db::set_sta_ipv4(const std::string &mac, const std::string &ipv4)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
@@ -660,7 +522,7 @@ bool db::set_sta_ipv4(const std::string &mac, const std::string &ipv4)
         return false;
     }
     pSta->ipv4 = ipv4;
-    return set_node_ipv4(mac, ipv4); // temporary
+    return true;
 }
 
 std::string db::get_sta_ipv4(const std::string &mac)
@@ -907,16 +769,6 @@ bool db::set_eth_switch_state(const std::string &mac, beerocks::eNodeState state
     return true;
 }
 
-beerocks::eNodeState db::get_node_state(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return beerocks::STATE_MAX;
-    }
-    return n->state;
-}
-
 beerocks::eNodeState db::get_agent_state(const sMacAddr &mac)
 {
     std::shared_ptr<Agent> agent = get_agent(mac);
@@ -958,15 +810,6 @@ beerocks::eNodeState db::get_sta_state(const std::string &mac)
     return pSta->state;
 }
 
-std::chrono::steady_clock::time_point db::get_last_state_change(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return std::chrono::steady_clock::time_point();
-    }
-    return n->last_state_change;
-}
-
 bool db::set_sta_handoff_flag(Station &station, bool handoff)
 {
     std::shared_ptr<Station> pSta = get_station(station.mac);
@@ -988,14 +831,14 @@ bool db::get_sta_handoff_flag(const Station &station)
     return pSta->m_handoff;
 }
 
-bool db::update_node_last_seen(const std::string &mac)
+bool db::update_radio_last_seen(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return false;
     }
-    n->last_seen = std::chrono::steady_clock::now();
+    radio->last_seen = std::chrono::steady_clock::now();
     return true;
 }
 
@@ -1007,18 +850,18 @@ bool db::update_sta_last_seen(const std::string &mac)
         return false;
     }
     pSta->last_seen = std::chrono::steady_clock::now();
-    return update_node_last_seen(mac); // temporary
+    return true;
 }
 
-std::chrono::steady_clock::time_point db::get_node_last_seen(const std::string &mac)
+std::chrono::steady_clock::time_point db::get_radio_last_seen(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << mac << " does not exist!";
         return std::chrono::steady_clock::now();
     }
 
-    return n->last_seen;
+    return radio->last_seen;
 }
 
 std::chrono::steady_clock::time_point db::get_sta_last_seen(const std::string &mac)
@@ -1106,50 +949,56 @@ bool db::is_ap_out_of_band(const std::string &mac, const std::string &sta_mac)
     return false;
 }
 
-bool db::is_node_wireless(const std::string &mac)
+bool db::is_sta_wireless(const std::string &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Station> station = get_station(tlvf::mac_from_string(mac));
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return false;
     }
-    return utils::is_node_wireless(n->iface_type);
+    return utils::is_node_wireless(station->iface_type);
 }
 
-std::string db::node_to_string(const std::string &mac)
+std::string db::obj_to_string(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
     std::ostringstream os;
-    if (n != nullptr) {
-        os << n;
+    std::shared_ptr<Agent> agent = get_agent(mac);
+    if (agent) {
+        os << agent;
     } else {
-        os << "";
+        std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+        if (radio) {
+            os << radio;
+        } else {
+            std::shared_ptr<Agent::sRadio::sBss> bss = get_bss(mac);
+            if (bss) {
+                os << bss;
+            } else {
+                std::shared_ptr<Station> station = get_station(mac);
+                if (station) {
+                    os << station;
+                } else {
+                    os << "";
+                }
+            }
+        }
     }
     return os.str();
 }
 //
 // DB node functions (get only)
 //
-int db::get_node_hierarchy(const std::string &mac)
-{
-    auto n = get_node(mac);
-    return get_node_hierarchy(n);
-}
-
-std::set<std::string> db::get_nodes(int type)
+std::set<std::string> db::get_stations()
 {
     std::set<std::string> ret;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if ((type < 0 || kv.second->get_type() == type) && (kv.second->mac == kv.first)) {
-                ret.insert(kv.first);
-            }
-        }
+
+    for (const auto &station : m_stations) {
+        ret.insert(tlvf::mac_to_string(station.first));
     }
     return ret;
 }
 
-std::set<std::string> db::get_active_hostaps()
+std::set<std::string> db::get_active_radios()
 {
     std::set<std::string> ret;
     for (const auto &agent : m_agents) {
@@ -1176,7 +1025,7 @@ std::vector<std::shared_ptr<Agent>> db::get_all_connected_agents()
     return ret;
 }
 
-std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
+std::set<std::string> db::get_backhauls_from_hierarchy(int hierarchy)
 {
     std::set<std::string> result;
 
@@ -1185,9 +1034,9 @@ std::set<std::string> db::get_nodes_from_hierarchy(int hierarchy, int type)
         return result;
     }
 
-    for (auto kv : nodes[hierarchy]) {
-        if ((type < 0 || kv.second->get_type() == type) && (kv.second->mac == kv.first)) {
-            result.insert(kv.first);
+    for (const auto &agent : m_agents) {
+        if (get_agent_hierarchy(agent.first) == hierarchy) {
+            result.insert(tlvf::mac_to_string(agent.second->parent_mac));
         }
     }
 
@@ -1206,29 +1055,20 @@ std::shared_ptr<Agent> db::get_gw()
     return {};
 }
 
-std::set<std::string> db::get_node_subtree(const std::string &mac)
+std::unordered_set<sMacAddr> db::get_agent_children(const sMacAddr &al_mac)
 {
-    std::set<std::string> subtree;
+    // iterate recursively over agents checking their parent
+    std::unordered_set<sMacAddr> children;
+    for (const auto &agent : m_agents) {
+        std::shared_ptr<Agent> parent_agent = agent.second->backhaul.parent_agent.lock();
+        if (parent_agent && parent_agent->al_mac == al_mac) {
+            children.insert(agent.first);
+            std::unordered_set<sMacAddr> children_set = get_agent_children(agent.first);
+            children.insert(children_set.begin(), children_set.end());
+        }
+    }
 
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << "node " << mac << " does not exist!";
-    }
-    auto subtree_ = get_node_subtree(n);
-    for (auto s : subtree_) {
-        subtree.insert(s->mac);
-    }
-    return subtree;
-}
-
-std::string db::get_node_parent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << "node " << mac << " does not exist!";
-        return std::string();
-    }
-    return n->parent_mac;
+    return children;
 }
 
 // returns vap mac to which the client is connected
@@ -1240,44 +1080,6 @@ std::string db::get_sta_parent(const std::string &mac)
         return std::string();
     }
     return pSta->parent_mac;
-}
-
-std::string db::get_node_parent_backhaul(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
-    }
-
-    std::string ire;
-    if (n->get_type() == beerocks::TYPE_IRE) {
-        ire = mac;
-    } else {
-        ire = tlvf::mac_to_string(get_node_parent_ire(mac));
-    }
-
-    return get_node_parent(ire);
-}
-
-sMacAddr db::get_node_parent_ire(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n || n->get_type() == beerocks::TYPE_GW) {
-        return network_utils::ZERO_MAC;
-    }
-
-    std::shared_ptr<node> p;
-    do {
-        p = get_node(n->parent_mac);
-        if (!p) {
-            LOG(DEBUG) << "node " << mac << " has no valid parent IRE";
-            return network_utils::ZERO_MAC;
-        }
-        n = p;
-    } while (p->get_type() != beerocks::TYPE_IRE && p->get_type() != beerocks::TYPE_GW);
-
-    return tlvf::mac_from_string(p->mac);
 }
 
 sMacAddr db::get_radio_parent_agent(const sMacAddr &radio_mac)
@@ -1324,47 +1126,6 @@ sMacAddr db::get_eth_switch_parent_agent(const sMacAddr &mac)
     return network_utils::ZERO_MAC;
 }
 
-std::string db::get_node_previous_parent(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << "node " << mac << " does not exist!";
-        return std::string();
-    }
-    return n->previous_parent_mac;
-}
-
-std::set<std::string> db::get_node_siblings(const std::string &mac, int type)
-{
-    std::set<std::string> siblings;
-    auto n = get_node(mac);
-
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist";
-        return siblings;
-    }
-
-    auto parent = get_node(n->parent_mac);
-    if (!parent) {
-        LOG(WARNING) << "parent for node " << mac << " does not exist";
-        return siblings;
-    }
-
-    int hierarchy = get_node_hierarchy(parent) + 1;
-    if (hierarchy >= 0 && hierarchy < HIERARCHY_MAX) {
-        for (auto &it : nodes[hierarchy]) {
-            if (it.first == it.second->mac) {
-                auto sib = it.second;
-                if ((sib->parent_mac == parent->mac) && (mac != sib->mac) &&
-                    (type == beerocks::TYPE_ANY || sib->get_type() == type)) {
-                    siblings.insert(sib->mac);
-                }
-            }
-        }
-    }
-    return siblings;
-}
-
 std::set<std::string> db::get_radio_siblings(const sMacAddr &ruid)
 {
     std::set<std::string> siblings;
@@ -1382,28 +1143,6 @@ std::set<std::string> db::get_radio_siblings(const sMacAddr &ruid)
     }
 
     return siblings;
-}
-
-std::set<std::string> db::get_node_children(const std::string &mac, int type, int state)
-{
-    std::set<std::string> children_macs;
-    auto n = get_node(mac);
-
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist";
-        return children_macs;
-    }
-
-    std::set<std::shared_ptr<node>> children_nodes;
-    if (n->mac == mac) {
-        children_nodes = get_node_children(n, type, state);
-    } else {
-        children_nodes = get_node_children(n, type, state, mac);
-    }
-    for (auto c : children_nodes) {
-        children_macs.insert(c->mac);
-    }
-    return children_macs;
 }
 
 std::set<std::string> db::get_stations_on_radio(const sMacAddr &ruid, int state)
@@ -1426,15 +1165,13 @@ std::set<std::string> db::get_stations_on_radio(const sMacAddr &ruid, int state)
 
 std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 {
-    auto al_mac_str = tlvf::mac_to_string(al_mac);
     std::list<sMacAddr> neighbors_al_macs;
-    auto all_al_macs = get_nodes(beerocks::TYPE_IRE);
 
     // According to IEEE 1905.1 a neighbor is defined as a first circle only, so we need to filter
     // out the childrens from second circle and above.
-    for (const auto &al_mac_iter : all_al_macs) {
-        if (get_agent_parent(tlvf::mac_from_string(al_mac_iter)) == al_mac) {
-            neighbors_al_macs.push_back(tlvf::mac_from_string(al_mac_iter));
+    for (const auto &agent : m_agents) {
+        if (get_agent_parent(agent.first) == al_mac) {
+            neighbors_al_macs.push_back(agent.first);
         }
     }
 
@@ -1442,12 +1179,6 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
     auto parent_bridge = get_agent_parent(al_mac);
     if (parent_bridge != network_utils::ZERO_MAC) {
         neighbors_al_macs.push_back(parent_bridge);
-    }
-
-    // Add siblings Nodes
-    auto siblings = get_node_siblings(al_mac_str, beerocks::TYPE_IRE);
-    for (const auto &sibling : siblings) {
-        neighbors_al_macs.push_back(tlvf::mac_from_string(sibling));
     }
 
     return neighbors_al_macs;
@@ -2403,15 +2134,6 @@ bool db::capability_check(const std::string &mac, int channel)
     return false;
 }
 
-bool db::get_node_6ghz_support(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return false;
-    }
-    return n->supports_6ghz;
-}
-
 bool db::get_sta_6ghz_support(const std::string &mac)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
@@ -2461,17 +2183,6 @@ bool db::is_radio_24ghz(const sMacAddr &radio_mac)
     }
 
     return (radio->wifi_channel.get_freq_type() == eFreqType::FREQ_24G);
-}
-
-bool db::is_node_5ghz(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node " << mac << " does not exist! return false as default";
-        return false;
-    }
-
-    return (n->wifi_channel.get_freq_type() == eFreqType::FREQ_5G);
 }
 
 bool db::is_radio_5ghz(const sMacAddr &radio_mac)
@@ -2636,7 +2347,8 @@ bool db::can_start_client_steering(const std::string &sta_mac, const std::string
     if ((hostap_is_5ghz && !get_sta_5ghz_support(sta_mac))) {
         LOG(DEBUG) << "Sta " << sta_mac << " can't steer to hostap " << target_bssid << std::endl
                    << "  hostap_is_5ghz = " << hostap_is_5ghz << std::endl
-                   << "  sta_is_5ghz = " << is_node_5ghz(sta_mac) << std::endl;
+                   << "  sta_is_5ghz = " << is_sta_5ghz(tlvf::mac_from_string(sta_mac))
+                   << std::endl;
         return false;
     }
     if (!hostap_is_5ghz && !get_sta_24ghz_support(sta_mac)) {
@@ -2797,42 +2509,20 @@ sMacAddr db::get_radio_bss_mac(const sMacAddr &radio_mac, int vap_id)
     return network_utils::ZERO_MAC;
 }
 
-std::string db::get_node_parent_radio(const std::string &mac)
-{
-    // if mac is a client mac, get_node_parent will return vap bssid.
-    // If the mac is Vap bssid, get_node will return a radio node.
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return std::string();
-    }
-    if (n->get_type() == beerocks::TYPE_CLIENT) {
-        const auto parent_bssid = get_sta_parent(mac);
-        std::shared_ptr<Agent::sRadio> parent_radio =
-            get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
-        if (!parent_radio) {
-            LOG(ERROR) << __FUNCTION__ << " - radio hosting " << parent_bssid << " does not exist!";
-            return std::string();
-        }
-        return tlvf::mac_to_string(parent_radio->radio_uid);
-    }
-    return n->mac;
-}
-
 // returns radio_uid to which the client is connected
 std::string db::get_sta_parent_radio(const std::string &mac)
 {
-    if (has_station(tlvf::mac_from_string(mac))) {
-        const auto parent_bssid = get_sta_parent(mac);
-        std::shared_ptr<Agent::sRadio> parent_radio =
-            get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
-        if (!parent_radio) {
-            LOG(ERROR) << __FUNCTION__ << " - radio hosting " << parent_bssid << " does not exist!";
-            return std::string();
-        }
-        return tlvf::mac_to_string(parent_radio->radio_uid);
+    std::shared_ptr<Station> station = get_station(tlvf::mac_from_string(mac));
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return std::string();
     }
-    return std::string();
+    if (station->get_bss()) {
+        return tlvf::mac_to_string(station->get_bss()->radio.radio_uid);
+    } else {
+        LOG(ERROR) << __FUNCTION__ << " - no parent BSS found for STA " << mac;
+        return std::string();
+    }
 }
 
 std::string db::get_bss_parent_radio(const std::string &bssid)
@@ -2926,30 +2616,30 @@ beerocks::eIfaceType db::get_radio_iface_type(const sMacAddr &mac)
     return radio->iface_type;
 }
 
-bool db::set_node_backhaul_iface_type(const std::string &mac, beerocks::eIfaceType iface_type)
+bool db::set_sta_backhaul_iface_type(const sMacAddr &mac, beerocks::eIfaceType iface_type)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Station> station = get_station(mac);
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return false;
     }
-    if (is_node_wireless(mac) && (iface_type > beerocks::IFACE_TYPE_WIFI_END ||
-                                  iface_type == beerocks::IFACE_TYPE_UNSUPPORTED)) {
+    if (station->get_bss() && (iface_type > beerocks::IFACE_TYPE_WIFI_END ||
+                               iface_type == beerocks::IFACE_TYPE_UNSUPPORTED)) {
         LOG(ERROR) << "this should not happend!";
         return false;
     }
-    n->iface_type = iface_type;
+    station->iface_type = iface_type;
     return true;
 }
 
-beerocks::eIfaceType db::get_node_backhaul_iface_type(const std::string &mac)
+beerocks::eIfaceType db::get_sta_backhaul_iface_type(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Station> station = get_station(mac);
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return beerocks::IFACE_TYPE_UNSUPPORTED;
     }
-    return n->iface_type;
+    return station->iface_type;
 }
 
 std::string db::get_5ghz_sibling_bss(const std::string &mac)
@@ -4659,11 +4349,11 @@ bool db::load_persistent_db_clients()
     }
 
     for (const auto &client : vector_of_clients) {
-        // Send results to add_node_from_data and return to increment
+        // Send results to add_sta_from_data and return to increment
         // the local variable declared previously
         std::pair<uint16_t, uint16_t> result = std::make_pair(0, 0);
 
-        db::add_node_from_data(client.first, client.second, result);
+        db::add_sta_from_data(client.first, client.second, result);
 
         // If result i equals 0 it wouldn't affect the real results.
         add_error_count += result.first;
@@ -5353,15 +5043,6 @@ beerocks::WifiChannel db::get_radio_wifi_channel(const sMacAddr &radio_mac)
     return radio->wifi_channel;
 }
 
-beerocks::WifiChannel db::get_node_wifi_channel(const std::string &mac)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        return {};
-    }
-    return n->wifi_channel;
-}
-
 bool db::set_radio_wifi_channel(const sMacAddr &radio_mac,
                                 const beerocks::WifiChannel &wifi_channel)
 {
@@ -5447,89 +5128,6 @@ beerocks::WifiChannel db::get_sta_wifi_channel(const std::string &mac)
     return pSta->wifi_channel;
 }
 
-bool db::set_node_wifi_channel(const sMacAddr &mac, const beerocks::WifiChannel &wifi_channel)
-{
-    std::shared_ptr<node> n = get_node(mac);
-    if (!n) {
-        LOG(ERROR) << "node " << mac << " does not exist ";
-        return false;
-    }
-
-    LOG(INFO) << "set node " << mac;
-    LOG(INFO) << "previous wifiChannel node: " << wifi_channel;
-    n->wifi_channel = wifi_channel;
-
-    LOG(INFO) << "current wifiChannel node: " << wifi_channel;
-
-    switch (n->wifi_channel.get_freq_type()) {
-    case eFreqType::FREQ_24G: {
-        n->supports_24ghz              = true;
-        n->failed_24ghz_steer_attempts = 0;
-    } break;
-    case eFreqType::FREQ_5G: {
-        n->supports_5ghz              = true;
-        n->failed_5ghz_steer_attempts = 0;
-    } break;
-    case eFreqType::FREQ_6G: {
-        n->supports_6ghz              = true;
-        n->failed_6ghz_steer_attempts = 0;
-    } break;
-    default:
-        LOG(ERROR) << "frequency type unknown, channel=" << n->wifi_channel.get_channel();
-        break;
-    }
-
-    auto children = get_node_children(n);
-    for (auto child : children) {
-        child->wifi_channel = wifi_channel;
-    }
-    return true;
-}
-
-bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
-{
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
-        return false;
-    }
-    if (n->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
-        LOG(ERROR) << "frequency type of node " << mac
-                   << " is unknown, channel=" << int(n->wifi_channel.get_channel());
-        return false;
-    }
-
-    if (bw == eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
-        LOG(ERROR) << "the new bandwidth of node " << mac << " can't be unknown";
-        return false;
-    }
-
-    if (bw == n->wifi_channel.get_bandwidth()) {
-        return true;
-    }
-
-    if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
-        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
-                  << "MHz to MAX";
-    } else {
-        LOG(INFO) << "update wifiChannel node " << mac << " bw from "
-                  << beerocks::utils::convert_bandwidth_to_int(n->wifi_channel.get_bandwidth())
-                  << " to " << bw;
-    }
-
-    eWiFiBandwidth prev_bw = n->wifi_channel.get_bandwidth();
-    n->wifi_channel.set_bandwidth(bw);
-    LOG(INFO) << "updating node " << mac << " bandwidth from "
-              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
-              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
-    auto children = get_node_children(n);
-    for (auto child : children) {
-        child->wifi_channel.set_bandwidth(bw);
-    }
-    return true;
-}
-
 bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
 {
     std::shared_ptr<Station> pSta = get_station(mac);
@@ -5574,25 +5172,46 @@ bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidt
 // tasks
 //
 
-bool db::assign_load_balancer_task_id(const std::string &mac, int new_task_id)
+bool db::assign_agent_load_balancer_task_id(const sMacAddr &mac, int new_task_id)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent> agent = get_agent(mac);
+    if (!agent) {
+        LOG(WARNING) << __FUNCTION__ << " - agent " << mac << " does not exist!";
         return false;
     }
-    n->load_balancer_task_id = new_task_id;
+    agent->load_balancer_task_id = new_task_id;
     return true;
 }
 
-int db::get_load_balancer_task_id(const std::string &mac)
+int db::get_agent_load_balancer_task_id(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << mac << " does not exist!";
+    std::shared_ptr<Agent> agent = get_agent(mac);
+    if (!agent) {
+        LOG(WARNING) << __FUNCTION__ << " - agent " << mac << " does not exist!";
         return -1;
     }
-    return n->load_balancer_task_id;
+    return agent->load_balancer_task_id;
+}
+
+bool db::assign_station_load_balancer_task_id(const sMacAddr &mac, int new_task_id)
+{
+    std::shared_ptr<Station> station = get_station(mac);
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return false;
+    }
+    station->load_balancer_task_id = new_task_id;
+    return true;
+}
+
+int db::get_station_load_balancer_task_id(const sMacAddr &mac)
+{
+    std::shared_ptr<Station> station = get_station(mac);
+    if (!station) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return -1;
+    }
+    return station->load_balancer_task_id;
 }
 
 bool db::assign_channel_selection_task_id(int new_task_id)
@@ -5643,25 +5262,25 @@ int db::get_agent_monitoring_task_id() { return agent_monitoring_task_id; }
 
 bool db::assign_dynamic_channel_selection_task_id(const sMacAddr &mac, int new_task_id)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << tlvf::mac_to_string(mac)
                      << " does not exist!";
         return false;
     }
-    n->dynamic_channel_selection_task_id = new_task_id;
+    radio->dynamic_channel_selection_task_id = new_task_id;
     return true;
 }
 
 int db::get_dynamic_channel_selection_task_id(const sMacAddr &mac)
 {
-    auto n = get_node(mac);
-    if (!n) {
-        LOG(WARNING) << __FUNCTION__ << " - node " << tlvf::mac_to_string(mac)
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << tlvf::mac_to_string(mac)
                      << " does not exist!";
         return -1;
     }
-    return n->dynamic_channel_selection_task_id;
+    return radio->dynamic_channel_selection_task_id;
 }
 
 bool db::assign_dynamic_channel_selection_r2_task_id(int new_task_id)
@@ -5864,51 +5483,19 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
 // PRIVATE FUNCTIONS
 //   must be used from a thread safe context
 //
-int db::get_node_hierarchy(std::shared_ptr<node> n)
+int db::get_agent_hierarchy(const sMacAddr &al_mac)
 {
-    if (!n) {
+    std::shared_ptr<Agent> agent = get_agent(al_mac);
+    if (!agent) {
         return -1;
-    }
-    //redundant but more efficient this way
-    return n->hierarchy;
-}
-
-std::shared_ptr<node> db::get_node(const std::string &key)
-{
-    if (key == last_accessed_node_mac) {
-        return last_accessed_node;
-    }
-
-    for (int i = 0; i < HIERARCHY_MAX; i++) {
-        auto it = nodes[i].find(key);
-        if (it != nodes[i].end()) {
-            last_accessed_node_mac = key;
-            last_accessed_node     = it->second;
-            return it->second;
+    } else {
+        std::shared_ptr<Agent> parent_agent = agent->backhaul.parent_agent.lock();
+        if (parent_agent) {
+            return get_agent_hierarchy(parent_agent->al_mac) + 1;
+        } else {
+            return 0;
         }
     }
-    return nullptr;
-}
-
-std::shared_ptr<node> db::get_node(const sMacAddr &mac)
-{
-    std::string key = mac == network_utils::ZERO_MAC ? std::string() : tlvf::mac_to_string(mac);
-    return get_node(key);
-}
-
-std::shared_ptr<node> db::get_node_verify_type(const sMacAddr &mac, beerocks::eType type)
-{
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(ERROR) << "node not found for mac " << mac;
-        return nullptr;
-    } else if (node->get_type() != type) {
-        LOG(ERROR) << "node " << mac << " type(" << node->get_type() << ") != requested-type("
-                   << type << ")";
-        return nullptr;
-    }
-
-    return node;
 }
 
 std::shared_ptr<Agent::sRadio> db::get_radio_by_uid(const sMacAddr &radio_uid)
@@ -5952,133 +5539,6 @@ std::shared_ptr<Station> db::get_station(const sMacAddr &mac)
     return station;
 }
 
-std::set<std::shared_ptr<node>> db::get_node_subtree(std::shared_ptr<node> n)
-{
-    std::set<std::shared_ptr<node>> subtree;
-
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
-        return subtree;
-    }
-
-    int i = get_node_hierarchy(n) + 1;
-
-    if (i >= HIERARCHY_MAX) {
-        return subtree;
-    }
-
-    for (auto &node_element : nodes[i]) {
-        if (node_element.first == node_element.second->mac) {
-            auto subtree_node = node_element.second;
-            if (subtree_node->parent_mac == n->mac) {
-                subtree.insert(subtree_node);
-                std::set<std::shared_ptr<node>> sub_subtree = get_node_subtree(subtree_node);
-                subtree.insert(sub_subtree.begin(), sub_subtree.end());
-            }
-        }
-    }
-    return subtree;
-}
-
-std::set<std::shared_ptr<node>> db::get_node_children(std::shared_ptr<node> n, int type, int state,
-                                                      std::string parent_mac)
-{
-    std::set<std::shared_ptr<node>> children;
-
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
-        return children;
-    }
-
-    auto bssids = get_radio_bss_bssids(n->mac);
-    bssids.insert(n->mac);
-
-    int hierarchy = get_node_hierarchy(n) + 1;
-
-    if (hierarchy >= 0 && hierarchy < HIERARCHY_MAX) {
-        for (auto &node_element : nodes[hierarchy]) {
-            auto child = node_element.second;
-            if ((child->mac == node_element.first) &&
-                (bssids.find(child->parent_mac) != bssids.end() &&
-                 (type == beerocks::TYPE_ANY || child->get_type() == type) &&
-                 (state == beerocks::STATE_ANY || child->state == state) &&
-                 (parent_mac.empty() || child->parent_mac == parent_mac))) {
-                children.insert(child);
-            }
-        }
-    }
-    return children;
-}
-
-void db::adjust_subtree_hierarchy(std::shared_ptr<node> n)
-{
-    if (!n) {
-        LOG(ERROR) << "node is nullptr!";
-        return;
-    }
-
-    int hierarchy = get_node_hierarchy(n);
-
-    for (int i = 0; i < HIERARCHY_MAX; ++i) {
-        for (auto it = nodes[i].begin(); it != nodes[i].end();) {
-            auto subtree_node = it->second;
-            if (subtree_node->parent_mac == n->mac) {
-                int new_hierarchy = hierarchy + 1;
-                if (new_hierarchy >= HIERARCHY_MAX) {
-                    LOG(ERROR) << "new hierarchy is too high!";
-                    return;
-                }
-                it = nodes[i].erase(it);
-                nodes[new_hierarchy].insert(std::make_pair(subtree_node->mac, subtree_node));
-                subtree_node->hierarchy = new_hierarchy;
-                adjust_subtree_hierarchy(subtree_node);
-            } else {
-                ++it;
-            }
-        }
-    }
-}
-
-void db::adjust_subtree_hierarchy(std::set<std::shared_ptr<node>> subtree, int offset)
-{
-    for (auto s : subtree) {
-        int new_hierarchy = s->hierarchy + offset;
-        if (new_hierarchy >= HIERARCHY_MAX || new_hierarchy < 0) {
-            LOG(ERROR) << "invalid new_hierarchy=" << new_hierarchy << " for node " << s->mac;
-            continue;
-        }
-        nodes[s->hierarchy].erase(s->mac);
-        nodes[new_hierarchy].insert({s->mac, s});
-        s->hierarchy = new_hierarchy;
-    }
-}
-
-void db::rewind()
-{
-    current_hierarchy = 0;
-    db_it             = nodes[current_hierarchy].begin();
-}
-
-bool db::get_next_node(std::shared_ptr<node> &n)
-{
-    bool last = false;
-
-    if (db_it != nodes[current_hierarchy].end()) {
-        n = db_it->second;
-        ++db_it;
-    }
-
-    if (db_it == nodes[current_hierarchy].end()) {
-        current_hierarchy++;
-        if (current_hierarchy >= HIERARCHY_MAX) {
-            current_hierarchy = 0;
-            last              = true;
-        }
-        db_it = nodes[current_hierarchy].begin();
-    }
-    return last;
-}
-
 void db::set_vap_list(std::shared_ptr<db::vaps_list_t> vaps_list) { m_vap_list = vaps_list; }
 
 void db::clear_vap_list()
@@ -6102,16 +5562,16 @@ bool db::is_prplmesh(const sMacAddr &mac)
 
 void db::set_prplmesh(const sMacAddr &mac)
 {
-    auto local_bridge_mac = get_local_bridge_mac();
-    if (!get_node(mac)) {
+    auto local_bridge_mac        = get_local_bridge_mac();
+    std::shared_ptr<Agent> agent = get_agent(mac);
+    if (!agent) {
         if (local_bridge_mac == mac) {
-            add_node_gateway(mac);
+            agent = add_gateway(mac);
         } else {
-            add_node_ire(mac);
+            agent = add_agent(mac);
         }
     }
 
-    std::shared_ptr<Agent> agent = get_agent(mac);
     if (agent) {
         agent->is_prplmesh = true;
     }
@@ -6137,14 +5597,8 @@ bool db::update_client_entry_in_persistent_db(const sMacAddr &mac, const ValuesM
     return true;
 }
 
-bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_map)
+bool db::set_sta_params_from_map(const sMacAddr &mac, const ValuesMap &values_map)
 {
-    auto node = get_node(mac);
-    if (!node) {
-        LOG(WARNING) << " - node " << mac << " does not exist!";
-        return false;
-    }
-
     auto client = get_station(mac);
     if (!client) {
         LOG(WARNING) << "client " << mac << " not found";
@@ -6159,7 +5613,7 @@ bool db::set_node_params_from_map(const sMacAddr &mac, const ValuesMap &values_m
                        << mac;
             client->parameters_last_edit = timestamp_from_seconds(string_utils::stoi(param.second));
         } else if (param.first == TIMELIFE_DELAY_STR) {
-            LOG(DEBUG) << "Setting node client_time_life_delay_sec to " << param.second << " for "
+            LOG(DEBUG) << "Setting client_time_life_delay_sec to " << param.second << " for "
                        << mac;
             client->time_life_delay_minutes =
                 std::chrono::minutes(string_utils::stoi(param.second));
@@ -6358,8 +5812,8 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
     return candidate_client_to_be_removed;
 }
 
-void db::add_node_from_data(const std::string &client_entry, const ValuesMap &values_map,
-                            std::pair<uint16_t, uint16_t> &result)
+void db::add_sta_from_data(const std::string &client_entry, const ValuesMap &values_map,
+                           std::pair<uint16_t, uint16_t> &result)
 {
     auto client_mac = client_db_entry_to_mac(client_entry);
 
@@ -6373,7 +5827,7 @@ void db::add_node_from_data(const std::string &client_entry, const ValuesMap &va
     }
 
     // Set clients persistent information in the node
-    if (!set_node_params_from_map(client_mac, values_map)) {
+    if (!set_sta_params_from_map(client_mac, values_map)) {
         LOG(ERROR) << "Failed to set client " << client_entry
                    << " node in runtime db with values read from persistent db: " << values_map;
         result.second = 1;

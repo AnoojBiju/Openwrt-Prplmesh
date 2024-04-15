@@ -37,13 +37,18 @@ void client_locating_task::work()
         return;
     }
 
-    if (database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
-        auto ire_backhaul = database.get_node_parent_backhaul(client_mac);
-        if (database.is_node_wireless(ire_backhaul)) {
-            TASK_LOG(DEBUG) << "IRE is wireless -> finish task";
+    std::shared_ptr<Agent> agent = database.get_agent(tlvf::mac_from_string(client_mac));
+    if (agent && !agent->is_gateway) {
+        std::shared_ptr<Station> bh_sta = database.get_station(agent->parent_mac);
+        if (!bh_sta) {
+            finish();
+            return;
+        }
+        if (bh_sta->get_bss()) {
+            TASK_LOG(DEBUG) << "Agent is wireless -> finish task";
             finish();
         }
-    } else if (database.is_node_wireless(client_mac)) {
+    } else if (client->get_bss()) {
         TASK_LOG(DEBUG) << "client is wireless -> finish task";
         finish();
     }
@@ -57,8 +62,8 @@ void client_locating_task::work()
             TASK_LOG(DEBUG)
                 << "task in disconnect mode when client is already disconnected -> finish task";
             finish();
-        } else if (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL) {
-            TASK_LOG(DEBUG) << "not handeling IRE backhaul type -> finish task";
+        } else if (client->is_bSta()) {
+            TASK_LOG(DEBUG) << "not handeling bSta type -> finish task";
             finish();
         } else {
             int prev_task_id = client->get_client_locating_task_id(new_connection);
@@ -67,7 +72,7 @@ void client_locating_task::work()
             TASK_LOG(DEBUG) << "new task initiate with new_connection "
                             << std::string(new_connection ? "on" : "off");
 
-            client_ipv4 = database.get_node_ipv4(client_mac);
+            client_ipv4 = database.get_sta_ipv4(client_mac);
 
             state = SEND_ARP_QUERIES;
             wait_for(starting_delay_ms);
@@ -78,8 +83,8 @@ void client_locating_task::work()
         auto agents      = database.get_all_connected_agents();
         pending_ires_num = 0;
 
-        for (auto &agent : agents) {
-            auto ire = tlvf::mac_to_string(agent->al_mac);
+        for (auto &agent_it : agents) {
+            auto ire = tlvf::mac_to_string(agent_it->al_mac);
 
             auto request =
                 message_com::create_vs_message<beerocks_message::cACTION_CONTROL_ARP_QUERY_REQUEST>(
@@ -91,20 +96,20 @@ void client_locating_task::work()
             request->params().mac  = tlvf::mac_from_string(client_mac);
             request->params().ipv4 = network_utils::ipv4_from_string(client_ipv4);
 
-            if ((ire == client_mac) || (client_mac == database.get_node_parent_backhaul(ire))) {
+            if ((ire == client_mac) || (client_mac == tlvf::mac_to_string(agent_it->parent_mac))) {
                 continue;
             }
 
-            if (!agent->backhaul.wireless_backhaul_radio) {
+            if (!agent_it->backhaul.wireless_backhaul_radio) {
                 TASK_LOG(WARNING) << "backhaul manager radio is not set!";
                 continue;
             }
 
             auto backhaul_manager_hostap =
-                tlvf::mac_to_string(agent->backhaul.wireless_backhaul_radio->radio_uid);
+                tlvf::mac_to_string(agent_it->backhaul.wireless_backhaul_radio->radio_uid);
 
-            auto agent_mac =
-                database.get_radio_parent_agent(agent->backhaul.wireless_backhaul_radio->radio_uid);
+            auto agent_mac = database.get_radio_parent_agent(
+                agent_it->backhaul.wireless_backhaul_radio->radio_uid);
 
             son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, backhaul_manager_hostap);
 
@@ -131,33 +136,28 @@ void client_locating_task::work()
                 TASK_LOG(DEBUG) << "deepest slave is: " << deepest_slave
                                 << " hierarchy=" << deepest_slave_hierarchy << " placing client "
                                 << client_mac << " under it";
-                auto eth_sw_container =
-                    database.get_node_siblings(deepest_slave, beerocks::TYPE_ETH_SWITCH);
-                if (eth_sw_container.empty()) {
-                    TASK_LOG(ERROR) << "eth_sw_container empty for slave " << deepest_slave;
+                std::shared_ptr<Agent> deepest_slave_agent =
+                    database.get_agent(tlvf::mac_from_string(deepest_slave));
+                if (!deepest_slave_agent || deepest_slave_agent->eth_switches.empty()) {
+                    TASK_LOG(ERROR) << "no eth_switch for slave " << deepest_slave;
                 } else {
-                    auto client_parent     = database.get_sta_parent(client_mac);
-                    auto client_state      = database.get_sta_state(client_mac);
-                    std::string eth_sw_mac = *eth_sw_container.begin();
+                    auto client_parent  = database.get_sta_parent(client_mac);
+                    auto client_state   = database.get_sta_state(client_mac);
+                    sMacAddr eth_sw_mac = deepest_slave_agent->eth_switches.begin()->first;
 
                     TASK_LOG(DEBUG)
                         << "client_mac = " << client_mac << " (" << int(client_state) << ")"
                         << ", client_parent = " << client_parent << ", eth_sw_mac = " << eth_sw_mac;
 
                     // update database and bml listeners if client moved or newly connected
-                    if ((client_parent != eth_sw_mac) ||
+                    if ((client_parent != tlvf::mac_to_string(eth_sw_mac)) ||
                         (client_state != beerocks::STATE_CONNECTED)) {
                         // update node
-                        if (database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
-                            auto ire_backhaul = database.get_node_parent_backhaul(client_mac);
-                            database.add_node_wireless_backhaul(tlvf::mac_from_string(ire_backhaul),
-                                                                tlvf::mac_from_string(eth_sw_mac));
-                            database.add_node_ire(tlvf::mac_from_string(client_mac),
-                                                  tlvf::mac_from_string(ire_backhaul));
+                        if (agent && !agent->is_gateway) {
+                            database.add_backhaul_station(agent->parent_mac, eth_sw_mac);
                         } else {
                             database.add_station(network_utils::ZERO_MAC,
-                                                 tlvf::mac_from_string(client_mac),
-                                                 tlvf::mac_from_string(eth_sw_mac));
+                                                 tlvf::mac_from_string(client_mac), eth_sw_mac);
                             database.set_sta_state(client_mac, beerocks::STATE_CONNECTED);
                         }
 
@@ -178,14 +178,20 @@ void client_locating_task::work()
             TASK_LOG(DEBUG) << "ETH client disconnected! " << client_mac
                             << " from eth_switch=" << eth_switch;
             // non of the pending ires replied about that client
-            if (database.get_node_type(client_mac) == beerocks::TYPE_IRE) {
-                auto backhaul_mac       = database.get_sta_parent(client_mac);
-                bool reported_by_parent = eth_switch == database.get_node_parent(backhaul_mac);
-                son_actions::handle_dead_node(backhaul_mac, reported_by_parent, database, tasks);
-            } else if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) ||
-                       (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL)) {
-                bool reported_by_parent = eth_switch == database.get_sta_parent(client_mac);
-                son_actions::handle_dead_node(client_mac, reported_by_parent, database, tasks);
+            if (agent) {
+                auto backhaul_mac = database.get_agent_parent(tlvf::mac_from_string(client_mac));
+                bool reported_by_parent =
+                    eth_switch == database.get_sta_parent(tlvf::mac_to_string(backhaul_mac));
+                son_actions::handle_dead_station(tlvf::mac_to_string(backhaul_mac),
+                                                 reported_by_parent, database, tasks);
+            } else {
+                std::shared_ptr<Station> station =
+                    database.get_station(tlvf::mac_from_string(client_mac));
+                if (station) {
+                    bool reported_by_parent = eth_switch == database.get_sta_parent(client_mac);
+                    son_actions::handle_dead_station(client_mac, reported_by_parent, database,
+                                                     tasks);
+                }
             }
         }
         finish();
@@ -223,7 +229,7 @@ void client_locating_task::handle_response(std::string mac,
                  response->params().source == beerocks::ARP_SRC_WIRELESS_FRONT)) {
                 TASK_LOG(DEBUG) << "slave mac " << mac << " has client_mac " << client_mac
                                 << " ipv4=" << client_ipv4 << " on front iface";
-                int hierarchy = database.get_node_hierarchy(mac);
+                int hierarchy = database.get_agent_hierarchy(tlvf::mac_from_string(mac));
                 if (hierarchy > deepest_slave_hierarchy) {
                     deepest_slave_hierarchy = hierarchy;
                     deepest_slave           = mac;
