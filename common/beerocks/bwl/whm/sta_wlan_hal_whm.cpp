@@ -618,12 +618,16 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
     // Set Security
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile.1.Security.
     std::string profile_security_path = profile_path + "Security.";
-    std::string mode_enabled          = utils_wlan_hal_whm::security_type_to_string(profile.sec);
+
+    // Configure Profile.Security object
     params.set_type(AMXC_VAR_ID_HTABLE);
-    params.add_child("ModeEnabled", mode_enabled);
+    params.add_child("ModeEnabled", "WPA2-WPA3-Personal");
+    params.add_child("KeyPassPhrase", profile.pass);
+    params.add_child("SAEPassphrase", profile.pass);
+    params.add_child("MFPConfig", "Optional");
     ret = m_ambiorix_cl.update_object(profile_security_path, params);
     if (!ret) {
-        LOG(ERROR) << "Failed setting security on interface " << get_iface_name();
+        LOG(ERROR) << "Failed setting security params on interface " << get_iface_name();
         return false;
     }
 
@@ -631,14 +635,6 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
 
     // mem_only_psk not supported by pwhm
 
-    // Set psk
-    params.set_type(AMXC_VAR_ID_HTABLE);
-    params.add_child("KeyPassPhrase", profile.pass);
-    ret = m_ambiorix_cl.update_object(profile_security_path, params);
-    if (!ret) {
-        LOG(ERROR) << "Failed setting security psk on interface " << get_iface_name();
-        return false;
-    }
     return true;
 }
 
