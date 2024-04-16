@@ -61,6 +61,7 @@ public:
     virtual bool is_connected() override;
     virtual int get_channel() override;
     virtual bool update_status() override;
+    virtual bool clear_non_associated_devices() override;
 
     std::string get_ssid() override;
     std::string get_bssid() override;
