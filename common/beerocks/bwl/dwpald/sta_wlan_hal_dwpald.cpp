@@ -933,6 +933,19 @@ void sta_wlan_hal_dwpal::update_status(const ConnectionStatus &connection_status
     LOG(DEBUG) << "m_active_ssid= " << m_active_ssid;
 }
 
+bool sta_wlan_hal_dwpald::clear_non_associated_devices()
+{
+    std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl.call(nasta_monitor_path, "clearNonAssociatedDevices", args, result)) {
+        LOG(ERROR) << " remote function call clearNonAssociatedDevices for object "
+                   << nasta_monitor_path << " Failed!";
+        return false;
+    }
+    return true;
+}
+
 #if 0
 bool sta_wlan_hal_dwpal::parse_fapi_event(const std::string& opcode, std::shared_ptr<void> obj)
 {

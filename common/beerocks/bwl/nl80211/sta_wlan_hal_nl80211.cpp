@@ -518,6 +518,8 @@ void sta_wlan_hal_nl80211::update_status(const ConnectionStatus &connection_stat
                << ", active_ssid= " << m_active_ssid;
 }
 
+bool sta_wlan_hal_nl80211::clear_non_associated_devices() { return true; }
+
 } // namespace nl80211
 
 std::shared_ptr<sta_wlan_hal> sta_wlan_hal_create(const std::string &iface_name,

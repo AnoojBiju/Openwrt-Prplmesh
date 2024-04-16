@@ -87,6 +87,8 @@ public:
 
     virtual std::string get_ssid()  = 0;
     virtual std::string get_bssid() = 0;
+    virtual bool clear_non_associated_devices() = 0;
+
     /*!
      * Returns the Backhaul Mac address.
      */
