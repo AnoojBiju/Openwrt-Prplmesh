@@ -2987,13 +2987,16 @@ void BackhaulManager::handle_dev_reset_default(
     bpl::cfg_wifi_reset_wps_credentials();
 
     // clear unassociated devices
+    LOG(DEBUG) << "Clearing non associated devices for all radios";
     for (auto &radio_info : m_radios_info) {
+        LOG(DEBUG) << "in the loop - " << radio_info->hostap_iface;
+        LOG(DEBUG) << "in the loop sta_iface - " << radio_info->sta_iface;
         if (radio_info->sta_wlan_hal) {
-            LOG(TRACE) << "Clearing non associated devices for radio " << radio_info->sta_iface;
+            LOG(DEBUG) << "Clearing non associated devices for radio " << radio_info->sta_iface;
             radio_info->sta_wlan_hal->clear_non_associated_devices();
         }
     }
-
+    LOG(DEBUG) << "out of the loop";
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
     auto db            = AgentDB::get();
