@@ -63,6 +63,7 @@ public:
     virtual bool update_status() override;
 
     virtual bool reassociate() override;
+    virtual bool clear_non_associated_devices() override;
 
     std::string get_ssid() override;
     std::string get_bssid() override;

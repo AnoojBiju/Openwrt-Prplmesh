@@ -813,6 +813,19 @@ bool sta_wlan_hal_whm::process_ep_wps_event(const std::string &interface,
     return true;
 }
 
+bool sta_wlan_hal_whm::clear_non_associated_devices()
+{
+    std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
+    AmbiorixVariant result;
+    AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+    if (!m_ambiorix_cl.call(nasta_monitor_path, "clearNonAssociatedDevices", args, result)) {
+        LOG(ERROR) << " remote function call clearNonAssociatedDevices for object "
+                   << nasta_monitor_path << " Failed!";
+        return false;
+    }
+    return true;
+}
+
 } // namespace whm
 
 std::shared_ptr<sta_wlan_hal> sta_wlan_hal_create(const std::string &iface_name,

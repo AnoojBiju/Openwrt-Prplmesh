@@ -2983,8 +2983,16 @@ void BackhaulManager::handle_dev_reset_default(
         active_hal->set_3addr_mcast(false);
         active_hal->disconnect();
     }
-    bpl::cfg_wifi_reset_wps_credentials();
     // clear all known WPS credentials from persistent memory
+    bpl::cfg_wifi_reset_wps_credentials();
+
+    // clear unassociated devices
+    for (auto &radio_info : m_radios_info) {
+        if (radio_info->sta_wlan_hal) {
+            LOG(TRACE) << "Clearing non associated devices for radio " << radio_info->sta_iface;
+            radio_info->sta_wlan_hal->clear_non_associated_devices();
+        }
+    }
 
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
