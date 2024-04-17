@@ -160,6 +160,7 @@ public:
 
         /** Name of the Wi-Fi chip vendor of this radio */
         std::string chipset_vendor;
+        /* Frequency type of the radio is obtained from WSC M1*/
         beerocks::eFreqType band = beerocks::FREQ_UNKNOWN;
 
         int ant_gain = 0;

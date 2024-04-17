@@ -1244,6 +1244,8 @@ public:
     bool add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t operating_class,
                                               uint8_t tx_power,
                                               const std::vector<uint8_t> &non_operable_channels);
+    std::set<uint8_t> get_supported_channels_in_operating_class(const sMacAddr &radio_mac,
+                                                                uint8_t operating_class);
 
     bool set_radio_band_capability(const sMacAddr &mac,
                                    const beerocks::eRadioBandCapability capability);
@@ -1256,6 +1258,7 @@ public:
         const std::string &mac); // TODO: add a real learning algorithm for per-channel support
     bool get_sta_6ghz_support(const std::string &mac);
     bool get_radio_5ghz_support(const sMacAddr &radio_mac);
+    beerocks::eFreqType get_radio_freq_type(const sMacAddr &radio_mac);
     bool get_sta_24ghz_support(const std::string &mac);
     bool is_radio_6ghz(const sMacAddr &radio_mac);
     bool is_node_5ghz(const std::string &mac);
