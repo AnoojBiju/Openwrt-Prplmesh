@@ -1198,6 +1198,20 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
         LOG(ERROR) << "No radio found for ruid=" << ruid << " on " << al_mac;
         return false;
     }
+    /*  Obtain the freq_type from the M1 message itself.
+        This will help us to know the radio's frequency
+        type before we run channel selection task.
+        This is useful when the operating class count
+        is given as 0 in the Channel preference report
+        of the agent.
+    */
+    if (m1->rf_bands() & WSC::WSC_RF_BAND_2GHZ) {
+        radio->band = beerocks::FREQ_24G;
+    } else if (m1->rf_bands() & WSC::WSC_RF_BAND_5GHZ) {
+        radio->band = beerocks::FREQ_5G;
+    } else if (m1->rf_bands() & WSC::WSC_RF_BAND_6GHZ) {
+        radio->band = beerocks::FREQ_6G;
+    }
 
     database.clear_configured_bss_info(ruid);
 
