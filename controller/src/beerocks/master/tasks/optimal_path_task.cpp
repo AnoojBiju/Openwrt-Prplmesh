@@ -296,7 +296,8 @@ void optimal_path_task::work()
                                << int(station->selected_bands);
                 // Try to find radio with selected bands first on local device (same device the client
                 // is currently connected on) and force steer the client to that radio.
-                auto current_hostap_siblings = database.get_node_siblings(current_hostap);
+                auto current_hostap_siblings =
+                    database.get_radio_siblings(tlvf::mac_from_string(current_hostap));
                 auto sibling_it =
                     std::find_if(current_hostap_siblings.begin(), current_hostap_siblings.end(),
                                  [&](const std::string &sibling) {
@@ -829,7 +830,7 @@ void optimal_path_task::work()
         }
         hostaps.clear();
 
-        auto sta_bridge = database.get_node_parent(current_hostap);
+        auto sta_bridge = database.get_radio_parent_agent(tlvf::mac_from_string(current_hostap));
         if (!database.settings_client_optimal_path_roaming()) {
             state = REQUEST_CROSS_RSSI_MEASUREMENTS;
             break;
@@ -857,7 +858,7 @@ void optimal_path_task::work()
         for (auto &agent : agents_outside_subtree) {
             bool found_band_match = false;
 
-            if (tlvf::mac_from_string(sta_bridge) == agent->al_mac) {
+            if (sta_bridge == agent->al_mac) {
                 continue;
             }
 
@@ -873,9 +874,9 @@ void optimal_path_task::work()
 
             //searching for hostap 5Ghz Low/High direct match ,2.4Ghz auto picked when sta is 2.4
             for (const auto &radio_map_element : agent->radios) {
-                auto radio              = radio_map_element.second;
-                auto hostap             = tlvf::mac_to_string(radio->radio_uid);
-                hostap_backhaul         = database.get_node_parent_backhaul(hostap);
+                auto radio      = radio_map_element.second;
+                auto hostap     = tlvf::mac_to_string(radio->radio_uid);
+                hostap_backhaul = tlvf::mac_to_string(database.get_agent_parent(agent->al_mac));
                 auto radio_wifi_channel = database.get_radio_wifi_channel(radio->radio_uid);
                 if (radio_wifi_channel.is_empty()) {
                     LOG(ERROR) << "empty wifi channel of " << hostap
@@ -1040,7 +1041,8 @@ void optimal_path_task::work()
         hostap_candidates.push_back({current_hostap, false});
 
         if (database.settings_client_band_steering()) {
-            auto hostap_siblings = database.get_node_siblings(current_hostap);
+            auto hostap_siblings =
+                database.get_radio_siblings(tlvf::mac_from_string(current_hostap));
             for (auto sibling : hostap_siblings) {
                 if (!database.is_radio_active(tlvf::mac_from_string(sibling)) ||
                     is_hostap_on_cs_process(sibling)) {
@@ -1067,9 +1069,9 @@ void optimal_path_task::work()
                                          tlvf::mac_from_string(hostap)));
 
             //when hostap is backhaul manager , the mathing candidate is his same band sibling
-            if (is_backhaul_manager &&
-                database.get_node_type(database.get_node_parent(hostap)) != beerocks::TYPE_GW) {
-                auto sibling_backhaul_manager = database.get_node_siblings(hostap);
+            if (is_backhaul_manager && agent->is_gateway) {
+                auto sibling_backhaul_manager =
+                    database.get_radio_siblings(tlvf::mac_from_string(hostap));
                 for (auto &sibling : sibling_backhaul_manager) {
                     if (!database.is_ap_out_of_band(sibling, sta_mac)) {
                         //actual ap candidate (is case measured through backhaul)
@@ -1090,7 +1092,8 @@ void optimal_path_task::work()
             } else {
                 hostap_candidates.push_back({hostap, false});
                 if (database.settings_client_band_steering()) {
-                    auto hostap_siblings = database.get_node_siblings(hostap);
+                    auto hostap_siblings =
+                        database.get_radio_siblings(tlvf::mac_from_string(hostap));
                     for (auto &sibling : hostap_siblings) {
                         if (!database.is_radio_active(tlvf::mac_from_string(sibling)) ||
                             is_hostap_on_cs_process(sibling)) {
@@ -1177,7 +1180,8 @@ void optimal_path_task::work()
                                << int(station->selected_bands);
                 // Try to find radio with selected bands first on local device (same device the client
                 // is currently connected on) and force steer the client to that radio.
-                auto current_hostap_siblings = database.get_node_siblings(current_hostap);
+                auto current_hostap_siblings =
+                    database.get_radio_siblings(tlvf::mac_from_string(current_hostap));
                 auto sibling_it =
                     std::find_if(current_hostap_siblings.begin(), current_hostap_siblings.end(),
                                  [&](const std::string &sibling) {
@@ -1639,7 +1643,6 @@ void optimal_path_task::send_rssi_measurement_request(const sMacAddr &agent_mac,
         LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
         return;
     }
-    database.get_node_parent_backhaul(hostap);
 
     std::shared_ptr<Agent::sRadio> parent_radio =
         database.get_radio_by_bssid(tlvf::mac_from_string(hostap_mac));

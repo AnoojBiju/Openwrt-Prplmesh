@@ -52,6 +52,7 @@ public:
         m_sta_5ghz_capabilities.valid  = false;
         m_sta_24ghz_capabilities.valid = false;
     }
+    ~Station();
 
     const sMacAddr mac;
     std::string name;

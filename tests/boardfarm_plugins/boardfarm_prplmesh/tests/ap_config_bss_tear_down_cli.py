@@ -41,9 +41,9 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
 
         # Wait until the connection map is updated:
         self.check_log(controller,
-                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+                       rf"Setting radio '{agent.radios[0].mac}' as active", timeout=10)
         self.check_log(controller,
-                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
+                       rf"Setting radio '{agent.radios[1].mac}' as active", timeout=10)
 
         radio_0_vap_0 = agent.radios[0].get_vap(ssid)
         if not radio_0_vap_0:
@@ -73,9 +73,9 @@ class ApConfigBSSTeardownCli(PrplMeshBaseTest):
 
         # Wait until the connection map is updated:
         self.check_log(controller,
-                       rf"Setting node '{agent.radios[0].mac}' as active", timeout=10)
+                       rf"Setting radio '{agent.radios[0].mac}' as active", timeout=10)
         self.check_log(controller,
-                       rf"Setting node '{agent.radios[1].mac}' as active", timeout=10)
+                       rf"Setting radio '{agent.radios[1].mac}' as active", timeout=10)
 
         conn_map = controller.get_conn_map()
         repeater1 = conn_map[agent.mac]

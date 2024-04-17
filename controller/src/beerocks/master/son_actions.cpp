@@ -104,7 +104,7 @@ bool son_actions::add_node_to_default_location(db &database, std::string client_
     }
 
     if (!database.set_sta_state(client_mac, beerocks::STATE_CONNECTING)) {
-        LOG(ERROR) << "add_node_to_default_location - set_node_state failed.";
+        LOG(ERROR) << "add_node_to_default_location - set_sta_state failed.";
         return false;
     }
 
@@ -181,7 +181,8 @@ bool son_actions::set_radio_active(db &database, task_pool &tasks, std::string h
 
     if (result) {
         bml_task::connection_change_event new_event;
-        new_event.mac   = database.get_node_parent(hostap_mac);
+        new_event.mac =
+            tlvf::mac_to_string(database.get_radio_parent_agent(tlvf::mac_from_string(hostap_mac)));
         int bml_task_id = database.get_bml_task_id();
         tasks.push_event(bml_task_id, bml_task::CONNECTION_CHANGE, &new_event);
         LOG(TRACE) << "BML, sending hostap (" << hostap_mac
@@ -333,7 +334,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
 
         // close slave socket
         if (mac_type == beerocks::TYPE_SLAVE) {
-            database.set_node_state(mac, beerocks::STATE_DISCONNECTED);
+            database.set_radio_state(mac, beerocks::STATE_DISCONNECTED);
             set_radio_active(database, tasks, mac, false);
         }
 
@@ -375,7 +376,7 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
                     }
                 }
 
-                database.set_node_state(node_mac, beerocks::STATE_DISCONNECTED);
+                database.set_radio_state(node_mac, beerocks::STATE_DISCONNECTED);
                 set_radio_active(database, tasks, node_mac,
                                  false); //implementation checks for hostap node type
 

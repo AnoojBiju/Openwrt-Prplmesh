@@ -54,7 +54,7 @@ void ire_network_optimization_task::work()
 
     case ITERATION: {
         while (current_ire_it != ires.end() &&
-               database.get_node_state(*current_ire_it) != beerocks::STATE_CONNECTED) {
+               database.get_sta_state(*current_ire_it) != beerocks::STATE_CONNECTED) {
             ++current_ire_it;
         }
 

@@ -107,8 +107,9 @@ void load_balancer_task::work()
                 most_loaded_hostap = hostap;
                 max_load           = hostap_channel_load;
             } else if (hostap_channel_load == max_load) {
-                if (database.get_node_children(hostap).size() >
-                    database.get_node_children(most_loaded_hostap).size()) {
+                if (database.get_stations_on_radio(tlvf::mac_from_string(hostap)).size() >
+                    database.get_stations_on_radio(tlvf::mac_from_string(most_loaded_hostap))
+                        .size()) {
                     /*
                          * TODO might need different sta count criteria for 2.4ghz and 5ghz hostaps
                          */
@@ -154,7 +155,8 @@ void load_balancer_task::work()
         float chosen_client_efficiency_ratio = 0;
         float min_efficiency_ratio           = std::numeric_limits<float>::max();
         float max_efficiency_ratio           = std::numeric_limits<float>::min();
-        auto most_loaded_hostap_clients      = database.get_node_children(most_loaded_hostap);
+        auto most_loaded_hostap_clients =
+            database.get_stations_on_radio(tlvf::mac_from_string(most_loaded_hostap));
 
         for (auto client : most_loaded_hostap_clients) {
             int client_tx_bytes = database.get_sta_tx_bytes(client);
@@ -379,7 +381,7 @@ void load_balancer_task::work()
             }
 
             /*
-                auto clients = database.get_node_children(hostap);
+                auto clients = database.get_stations_on_radio(tlvf::mac_from_string(hostap));
 
                 if(clients.size() < most_loaded_hostap_clients.size()){
                     chosen_hostap = hostap;
@@ -423,7 +425,7 @@ void load_balancer_task::work()
                      * new AP has not enough free airtime to accommodate estimated STA traffic
                      * need to calculate how much throughput will be lost as a result
                      */
-                    auto clients = database.get_node_children(hostap);
+                    auto clients = database.get_stations_on_radio(tlvf::mac_from_string(hostap));
                     int excess_required_airtime_ms = predicted_chosen_client_airtime_ms - free_hostap_airtime_ms;
                     int total_predicted_airtime_ms = predicted_chosen_client_airtime_ms + (hostap_duration_ms - free_hostap_airtime_ms);
                     ASSERT_NONZERO(total_predicted_airtime_ms);

@@ -171,7 +171,8 @@ bool network_health_check_task::send_arp_query(std::string mac)
 
     auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(parent_radio));
 
-    if (database.get_node_state(parent_radio) != beerocks::STATE_CONNECTED) {
+    if (database.get_radio_state(tlvf::mac_from_string(parent_radio)) !=
+        beerocks::STATE_CONNECTED) {
         LOG(WARNING) << "parent_mac not connected , parent_mac = " << parent_radio;
         return false;
     }

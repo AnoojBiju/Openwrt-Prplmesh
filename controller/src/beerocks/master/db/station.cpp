@@ -31,6 +31,14 @@ namespace prplmesh {
 namespace controller {
 namespace db {
 
+Station::~Station()
+{
+    std::shared_ptr<Agent::sRadio::sBss> bss = get_bss();
+    if (bss) {
+        bss->connected_stations.erase(mac);
+    }
+}
+
 void Station::assign_client_locating_task_id(int new_task_id, bool new_connection)
 {
     if (new_connection) {

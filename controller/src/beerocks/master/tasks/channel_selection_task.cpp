@@ -356,7 +356,7 @@ void channel_selection_task::work()
         } else {
             // update bml listeners
             bml_task::connection_change_event new_event;
-            new_event.mac = database.get_node_parent(tlvf::mac_to_string(radio_mac));
+            new_event.mac = tlvf::mac_to_string(database.get_radio_parent_agent(radio_mac));
             tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
             TASK_LOG(DEBUG) << "BML, sending CONNECTION_CHANGE for mac " << new_event.mac;
         }
@@ -706,11 +706,11 @@ void channel_selection_task::work()
     }
     case eState::ACTIVATE_SLAVE: {
         if (!son_actions::set_radio_active(database, tasks, tlvf::mac_to_string(radio_mac), true)) {
-            TASK_LOG(ERROR) << "set node hostap active failed, mac=" << radio_mac;
+            TASK_LOG(ERROR) << "set radio active failed, mac=" << radio_mac;
         }
         //the connected looks irelevant for the hostap - adding this line so it would appear on network map
-        if (!database.set_node_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED)) {
-            TASK_LOG(ERROR) << "set node state failed, mac=" << radio_mac;
+        if (!database.set_radio_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED)) {
+            TASK_LOG(ERROR) << "set radio state failed, mac=" << radio_mac;
         }
         if (database.settings_ire_roaming()) {
             TASK_LOG(DEBUG) << "add ire_network_optimization_task";
@@ -924,8 +924,7 @@ void channel_selection_task::work()
         }
 
         if (!database.settings_client_band_steering()) {
-            auto clients =
-                database.get_node_children(tlvf::mac_to_string(radio_mac), beerocks::TYPE_CLIENT);
+            auto clients = database.get_stations_on_radio(radio_mac, beerocks::TYPE_CLIENT);
             auto it =
                 std::find_if(clients.begin(), clients.end(), [&](const std::string &client_mac) {
                     auto client_state = (uint8_t)database.get_sta_state(client_mac);
@@ -963,8 +962,7 @@ void channel_selection_task::work()
     case eState::STEER_STA_BEFORE_DFS_REENTRY: {
         database.clear_radio_dfs_reentry_clients(radio_mac);
 
-        auto set_reentry_clients = database.get_node_children(tlvf::mac_to_string(radio_mac),
-                                                              TYPE_CLIENT, STATE_CONNECTED);
+        auto set_reentry_clients = database.get_stations_on_radio(radio_mac, STATE_CONNECTED);
         if (set_reentry_clients.empty()) {
             TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                             << " no client connected to reentry hostap ";
@@ -974,9 +972,8 @@ void channel_selection_task::work()
         TASK_LOG(DEBUG) << "radio_mac - " << radio_mac
                         << " client connected to reentry hostap steering to 2.4 hostap ";
         database.set_radio_dfs_reentry_clients(radio_mac, set_reentry_clients);
-        auto hostaps_sibling =
-            database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
-        auto hostap_mac_2g = std::find_if(
+        auto hostaps_sibling = database.get_radio_siblings(radio_mac);
+        auto hostap_mac_2g   = std::find_if(
             std::begin(hostaps_sibling), std::end(hostaps_sibling),
             [&](std::string hostap_sibling) {
                 auto hostap_sibling_wifi_channel =
@@ -1119,8 +1116,7 @@ bool channel_selection_task::reentry_steered_client_check()
                                          now - dfs_reentry_pending_steered_clients->timestamp)
                                          .count();
     if (dfs_reentry_clients_delta < REENTRY_STEERED_CLIENTS_WAIT) {
-        auto set_reentry_clients = database.get_node_children(tlvf::mac_to_string(radio_mac),
-                                                              TYPE_CLIENT, STATE_CONNECTED);
+        auto set_reentry_clients = database.get_stations_on_radio(radio_mac, STATE_CONNECTED);
 
         if (set_reentry_clients.empty()) {
             TASK_LOG(DEBUG) << "no client connected to reentry hostap ";
@@ -1749,9 +1745,8 @@ void channel_selection_task::assign_config_global_restricted_channel_to_db()
 }
 void channel_selection_task::run_optimal_path_for_connected_clients()
 {
-    auto hostaps_sibling =
-        database.get_node_siblings(tlvf::mac_to_string(radio_mac), beerocks::TYPE_SLAVE);
-    auto hostap_mac_2g = std::find_if(
+    auto hostaps_sibling = database.get_radio_siblings(radio_mac);
+    auto hostap_mac_2g   = std::find_if(
         std::begin(hostaps_sibling), std::end(hostaps_sibling), [&](std::string hostap_sibling) {
             auto hostap_sibling_wifi_channel =
                 database.get_radio_wifi_channel(tlvf::mac_from_string(hostap_sibling));
@@ -1765,7 +1760,7 @@ void channel_selection_task::run_optimal_path_for_connected_clients()
     if (hostap_mac_2g != std::end(hostaps_sibling)) {
         auto dfs_reentry_clients = database.get_radio_dfs_reentry_clients(radio_mac);
         auto conn_clients =
-            database.get_node_children(*hostap_mac_2g, TYPE_CLIENT, STATE_CONNECTED);
+            database.get_stations_on_radio(tlvf::mac_from_string(*hostap_mac_2g), STATE_CONNECTED);
         for (auto &dfs_reentry_client : dfs_reentry_clients) {
             TASK_LOG(DEBUG) << "dfs_reentry_client - " << dfs_reentry_client;
             conn_clients.erase(dfs_reentry_client);

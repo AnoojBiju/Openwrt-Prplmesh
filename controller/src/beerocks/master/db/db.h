@@ -538,11 +538,7 @@ public:
     void set_log_level_state(const beerocks::eLogLevel &log_level, const bool &new_state);
 
     // General set/get
-    bool has_node(const sMacAddr &mac);
-
     bool has_station(const sMacAddr &mac);
-
-    bool add_virtual_node(const sMacAddr &mac, const sMacAddr &real_node_mac);
 
     /**
      * @brief Gets the remaining timelife of a client
@@ -651,8 +647,11 @@ public:
     std::shared_ptr<Station>
     add_station(const sMacAddr &al_mac, const sMacAddr &mac,
                 const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+    void set_station_bss(std::shared_ptr<Station> station,
+                         std::shared_ptr<Agent::sRadio::sBss> bss);
 
     bool remove_node(const sMacAddr &mac);
+    bool remove_sta(const sMacAddr &mac);
 
     /**
      * @brief Removes optional subobjects: HTCapabilities, VHTCapabilities,WiFi6Capabilities in Radio DM
@@ -688,14 +687,16 @@ public:
     beerocks::eBeaconMeasurementSupportLevel
     get_sta_beacon_measurement_support_level(const std::string &mac);
 
-    bool set_node_name(const std::string &mac, const std::string &name);
     bool set_sta_name(const std::string &mac, const std::string &name);
     bool set_agent_name(const std::string &al_mac, const std::string &name);
+    bool set_eth_switch_name(const sMacAddr &mac, const std::string &name);
 
-    bool set_node_state(const std::string &mac, beerocks::eNodeState state);
     bool set_agent_state(const std::string &al_mac, beerocks::eNodeState state);
     bool set_radio_state(const std::string &ruid, beerocks::eNodeState state);
+    bool set_eth_switch_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_node_state(const std::string &mac);
+    beerocks::eNodeState get_agent_state(const sMacAddr &mac);
+    beerocks::eNodeState get_radio_state(const sMacAddr &ruid);
 
     bool set_sta_state(const std::string &mac, beerocks::eNodeState state);
     beerocks::eNodeState get_sta_state(const std::string &mac);
@@ -1102,8 +1103,11 @@ public:
     sMacAddr get_eth_switch_parent_agent(const sMacAddr &mac);
     std::string get_node_parent_backhaul(const std::string &mac);
     std::set<std::string> get_node_siblings(const std::string &mac, int type = beerocks::TYPE_ANY);
+    std::set<std::string> get_radio_siblings(const sMacAddr &ruid);
     std::set<std::string> get_node_children(const std::string &mac, int type = beerocks::TYPE_ANY,
                                             int state = beerocks::STATE_ANY);
+    std::set<std::string> get_stations_on_radio(const sMacAddr &ruid,
+                                                int state = beerocks::STATE_ANY);
     std::list<sMacAddr> get_1905_1_neighbors(const sMacAddr &al_mac);
 
     //
