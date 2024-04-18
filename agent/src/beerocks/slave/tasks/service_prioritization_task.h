@@ -27,6 +27,7 @@ public:
     bool handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx, uint32_t iface_index,
                      const sMacAddr &dst_mac, const sMacAddr &src_mac, int fd,
                      std::shared_ptr<beerocks_header> beerocks_header) override;
+    bool clear_configuration() { return qos_flush_setup(); };
 
 private:
     void handle_service_prioritization_request(ieee1905_1::CmduMessageRx &cmdu_rx,
