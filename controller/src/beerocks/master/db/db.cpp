@@ -2341,6 +2341,33 @@ bool db::add_hostap_supported_operating_class(const sMacAddr &radio_mac, uint8_t
     return true;
 }
 
+std::set<uint8_t> db::get_supported_channels_in_operating_class(const sMacAddr &radio_mac,
+                                                                uint8_t operating_class)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(WARNING) << __FUNCTION__ << " - radio " << radio_mac << " does not exist!";
+        return std::set<uint8_t>();
+    }
+    std::set<uint8_t> channels_in_operating_class;
+    auto supported_channels = get_radio_supported_channels(radio_mac);
+    auto channel_set        = wireless_utils::operating_class_to_channel_set(operating_class);
+    auto op_class_bw        = wireless_utils::operating_class_to_bandwidth(operating_class);
+
+    for (const auto &c : channel_set) {
+        auto channel =
+            std::find_if(supported_channels.begin(), supported_channels.end(),
+                         [&c, &op_class_bw](const beerocks::WifiChannel &ch) {
+                             return ch.get_channel() == c && ch.get_bandwidth() == op_class_bw;
+                         });
+        if (channel != supported_channels.end()) {
+            channels_in_operating_class.insert(c);
+        }
+    }
+
+    return channels_in_operating_class;
+}
+
 bool db::set_radio_band_capability(const sMacAddr &mac,
                                    const beerocks::eRadioBandCapability capability)
 {
@@ -2467,6 +2494,16 @@ bool db::is_radio_6ghz(const sMacAddr &radio_mac)
     }
 
     return (radio->wifi_channel.get_freq_type() == eFreqType::FREQ_6G);
+}
+
+beerocks::eFreqType db::get_radio_freq_type(const sMacAddr &radio_mac)
+{
+    std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(radio_mac);
+    if (!radio) {
+        LOG(ERROR) << "radio " << radio_mac << " does not exist!";
+        return eFreqType::FREQ_UNKNOWN;
+    }
+    return radio->band;
 }
 
 bool db::is_sta_6ghz(const sMacAddr &sta_mac)
@@ -6706,7 +6743,10 @@ bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8
         return false;
     }
 
-    radio->band = utils::get_freq_type_from_op_class(op_class);
+    if (radio->band != utils::get_freq_type_from_op_class(op_class)) {
+        LOG(ERROR) << "This should not happen. Radio band changed from " << radio->band << " to "
+                   << utils::get_freq_type_from_op_class(op_class);
+    }
 
     auto radio_path = radio->dm_path;
     if (radio_path.empty()) {

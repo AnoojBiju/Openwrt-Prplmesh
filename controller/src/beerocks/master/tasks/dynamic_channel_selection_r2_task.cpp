@@ -1665,6 +1665,27 @@ bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
     }
 
     database.clear_channel_preference(radio_uid);
+    if (channel_preference_tlv->operating_classes_list_length() == 0) {
+        // Set highest preference for all radio's supported channels if the operating classes list is empty.
+        const auto freq_type = database.get_radio_freq_type(radio_uid);
+        if (freq_type == beerocks::eFreqType::FREQ_UNKNOWN) {
+            LOG(ERROR) << "Unknown frequency type for radio " << radio_uid;
+            return false;
+        }
+        for (const auto &channel : radio->supported_channels) {
+            if (!database.set_channel_preference(
+                    radio_uid, son::wireless_utils::get_operating_class_by_channel(channel),
+                    channel.get_channel(),
+                    static_cast<uint8_t>(beerocks::eChannelPreferenceRankingConsts::BEST))) {
+                LOG(ERROR) << "Failed to update Channel Preference";
+                return false;
+            }
+        }
+        LOG(DEBUG) << "All channels set to highest preference due to empty operating classes list "
+                      "for radio: "
+                   << radio_uid;
+        return true;
+    }
     ss << "Preference for radio " << radio_uid << ":" << std::endl;
     for (size_t i = 0; i < channel_preference_tlv->operating_classes_list_length(); i++) {
         if (!std::get<0>(channel_preference_tlv->operating_classes_list(i))) {
@@ -1681,12 +1702,12 @@ bool dynamic_channel_selection_r2_task::handle_tlv_channel_preference(
 
         std::set<uint8_t> channel_set;
         if (operating_class.channel_list_length() == 0) {
-            // An empty Channel List field indicates that the indicated
-            // Preference applies to all channels in the Operating Class.
-            const auto all_channels_in_operating_class =
-                wireless_utils::operating_class_to_channel_set(op_cls_num);
-            channel_set.insert(all_channels_in_operating_class.begin(),
-                               all_channels_in_operating_class.end());
+            /* An empty Channel List field indicates that the indicated
+               Preference applies to all supported channels by the radio
+               in that Operating Class.
+            */
+            LOG(DEBUG) << "Operating class: " << int(op_cls_num) << " contains empty channel list";
+            channel_set = database.get_supported_channels_in_operating_class(radio_uid, op_cls_num);
         } else {
             for (size_t j = 0; j < operating_class.channel_list_length(); j++) {
                 const auto channel = operating_class.channel_list(j);
@@ -1792,8 +1813,8 @@ bool dynamic_channel_selection_r2_task::handle_tlv_profile2_cac_completion_repor
 
         } else {
             if (!cac_radio.number_of_detected_pairs() == 0) {
-                LOG(ERROR)
-                    << "Number of detected pairs value must be zeroed if radar was not detected!";
+                LOG(ERROR) << "Number of detected pairs value must be zeroed if radar was not "
+                              "detected!";
             }
         }
     }
