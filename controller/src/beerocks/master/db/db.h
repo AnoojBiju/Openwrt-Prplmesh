@@ -1094,6 +1094,7 @@ public:
     std::shared_ptr<Agent> get_gw();
     std::set<std::string> get_node_subtree(const std::string &mac);
     std::string get_node_parent(const std::string &mac);
+    std::string get_sta_parent(const std::string &mac);
 
     std::string get_node_previous_parent(const std::string &mac);
     sMacAddr get_node_parent_ire(const std::string &mac);
@@ -1328,6 +1329,7 @@ public:
     std::string get_bss_by_ssid(const sMacAddr &radio_mac, const std::string &ssid);
     sMacAddr get_radio_bss_mac(const sMacAddr &mac, int vap_id);
     std::string get_node_parent_radio(const std::string &mac);
+    std::string get_sta_parent_radio(const std::string &mac);
     std::string get_bss_parent_radio(const std::string &bssid);
 
     /**
@@ -2052,6 +2054,7 @@ public:
      *      3. the node's type is TYPE_SLAVE and the node's hostap object is nullptr
      */
     bool update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
+    bool update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw);
 
     void add_bss_info_configuration(const sMacAddr &al_mac,
                                     const wireless_utils::sBssInfoConf &bss_info);

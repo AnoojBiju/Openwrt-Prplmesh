@@ -214,7 +214,7 @@ bool client_association_task::handle_cmdu_1905_client_capability_report_message(
     auto client_bw_max = client_bw;
     if (son::wireless_utils::get_station_max_supported_bw(capabilities, client_bw_max)) {
         if (client_bw_max < client_bw) {
-            m_database.update_node_wifi_channel_bw(sta_mac, client_bw_max);
+            m_database.update_sta_wifi_channel_bw(sta_mac, client_bw_max);
         }
     }
 

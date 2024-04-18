@@ -419,7 +419,7 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
                 break;
             }
 
-            if (m_database.get_node_parent(client_mac) !=
+            if (m_database.get_sta_parent(client_mac) !=
                     event_obj->bssid || // client is not connected to provided bssid
                 m_database.get_sta_state(client_mac) == beerocks::STATE_DISCONNECTED) {
                 TASK_LOG(ERROR) << "Client " << client_mac << " is not connected to "
@@ -764,9 +764,9 @@ void pre_association_steering_task::handle_event(int event_type, void *obj)
             }
 
             auto wifi_channel = m_database.get_radio_wifi_channel(
-                tlvf::mac_from_string(m_database.get_node_parent_radio(client_mac)));
+                tlvf::mac_from_string(m_database.get_sta_parent_radio(client_mac)));
             if (wifi_channel.is_empty()) {
-                TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_node_parent_radio(client_mac)
+                TASK_LOG(ERROR) << "wifiChannel of " << m_database.get_sta_parent_radio(client_mac)
                                 << " is empty";
                 break;
             }

@@ -64,7 +64,7 @@ void association_handling_task::work()
         }
         station->association_handling_task_id = id;
 
-        original_parent_mac = database.get_node_parent(sta_mac);
+        original_parent_mac = database.get_sta_parent(sta_mac);
 
         task_started_timestamp = std::chrono::steady_clock::now();
 
@@ -89,7 +89,7 @@ void association_handling_task::work()
 
         std::string new_hostap_mac;
 
-        new_hostap_mac = database.get_node_parent(sta_mac);
+        new_hostap_mac = database.get_sta_parent(sta_mac);
         if (new_hostap_mac != original_parent_mac ||
             database.get_sta_state(sta_mac) != beerocks::STATE_CONNECTED) {
             TASK_LOG(DEBUG) << "sta " << sta_mac << " is no longer connected to "
@@ -137,7 +137,7 @@ void association_handling_task::work()
         TASK_LOG(DEBUG) << "started association_handling_task, looking for beacon measurement "
                            "capabilities on "
                         << sta_mac;
-        std::string bssid     = database.get_node_parent(sta_mac);
+        std::string bssid     = database.get_sta_parent(sta_mac);
         std::string radio_mac = database.get_bss_parent_radio(bssid);
         auto agent_mac        = database.get_bss_parent_agent(tlvf::mac_from_string(bssid));
 
@@ -203,7 +203,7 @@ void association_handling_task::work()
          * send measurement request to get a valid RSSI reading
          */
         TASK_LOG(DEBUG) << "starting rssi measurement on " << sta_mac;
-        std::string hostap_mac = database.get_node_parent(sta_mac);
+        std::string hostap_mac = database.get_sta_parent(sta_mac);
         auto agent_mac         = database.get_bss_parent_agent(tlvf::mac_from_string(hostap_mac));
 
         if (hostap_mac != original_parent_mac ||
@@ -310,7 +310,7 @@ void association_handling_task::handle_response(std::string mac,
         break;
     }
     case beerocks_message::ACTION_CONTROL_CLIENT_BEACON_11K_RESPONSE: {
-        const std::string parent_mac = database.get_node_parent(sta_mac);
+        const std::string parent_mac = database.get_sta_parent(sta_mac);
         auto response =
             beerocks_header
                 ->getClass<beerocks_message::cACTION_CONTROL_CLIENT_BEACON_11K_RESPONSE>();
@@ -396,7 +396,7 @@ void association_handling_task::finalize_new_connection()
             // not override the existing configuration.
             if ((client->stay_on_initial_radio == eTriStateBool::TRUE) &&
                 (client->initial_radio == network_utils::ZERO_MAC)) {
-                auto bssid            = database.get_node_parent(sta_mac);
+                auto bssid            = database.get_sta_parent(sta_mac);
                 auto parent_radio_mac = database.get_bss_parent_radio(bssid);
                 // If stay_on_initial_radio is enabled and initial_radio is not set yet, set to parent radio mac (not bssid)
                 if (!database.set_sta_initial_radio(*client,

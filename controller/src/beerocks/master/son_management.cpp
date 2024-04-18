@@ -340,7 +340,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         std::string client_mac = tlvf::mac_to_string(cli_request->client_mac());
-        std::string hostap_mac = database.get_node_parent(client_mac);
+        std::string hostap_mac = database.get_sta_parent(client_mac);
         LOG(DEBUG) << "CLI client disassociate request, client " << client_mac << " hostap "
                    << hostap_mac;
 
@@ -1613,7 +1613,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
         pre_association_steering_task::sSteeringRssiMeasurementRequestEvent new_event;
         new_event.sd           = sd;
         std::string client_mac = tlvf::mac_to_string(request->client_mac());
-        std::string sta_parent = database.get_node_parent(client_mac);
+        std::string sta_parent = database.get_sta_parent(client_mac);
 
         auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
         if (sta_parent_wifi_channel.is_empty()) {

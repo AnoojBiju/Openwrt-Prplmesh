@@ -536,6 +536,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
         LOG(DEBUG) << "Skip data model insertion for not-yet-connected persistent clients";
         return station;
     }
+    station->parent_mac = tlvf::mac_to_string(parent_mac);
 
     // Add STA to the controller data model via m_ambiorix_datamodel
     // for connected station (WiFi client)
@@ -1228,6 +1229,17 @@ std::string db::get_node_parent(const std::string &mac)
         return std::string();
     }
     return n->parent_mac;
+}
+
+// returns vap mac to which the client is connected
+std::string db::get_sta_parent(const std::string &mac)
+{
+    std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
+    if (!pSta) {
+        LOG(WARNING) << "station " << mac << "does not exist!";
+        return std::string();
+    }
+    return pSta->parent_mac;
 }
 
 std::string db::get_node_parent_backhaul(const std::string &mac)
@@ -2002,7 +2014,7 @@ bool db::set_sta_capabilities(const std::string &client_mac,
         return false;
     }
 
-    auto parent_radio = get_node_parent_radio(client_mac);
+    auto parent_radio = get_sta_parent_radio(client_mac);
 
     if (parent_radio.empty()) {
         LOG(ERROR) << "parent radio node found for client " << client_mac;
@@ -2758,7 +2770,7 @@ std::string db::get_node_parent_radio(const std::string &mac)
         return std::string();
     }
     if (n->get_type() == beerocks::TYPE_CLIENT) {
-        const auto parent_bssid = get_node_parent(mac);
+        const auto parent_bssid = get_sta_parent(mac);
         std::shared_ptr<Agent::sRadio> parent_radio =
             get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
         if (!parent_radio) {
@@ -2768,6 +2780,22 @@ std::string db::get_node_parent_radio(const std::string &mac)
         return tlvf::mac_to_string(parent_radio->radio_uid);
     }
     return n->mac;
+}
+
+// returns radio_uid to which the client is connected
+std::string db::get_sta_parent_radio(const std::string &mac)
+{
+    if (has_station(tlvf::mac_from_string(mac))) {
+        const auto parent_bssid = get_sta_parent(mac);
+        std::shared_ptr<Agent::sRadio> parent_radio =
+            get_radio_by_bssid(tlvf::mac_from_string(parent_bssid));
+        if (!parent_radio) {
+            LOG(ERROR) << __FUNCTION__ << " - radio hosting " << parent_bssid << " does not exist!";
+            return std::string();
+        }
+        return tlvf::mac_to_string(parent_radio->radio_uid);
+    }
+    return std::string();
 }
 
 std::string db::get_bss_parent_radio(const std::string &bssid)
@@ -4625,14 +4653,12 @@ bool db::load_persistent_db_clients()
 std::deque<sMacAddr> db::get_clients_with_persistent_data_configured()
 {
     std::deque<sMacAddr> configured_clients;
-    for (auto node_map : nodes) {
-        for (auto kv : node_map) {
-            if ((kv.second->get_type() == eType::TYPE_CLIENT) && (kv.second->mac == kv.first)) {
-                auto client = get_station(tlvf::mac_from_string(kv.second->mac));
-                if (client &&
-                    client->parameters_last_edit != std::chrono::system_clock::time_point::min()) {
-                    configured_clients.push_back(client->mac);
-                }
+    for (const auto &station : m_stations) {
+        if (has_station(station.second->mac)) {
+            auto client = get_station(station.second->mac);
+            if (client &&
+                client->parameters_last_edit != std::chrono::system_clock::time_point::min()) {
+                configured_clients.push_back(client->mac);
             }
         }
     }
@@ -5369,8 +5395,7 @@ bool db::set_sta_wifi_channel(const sMacAddr &sta_mac, const beerocks::WifiChann
         break;
     }
 
-    // Temporary
-    return set_node_wifi_channel(sta_mac, wifi_channel);
+    return true;
 }
 
 beerocks::WifiChannel db::get_sta_wifi_channel(const std::string &mac)
@@ -5465,6 +5490,46 @@ bool db::update_node_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwid
     for (auto child : children) {
         child->wifi_channel.set_bandwidth(bw);
     }
+    return true;
+}
+
+bool db::update_sta_wifi_channel_bw(const sMacAddr &mac, beerocks::eWiFiBandwidth bw)
+{
+    std::shared_ptr<Station> pSta = get_station(mac);
+    if (!pSta) {
+        LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
+        return false;
+    }
+    if (pSta->wifi_channel.get_freq_type() == eFreqType::FREQ_UNKNOWN) {
+        LOG(ERROR) << "frequency type of station " << mac
+                   << " is unknown, channel=" << int(pSta->wifi_channel.get_channel());
+        return false;
+    }
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_UNKNOWN) {
+        LOG(ERROR) << "the new bandwidth of station " << mac << " can't be unknown";
+        return false;
+    }
+
+    if (bw == pSta->wifi_channel.get_bandwidth()) {
+        return true;
+    }
+
+    if (bw == eWiFiBandwidth::BANDWIDTH_MAX) {
+        LOG(INFO) << "update wifiChannel station " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << "MHz to MAX";
+    } else {
+        LOG(INFO) << "update wifiChannel station " << mac << " bw from "
+                  << beerocks::utils::convert_bandwidth_to_int(pSta->wifi_channel.get_bandwidth())
+                  << " to " << bw;
+    }
+
+    eWiFiBandwidth prev_bw = pSta->wifi_channel.get_bandwidth();
+    pSta->wifi_channel.set_bandwidth(bw);
+    LOG(INFO) << "updating station " << mac << " bandwidth from "
+              << beerocks::utils::convert_bandwidth_to_int(prev_bw) << "MHz to "
+              << beerocks::utils::convert_bandwidth_to_int(bw) << "MHz";
     return true;
 }
 
@@ -6165,16 +6230,13 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
     bool is_aging_candidate_available        = false;
     auto candidate_client_expiry_due_time    = std::chrono::system_clock::time_point::max();
 
-    for (const auto &node_map : nodes) {
-        for (const auto &key_value : node_map) {
-            const auto client = key_value.second;
-            if (client->get_type() != beerocks::eType::TYPE_CLIENT) {
-                continue;
-            }
-            const auto client_mac = tlvf::mac_from_string(key_value.first);
+    for (const auto &station : m_stations) {
+        if (has_station(station.second->mac)) {
+            const auto client     = station.second;
+            const auto client_mac = station.first;
 
-            auto station = get_station(client_mac);
-            if (!station) {
+            auto pSta = get_station(client_mac);
+            if (!pSta) {
                 LOG(WARNING) << "client " << client_mac << " not found";
                 continue;
             }
@@ -6186,39 +6248,38 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
             //TODO: improvement - stop search if "already-aged" candidate is found (don't-care of connectivity status)
 
             // Skip clients which have no persistent information.
-            if (station->parameters_last_edit == std::chrono::system_clock::time_point::min()) {
+            if (pSta->parameters_last_edit == std::chrono::system_clock::time_point::min()) {
                 continue;
             }
 
             // Max client timelife delay
             // This is ditermined according to the friendliness status of the client.
             // If a client is unfriendly we can
-            auto selected_max_timelife_delay_sec = (station->is_unfriendly == eTriStateBool::TRUE)
+            auto selected_max_timelife_delay_sec = (pSta->is_unfriendly == eTriStateBool::TRUE)
                                                        ? unfriendly_device_max_timelife_delay_sec
                                                        : max_timelife_delay_sec;
 
             // Client timelife delay
-            auto timelife_delay_sec = (station->time_life_delay_minutes !=
+            auto timelife_delay_sec = (pSta->time_life_delay_minutes !=
                                        std::chrono::seconds(beerocks::PARAMETER_NOT_CONFIGURED))
-                                          ? std::chrono::seconds(station->time_life_delay_minutes)
+                                          ? std::chrono::seconds(pSta->time_life_delay_minutes)
                                           : selected_max_timelife_delay_sec;
 
             // Calculate client expiry due time.
             // In case both clients are non-aging - both time-life will be 0 - so only the
             // last-edit-time will affect the candidate selected.
-            auto current_client_expiry_due_time =
-                station->parameters_last_edit + timelife_delay_sec;
+            auto current_client_expiry_due_time = pSta->parameters_last_edit + timelife_delay_sec;
 
             // Preferring non-aging clients over aging ones (even if disconnected).
             // If client is non-aging and candidate is aging - skip it
             if (is_aging_candidate_available &&
-                station->time_life_delay_minutes == std::chrono::seconds::zero()) {
+                pSta->time_life_delay_minutes == std::chrono::seconds::zero()) {
                 continue;
             }
 
             // Previous candidate is not aging and current client is aging - replace candidate
             if (!is_aging_candidate_available &&
-                (station->time_life_delay_minutes > std::chrono::seconds::zero())) {
+                (pSta->time_life_delay_minutes > std::chrono::seconds::zero())) {
                 // Update candidate
                 candidate_client_to_be_removed = client_mac;
                 // Set the candidate client expiry due time for later comparison
@@ -6226,14 +6287,13 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 // Set aging-candidate-available
                 is_aging_candidate_available = true;
                 // Set disconnected-candidate-available
-                is_disconnected_candidate_available =
-                    (station->state == beerocks::STATE_DISCONNECTED);
+                is_disconnected_candidate_available = (pSta->state == beerocks::STATE_DISCONNECTED);
                 continue;
             }
 
             // Preferring disconnected clients over connected ones (even if less aged).
             if (is_disconnected_candidate_available &&
-                station->state != beerocks::STATE_DISCONNECTED) {
+                pSta->state != beerocks::STATE_DISCONNECTED) {
                 continue;
             }
 
@@ -6245,8 +6305,7 @@ sMacAddr db::get_candidate_client_for_removal(sMacAddr client_to_skip)
                 // Set the candidate client
                 candidate_client_to_be_removed = client_mac;
                 // Set disconnected-candidate-available
-                is_disconnected_candidate_available =
-                    (station->state == beerocks::STATE_DISCONNECTED);
+                is_disconnected_candidate_available = (pSta->state == beerocks::STATE_DISCONNECTED);
             }
         }
     }
