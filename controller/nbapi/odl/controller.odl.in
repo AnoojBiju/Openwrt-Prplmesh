@@ -200,7 +200,7 @@
                     void AccessPointCommit();
 
                     // Global network wide enable
-                    bool Enable = false; 
+                    bool Enable = true;
 
                     // Global network wide enable
                     object X-PRPL_ORG_Group[] {

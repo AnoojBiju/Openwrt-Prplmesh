@@ -44,7 +44,7 @@
         /*
         ** Enabling/Disabling the AcceessPoint set.
         */
-        bool Enable;
+        bool Enable = true;
 
     }
 }
