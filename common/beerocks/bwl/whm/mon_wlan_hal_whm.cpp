@@ -478,6 +478,24 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
 
     std::list<std::string> amx_un_stations_to_be_removed;
 
+    std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
+    //Now add the new unassociated stations
+    for (auto &new_station : new_list) {
+        std::string mac_address(new_station.first);
+
+        AmbiorixVariant result;
+        AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
+        args.add_child("macaddress", mac_address);
+        if (!m_ambiorix_cl.call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
+            LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
+                       << nasta_monitor_path << " Failed!";
+            continue;
+        }
+
+        LOG(TRACE) << "Non Associated Station with MACAddress: " << mac_address << "added to "
+                   << non_associated_device_path;
+    }
+
     std::string non_associated_device_path = m_radio_path + "NaStaMonitor.NonAssociatedDevice.";
 
     auto non_ass_devices =
@@ -525,24 +543,6 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         } else { // -->controller is not interested on it any more--> remove it from the dm
             amx_un_stations_to_be_removed.push_back(mac_address_amx);
         }
-    }
-
-    std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
-    //Now add the newly added unassociated stations
-    for (auto &new_station : new_list) {
-        std::string mac_address(new_station.first);
-
-        AmbiorixVariant result;
-        AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
-        args.add_child("macaddress", mac_address);
-        if (!m_ambiorix_cl.call(nasta_monitor_path, "createNonAssociatedDevice", args, result)) {
-            LOG(ERROR) << " remote function call createNonAssociatedDevice for object "
-                       << nasta_monitor_path << " Failed!";
-            continue;
-        }
-
-        LOG(TRACE) << "Non Associated Station with MACAddress: " << mac_address << "added to "
-                   << non_associated_device_path;
     }
 
     // Now lets remove all stations the controller do not want them anymore
