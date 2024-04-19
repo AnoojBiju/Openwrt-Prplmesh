@@ -478,6 +478,8 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
 
     std::list<std::string> amx_un_stations_to_be_removed;
 
+    std::string non_associated_device_path = m_radio_path + "NaStaMonitor.NonAssociatedDevice.";
+
     std::string nasta_monitor_path = m_radio_path + "NaStaMonitor";
     //Now add the new unassociated stations
     for (auto &new_station : new_list) {
@@ -495,8 +497,6 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         LOG(TRACE) << "Non Associated Station with MACAddress: " << mac_address << "added to "
                    << non_associated_device_path;
     }
-
-    std::string non_associated_device_path = m_radio_path + "NaStaMonitor.NonAssociatedDevice.";
 
     auto non_ass_devices =
         m_ambiorix_cl.get_object_multi<AmbiorixVariantMapSmartPtr>(non_associated_device_path);
