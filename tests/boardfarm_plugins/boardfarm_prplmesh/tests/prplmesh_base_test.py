@@ -599,7 +599,7 @@ class PrplMeshBaseTest(bft_base_test.BftBaseTest):
             "Band5GL": bands.get("Band5GL", False),
             "Band2_4G": bands.get("Band2_4G", False),
             "SSID": ssid,
-            "Enable": true, # Enable access point within group (Dirty as groups should be defined)
+            "Enable": True, # Enable access point within group (Dirty as groups should be defined)
         }}
         new_inst = controller.nbapi_command(
             "Device.WiFi.DataElements.Network.AccessPoint", "_add", params)
