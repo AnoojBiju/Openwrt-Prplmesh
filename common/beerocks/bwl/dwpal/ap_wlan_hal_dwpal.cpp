@@ -68,8 +68,6 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::ACS_Failed;
     } else if (opcode == "AP-CSA-FINISHED") {
         return ap_wlan_hal::Event::CSA_Finished;
-    } else if (opcode == "BSS-TM-QUERY") {
-        return ap_wlan_hal::Event::BSS_TM_Query;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
     } else if (opcode == "DFS-CAC-START") {
@@ -1191,65 +1189,6 @@ bool ap_wlan_hal_dwpal::sta_deauth(int8_t vap_id, const std::string &mac, uint32
 bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
 {
     LOG(DEBUG) << "ap_wlan_hal_dwpal: set_cce_indication, advertise_cce=" << advertise_cce;
-    return true;
-}
-
-bool ap_wlan_hal_dwpal::sta_bss_steer(int8_t vap_id, const std::string &mac,
-                                      const std::string &bssid, int oper_class, int chan,
-                                      int disassoc_timer_btt, int valid_int_btt, int reason)
-{
-
-    LOG(TRACE) << __func__ << " mac: " << mac << ", BSS: " << bssid
-               << ", oper_class: " << oper_class << ", channel: " << chan
-               << ", disassoc: " << disassoc_timer_btt << ", valid_int: " << valid_int_btt;
-
-    // Build command string
-    std::string cmd =
-        // Set the STA MAC address
-        "BSS_TM_REQ " +
-        mac
-
-        // Transition management parameters
-        + " dialog_token=" + "0" + " pref=" + "1" + " abridged=" + "1";
-
-    // Divide disassoc_timer by 100, because the hostapd expects it to be in beacon interval
-    // which is 100ms.
-    if (disassoc_timer_btt) {
-        cmd += std::string() + " disassoc_imminent=" + "1" +
-               " disassoc_timer=" + std::to_string(disassoc_timer_btt);
-    }
-
-    // Add only valid (positive) reason codes
-    // Upper layers may set the reason value to a (-1) value to mark that the reason is not present
-    if (reason >= 0) {
-        // mbo format is mbo=<reason>:<reassoc_delay>:<cell_pref>
-        // since the <reassoc_delay>:<cell_pref> variables are not part of the Steering Request TLV, we hard code it.
-        // See discussion here:
-        // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/1948#note_457733802
-        cmd += " mbo=" + std::to_string(reason);
-
-        // BTM request (MBO): Assoc retry delay is only valid in disassoc imminent mode
-        if (disassoc_timer_btt) {
-            cmd += ":100:0";
-        } else {
-            cmd += ":0:0";
-        }
-    }
-
-    if (valid_int_btt) {
-        cmd += " valid_int=" + std::to_string(valid_int_btt);
-    }
-
-    // Target BSSID
-    cmd += std::string() + " neighbor=" + bssid + ",0," + std::to_string(oper_class) + "," +
-           std::to_string(chan) + ",0,255";
-
-    // Send command
-    if (!dwpal_send_cmd(cmd)) {
-        LOG(ERROR) << "sta_bss_steer() failed!";
-        return false;
-    }
-
     return true;
 }
 
@@ -2985,38 +2924,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *buffer, int bufLen, const std:
             break;
         }
 
-        break;
-    }
-
-    case Event::BSS_TM_Query: {
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        const char *client_mac_str;
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
-            return false;
-        }
-
-        const char *vap_name;
-        if (!read_param("_iface", parsed_obj, &vap_name)) {
-            return false;
-        }
-
-        auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
-        std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
-
-        auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::message::sWifiChannel(m_radio_info.channel, m_radio_info.bandwidth));
-        // According to easymesh R2 specification when STA sends BSS_TM_QUERY
-        // AP should respond with BSS_TM_REQ with at least one neighbor AP.
-        // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
-        // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
-        // connected to, which in turn makes the STA to stay on the current VAP.
-        // Since it's not an "active" transition and it makes the STA stay on the
-        // current VAP, there is no need to notify the upper layer.
-        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(iface_ids.vap_id, client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2,
-                      0);
         break;
     }
 

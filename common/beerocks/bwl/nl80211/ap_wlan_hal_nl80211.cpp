@@ -75,8 +75,6 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::CSA_Finished;
     } else if (opcode == "CTRL-EVENT-CHANNEL-SWITCH") {
         return ap_wlan_hal::Event::CTRL_Channel_Switch;
-    } else if (opcode == "BSS-TM-QUERY") {
-        return ap_wlan_hal::Event::BSS_TM_Query;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
     } else if (opcode == "DFS-CAC-COMPLETED") {
@@ -528,8 +526,8 @@ bool ap_wlan_hal_nl80211::refresh_radio_info()
             auto &channel_info        = m_radio_info.channels_list[supported_channel_info.number];
             channel_info.tx_power_dbm = supported_channel_info.tx_power;
             channel_info.dfs_state    = supported_channel_info.is_dfs
-                                         ? supported_channel_info.dfs_state
-                                         : beerocks::eDfsState::DFS_STATE_MAX;
+                                            ? supported_channel_info.dfs_state
+                                            : beerocks::eDfsState::DFS_STATE_MAX;
 
             for (auto bw : supported_channel_info.supported_bandwidths) {
                 // Since bwl nl8011 does not support ranking, set all ranking to highest rank (1).
@@ -814,69 +812,6 @@ bool ap_wlan_hal_nl80211::sta_deauth(int8_t vap_id, const std::string &mac, uint
     // Send command
     if (!wpa_ctrl_send_msg(cmd, ifname)) {
         LOG(ERROR) << "sta_disassoc() failed!";
-        return false;
-    }
-
-    return true;
-}
-
-bool ap_wlan_hal_nl80211::sta_bss_steer(int8_t vap_id, const std::string &mac,
-                                        const std::string &bssid, int oper_class, int chan,
-                                        int disassoc_timer_btt, int valid_int_btt, int reason)
-{
-    LOG(TRACE) << __func__ << " vap_id: " << vap_id << " mac: " << mac << ", BSS: " << bssid
-               << ", oper_class: " << oper_class << ", channel: " << chan
-               << ", disassoc: " << disassoc_timer_btt << ", valid_int: " << valid_int_btt
-               << ", reason: " << reason;
-
-    if (!check_vap_id(vap_id)) {
-        LOG(ERROR) << "invalid source vap_id " << vap_id;
-        return false;
-    }
-
-    // Build command string
-    std::string cmd =
-        // Set the STA MAC address
-        "BSS_TM_REQ " +
-        mac
-        // Transition management parameters
-        + " pref=" + "1" + " abridged=" + "1";
-
-    // Add only valid (positive) reason codes
-    // Upper layers may set the reason value to a (-1) value to mark that the reason is not present
-    if (reason >= 0) {
-        // mbo format is mbo=<reason>:<reassoc_delay>:<cell_pref>
-        // since the <reassoc_delay>:<cell_pref> variables are not part of the Steering Request TLV, we hard code it.
-        // See discussion here:
-        // https://gitlab.com/prpl-foundation/prplmesh/prplMesh/-/merge_requests/1948#note_457733802
-        cmd += " mbo=" + std::to_string(reason);
-
-        // BTM request (MBO): Assoc retry delay is only valid in disassoc imminent mode
-        if (disassoc_timer_btt) {
-            cmd += ":100:0";
-        } else {
-            cmd += ":0:0";
-        }
-    }
-
-    if (disassoc_timer_btt) {
-        cmd += std::string() + " disassoc_imminent=" + "1" +
-               " disassoc_timer=" + std::to_string(disassoc_timer_btt);
-    }
-    // " bss_term="  // Unused Param
-    // " url="       // Unused Param
-
-    if (valid_int_btt) {
-        cmd += " valid_int=" + std::to_string(valid_int_btt);
-    }
-
-    // Target BSSID
-    cmd += std::string() + " neighbor=" + bssid + ",0," + std::to_string(oper_class) + "," +
-           std::to_string(chan) + ",0";
-
-    // Send command
-    if (!wpa_ctrl_send_msg(cmd, m_radio_info.available_vaps[vap_id].bss)) {
-        LOG(ERROR) << "sta_bss_steer() failed!";
         return false;
     }
 
@@ -1462,44 +1397,6 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         m_latest_assoc_frame.erase(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
     } break;
-
-    // BSS Transition Query (802.11v)
-    case Event::BSS_TM_Query: {
-
-        auto val_iter = parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_MAC);
-        if (val_iter == parsed_obj.end()) {
-            LOG(ERROR) << "No STA mac found";
-            return false;
-        }
-        const auto client_mac = val_iter->second;
-
-        if (interface.empty()) {
-            LOG(ERROR) << "No interface name found";
-            return false;
-        }
-        const auto vap_name = interface;
-
-        if (vap_id < 0) {
-            LOG(ERROR) << "Invalid vap_id " << vap_id;
-            return false;
-        }
-        std::string bssid = m_radio_info.available_vaps[vap_id].mac;
-
-        auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
-                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
-                                  m_radio_info.channel_ext_above > 0 ? true : false));
-        // According to easymesh R2 specification when STA sends BSS_TM_QUERY
-        // AP should respond with BSS_TM_REQ with at least one neighbor AP.
-        // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
-        // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
-        // connected to, which in turn makes the STA to stay on the current VAP.
-        // Since it's not an "active" transition and it makes the STA stay on the
-        // current VAP, there is no need to notify the upper layer.
-        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(vap_id, client_mac, bssid, op_class, m_radio_info.channel, 0, 2, 0);
-        break;
-    }
 
     // BSS Transition (802.11v)
     case Event::BSS_TM_Response: {
