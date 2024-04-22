@@ -7,7 +7,6 @@
  */
 
 #include "ap_manager.h"
-#include "agent_db.h"
 
 #include <bwl/base_wlan_hal_types.h>
 
@@ -2778,13 +2777,12 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                 break;
             }
 
-            auto radio = db->radio(db->backhaul.selected_iface_name);
-
             std::string sta_mac      = tlvf::mac_to_string(mgmt_frame->mac);
             std::string target_bssid = tlvf::mac_to_string(mgmt_frame->bssid);
-            uint8_t channel          = radio->wifi_channel.get_channel();
-            auto freq_type           = radio->wifi_channel.get_freq_type();
-            auto bw_info             = radio->wifi_channel.get_bandwidth();
+            uint8_t channel          = ap_wlan_hal->get_radio_info().channel;
+            auto freq_type           = ap_wlan_hal->get_radio_info().frequency_band;
+            auto bw_info =
+                utils::convert_bandwidth_to_enum(ap_wlan_hal->get_radio_info().bandwidth);
             beerocks::WifiChannel wifi_ch(channel, freq_type, bw_info);
 
             uint8_t op_class = son::wireless_utils::get_operating_class_by_channel(wifi_ch);
