@@ -2762,7 +2762,6 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             // pwhm sets the following flags in the Request Mode Field of the 802.11 BTM Request :
             // M_SWL_IEEE802_BTM_REQ_MODE_PREF_LIST_INCL | M_SWL_IEEE802_BTM_REQ_MODE_ABRIDGED | M_SWL_IEEE802_BTM_REQ_MODE_DISASSOC_IMMINENT
 
-            auto db                       = AgentDB::get();
             auto bssid                    = tlvf::mac_to_string(mgmt_frame->bssid);
             const auto &vap_unordered_map = ap_wlan_hal->get_radio_info().available_vaps;
             auto it = std::find_if(vap_unordered_map.begin(), vap_unordered_map.end(),
