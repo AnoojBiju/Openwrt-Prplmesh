@@ -49,8 +49,8 @@ if (ENABLE_NBAPI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_NBAPI ${UBUS_SOCK}")
     find_package(amxc REQUIRED)
     find_package(amxd REQUIRED)
-    find_package(amxrt REQUIRED)
-    target_link_libraries(${PROJECT_NAME} amxc amxd amxrt)
+    find_package(libamxrt REQUIRED)
+    target_link_libraries(${PROJECT_NAME} amxc amxd libamxrt)
 endif()
 
 # Install

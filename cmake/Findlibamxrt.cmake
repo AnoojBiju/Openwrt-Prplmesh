@@ -11,21 +11,21 @@ find_path(AMXRT_INCLUDE_DIRS
 )
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(amxrt DEFAULT_MSG
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(libamxrt DEFAULT_MSG
     AMXRT_LIBRARY
     AMXRT_INCLUDE_DIRS
 )
 
-if (amxrt_FOUND)
-    add_library(amxrt UNKNOWN IMPORTED)
+if (libamxrt_FOUND)
+    add_library(libamxrt UNKNOWN IMPORTED)
 
     # Includes
-    set_target_properties(amxrt PROPERTIES
+    set_target_properties(libamxrt PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${AMXRT_INCLUDE_DIRS}/"
     )
 
     # Library
-    set_target_properties(amxrt PROPERTIES
+    set_target_properties(libamxrt PROPERTIES
         IMPORTED_LINK_INTERFACE_LANGUAGES "C"
         IMPORTED_LOCATION "${AMXRT_LIBRARY}"
     )

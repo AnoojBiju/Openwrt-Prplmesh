@@ -29,9 +29,9 @@ if (ENABLE_NBAPI)
     find_package(amxd REQUIRED)
     find_package(amxp REQUIRED)
     find_package(amxo REQUIRED)
-    find_package(amxrt REQUIRED)
+    find_package(libamxrt REQUIRED)
     list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
-    list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo amxrt)
+    list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo libamxrt)
 endif()
 
 # Build the library

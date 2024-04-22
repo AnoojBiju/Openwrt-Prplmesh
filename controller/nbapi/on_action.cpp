@@ -1213,7 +1213,7 @@ static void event_configuration_changed(const char *const sig_name, const amxc_v
 static void event_network_group_changed(const char *const sig_name, const amxc_var_t *const data,
                                         void *const priv)
 {
-    amxd_object_t *group = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *group = amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!group) {
         LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Network.Group.X.";
@@ -1234,7 +1234,8 @@ static void event_network_group_changed(const char *const sig_name, const amxc_v
 static void event_network_enable_changed(const char *const sig_name, const amxc_var_t *const data,
                                          void *const priv)
 {
-    amxd_object_t *network_obj = amxd_dm_signal_get_object(g_data_model, data);
+    amxd_object_t *network_obj =
+        amxd_dm_signal_get_object(beerocks::nbapi::Amxrt::getDatamodel(), data);
 
     if (!network_obj) {
         LOG(WARNING) << "Failed to get object Device.WiFi.DataElements.Network.";
