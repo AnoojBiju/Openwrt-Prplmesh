@@ -62,6 +62,10 @@ class URXOSP(GenericPrplOS):
         shell.sendline("")
         shell.expect(self.bootloader_prompt)
 
+        time.sleep(10)
+        shell.sendline(
+            "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
+        shell.expect("blocks erased: OK", timeout=15)
         time.sleep(5)
         shell.sendline(
             "mmc erase ${overlay_container_a_block_start} ${overlay_container_a_block_size}")
