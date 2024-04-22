@@ -102,6 +102,8 @@ bool sta_wlan_hal_dummy::update_status()
     return true;
 }
 
+bool sta_wlan_hal_dummy::clear_non_associated_devices() { return true; }
+
 } // namespace dummy
 
 std::shared_ptr<sta_wlan_hal> sta_wlan_hal_create(const std::string &iface_name,

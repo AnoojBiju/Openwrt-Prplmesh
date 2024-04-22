@@ -933,6 +933,8 @@ void sta_wlan_hal_dwpal::update_status(const ConnectionStatus &connection_status
     LOG(DEBUG) << "m_active_ssid= " << m_active_ssid;
 }
 
+bool sta_wlan_hal_dwpal::clear_non_associated_devices() { return true; }
+
 #if 0
 bool sta_wlan_hal_dwpal::parse_fapi_event(const std::string& opcode, std::shared_ptr<void> obj)
 {
