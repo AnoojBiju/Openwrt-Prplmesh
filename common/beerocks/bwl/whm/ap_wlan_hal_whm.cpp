@@ -119,28 +119,25 @@ HALState ap_wlan_hal_whm::attach(bool block)
 
 void ap_wlan_hal_whm::subscribe_to_ap_bss_tm_events()
 {
-    auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
-    event_handler->event_type  = AMX_CL_BSS_TM_RESPONSE_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+    auto event_handler        = std::make_shared<sAmbiorixEventHandler>();
+    event_handler->event_type = AMX_CL_BSS_TM_RESPONSE_EVT;
+
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ap_path;
-        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+        if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
             return;
         }
-        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
-        auto &vapsExtInfo    = hal->m_vapsExtInfo;
-        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
-                                       return element.second.path == ap_path;
-                                   });
-        if (vap_it == vapsExtInfo.end()) {
+        auto vap_it =
+            std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                         [&](const auto &element) { return element.second.path == ap_path; });
+        if (vap_it == m_vapsExtInfo.end()) {
             LOG(DEBUG) << "vap_it not found";
             return;
         }
         LOG(DEBUG) << "event from iface " << vap_it->first;
 
-        hal->process_ap_bss_event(vap_it->first, &event_data);
+        process_ap_bss_event(vap_it->first, &event_data);
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
                          "[0-9]+.$')"
@@ -154,26 +151,23 @@ void ap_wlan_hal_whm::subscribe_to_ap_mgmt_frame_events()
 {
     auto event_handler         = std::make_shared<sAmbiorixEventHandler>();
     event_handler->event_type  = AMX_CL_MGMT_ACT_FRAME_EVT;
-    event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
+    event_handler->callback_fn = [this](AmbiorixVariant &event_data) -> void {
         std::string ap_path;
-        if (!event_data || (event_data.read_child(ap_path, "path") == false) || ap_path.empty()) {
+        if (!event_data.read_child(ap_path, "path") || ap_path.empty()) {
             return;
         }
-        ap_wlan_hal_whm *hal = (static_cast<ap_wlan_hal_whm *>(context));
-        auto &vapsExtInfo    = hal->m_vapsExtInfo;
-        auto vap_it          = std::find_if(vapsExtInfo.begin(), vapsExtInfo.end(),
-                                   [&](const std::pair<std::string, VAPExtInfo> &element) {
-                                       return element.second.path == ap_path;
-                                   });
-        if (vap_it == vapsExtInfo.end()) {
+
+        auto vap_it =
+            std::find_if(m_vapsExtInfo.begin(), m_vapsExtInfo.end(),
+                         [&](const auto &element) { return element.second.path == ap_path; });
+        if (vap_it == m_vapsExtInfo.end()) {
             LOG(DEBUG) << "vap_it not found";
             return;
         }
         LOG(DEBUG) << "event from iface " << vap_it->first;
 
-        hal->process_ap_bss_event(vap_it->first, &event_data);
+        process_ap_bss_event(vap_it->first, &event_data);
     };
-    event_handler->context = this;
 
     std::string filter = "(path matches '" + wbapi_utils::search_path_ap() +
                          "[0-9]+.$')"
@@ -1278,6 +1272,10 @@ bool ap_wlan_hal_whm::process_sta_event(const std::string &interface, const std:
 bool ap_wlan_hal_whm::process_ap_bss_event(const std::string &interface,
                                            const beerocks::wbapi::AmbiorixVariant *event_data)
 {
+    if (event_data == nullptr) {
+        LOG(WARNING) << "event_data null";
+        return false;
+    }
     std::string name_notification;
     event_data->read_child(name_notification, "notification");
     if (name_notification == AMX_CL_BSS_TM_RESPONSE_EVT) {
