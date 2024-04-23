@@ -75,8 +75,6 @@ static ap_wlan_hal::Event nl80211_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::CSA_Finished;
     } else if (opcode == "CTRL-EVENT-CHANNEL-SWITCH") {
         return ap_wlan_hal::Event::CTRL_Channel_Switch;
-    } else if (opcode == "BSS-TM-QUERY") {
-        return ap_wlan_hal::Event::BSS_TM_Query;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
     } else if (opcode == "DFS-CAC-COMPLETED") {
@@ -1462,44 +1460,6 @@ bool ap_wlan_hal_nl80211::process_nl80211_event(parsed_obj_map_t &parsed_obj)
         m_latest_assoc_frame.erase(parsed_obj[bwl::EVENT_KEYLESS_PARAM_MAC]);
 
     } break;
-
-    // BSS Transition Query (802.11v)
-    case Event::BSS_TM_Query: {
-
-        auto val_iter = parsed_obj.find(bwl::EVENT_KEYLESS_PARAM_MAC);
-        if (val_iter == parsed_obj.end()) {
-            LOG(ERROR) << "No STA mac found";
-            return false;
-        }
-        const auto client_mac = val_iter->second;
-
-        if (interface.empty()) {
-            LOG(ERROR) << "No interface name found";
-            return false;
-        }
-        const auto vap_name = interface;
-
-        if (vap_id < 0) {
-            LOG(ERROR) << "Invalid vap_id " << vap_id;
-            return false;
-        }
-        std::string bssid = m_radio_info.available_vaps[vap_id].mac;
-
-        auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
-                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
-                                  m_radio_info.channel_ext_above > 0 ? true : false));
-        // According to easymesh R2 specification when STA sends BSS_TM_QUERY
-        // AP should respond with BSS_TM_REQ with at least one neighbor AP.
-        // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
-        // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
-        // connected to, which in turn makes the STA to stay on the current VAP.
-        // Since it's not an "active" transition and it makes the STA stay on the
-        // current VAP, there is no need to notify the upper layer.
-        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(vap_id, client_mac, bssid, op_class, m_radio_info.channel, 0, 2, 0);
-        break;
-    }
 
     // BSS Transition (802.11v)
     case Event::BSS_TM_Response: {

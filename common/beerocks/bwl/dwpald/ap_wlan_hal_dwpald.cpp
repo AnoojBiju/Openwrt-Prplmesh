@@ -69,8 +69,6 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
         return ap_wlan_hal::Event::ACS_Failed;
     } else if (opcode == "AP-CSA-FINISHED") {
         return ap_wlan_hal::Event::CSA_Finished;
-    } else if (opcode == "BSS-TM-QUERY") {
-        return ap_wlan_hal::Event::BSS_TM_Query;
     } else if (opcode == "BSS-TM-RESP") {
         return ap_wlan_hal::Event::BSS_TM_Response;
     } else if (opcode == "DFS-CAC-START") {
@@ -3099,40 +3097,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
             break;
         }
 
-        break;
-    }
-
-    case Event::BSS_TM_Query: {
-        parsed_line_t parsed_obj;
-        parse_event(buffer, parsed_obj);
-
-        const char *client_mac_str;
-        if (!read_param("_mac", parsed_obj, &client_mac_str)) {
-            return false;
-        }
-
-        const char *vap_name;
-        if (!read_param("_iface", parsed_obj, &vap_name)) {
-            return false;
-        }
-
-        auto iface_ids    = beerocks::utils::get_ids_from_iface_string(vap_name);
-        std::string bssid = m_radio_info.available_vaps[iface_ids.vap_id].mac;
-
-        auto op_class = son::wireless_utils::get_operating_class_by_channel(
-            beerocks::WifiChannel(m_radio_info.channel, m_radio_info.vht_center_freq,
-                                  static_cast<beerocks::eWiFiBandwidth>(m_radio_info.bandwidth),
-                                  m_radio_info.channel_ext_above > 0 ? true : false));
-        // According to easymesh R2 specification when STA sends BSS_TM_QUERY
-        // AP should respond with BSS_TM_REQ with at least one neighbor AP.
-        // This commit adds the answer to the BSS_TM_QUERY. The answer adds only
-        // one neighbor to the BSS_TM_REQ - the current VAP that the STA is
-        // connected to, which in turn makes the STA to stay on the current VAP.
-        // Since it's not an "active" transition and it makes the STA stay on the
-        // current VAP, there is no need to notify the upper layer.
-        // disassoc_timer_btt = 0 valid_int_btt=2 (200ms) reason=0 (not specified)
-        sta_bss_steer(iface_ids.vap_id, client_mac_str, bssid, op_class, m_radio_info.channel, 0, 2,
-                      0);
         break;
     }
 
