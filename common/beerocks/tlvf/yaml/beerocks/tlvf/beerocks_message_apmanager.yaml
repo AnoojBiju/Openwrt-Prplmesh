@@ -40,6 +40,7 @@ cACTION_APMANAGER_JOINED_NOTIFICATION:
   cs_params: sApChannelSwitch
   channel_list: cChannelList
   vap_list: sVapsList
+  radio_max_bss: uint8_t
 
 cACTION_APMANAGER_ENABLE_APS_REQUEST:
   _type: class

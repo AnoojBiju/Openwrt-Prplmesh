@@ -2460,7 +2460,7 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
         radio->front.hybrid_mode_supported = notification->params().hybrid_mode_supported;
 
         radio->front.radio_max_bss =
-            std::min(notification->params().radio_max_bss, uint8_t(radio->front.bssids.size()));
+            std::min(notification->radio_max_bss(), uint8_t(radio->front.bssids.size()));
 
         LOG(DEBUG) << "ZWDFS AP: " << radio->front.zwdfs;
 
