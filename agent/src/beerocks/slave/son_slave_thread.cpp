@@ -419,6 +419,10 @@ void slave_thread::agent_reset()
     }
 
     if (m_is_backhaul_disconnected) {
+        // To ensure ApAutoConfigurationTask is inactive during SLAVE_INIT_DELAY_SEC,
+        // send an INIT_TASK event to reset its state.
+        m_task_pool.send_event(eTaskType::AP_AUTOCONFIGURATION,
+                               ApAutoConfigurationTask::eEvent::INIT_TASK);
         m_agent_state_timer_sec =
             std::chrono::steady_clock::now() + std::chrono::seconds(SLAVE_INIT_DELAY_SEC);
         LOG(DEBUG) << "goto STATE_WAIT_BEFORE_INIT";
