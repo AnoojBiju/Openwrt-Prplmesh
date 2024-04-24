@@ -19,7 +19,14 @@ target_include_directories(ieee1905_transport_messages PUBLIC
     )
 
 add_executable(ieee1905_transport main.cpp)
-target_link_libraries(ieee1905_transport PUBLIC ieee1905_transport_lib PRIVATE elpp)
+
+if (TARGET_PLATFORM STREQUAL "rdkb")
+    list(APPEND LINKED_LIBS breakpadwrapper)
+endif()
+
+target_link_libraries(ieee1905_transport PUBLIC ieee1905_transport_lib ${LINKED_LIBS} PRIVATE elpp)
+
+
 
 install(TARGETS ieee1905_transport_messages ieee1905_transport_lib ieee1905_transport
     ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
