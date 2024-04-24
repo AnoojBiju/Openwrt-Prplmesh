@@ -35,6 +35,7 @@
 #include <mapf/common/utils.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
