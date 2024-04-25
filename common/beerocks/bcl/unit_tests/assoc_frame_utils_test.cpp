@@ -10,6 +10,8 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+
 namespace {
 
 TEST(parse_station_capabilities, sta_caps_from_rcvd_raw_data)
