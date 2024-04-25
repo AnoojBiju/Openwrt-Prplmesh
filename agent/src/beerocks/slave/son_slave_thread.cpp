@@ -365,7 +365,8 @@ bool slave_thread::thread_init()
     }
 
     m_task_pool.add_task(std::make_shared<ApAutoConfigurationTask>(*this, cmdu_tx));
-    m_task_pool.add_task(std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
+    m_task_pool.add_task(m_service_prioritization_task_configurator =
+                             std::make_shared<ServicePrioritizationTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ProxyAgentDppTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<ControllerConnectivityTask>(*this, cmdu_tx));
     m_task_pool.add_task(std::make_shared<CapabilityReportingTask>(*this, cmdu_tx));
@@ -409,6 +410,9 @@ void slave_thread::agent_reset()
         }
         return true;
     });
+
+    LOG(DEBUG) << "Clearing QOS configurations";
+    m_service_prioritization_task_configurator->clear_configuration();
 
     // If stopped, move to STATE_STOPPED.
     if (m_stopped) {
