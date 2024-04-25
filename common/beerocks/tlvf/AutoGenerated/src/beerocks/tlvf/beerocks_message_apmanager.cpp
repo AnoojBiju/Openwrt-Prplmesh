@@ -277,6 +277,7 @@ std::shared_ptr<cChannelList> cACTION_APMANAGER_JOINED_NOTIFICATION::create_chan
         std::copy_n(src, move_length, dst);
     }
     m_vap_list = (sVapsList *)((uint8_t *)(m_vap_list) + len);
+    m_radio_max_bss = (uint8_t *)((uint8_t *)(m_radio_max_bss) + len);
     return std::make_shared<cChannelList>(src, getBuffRemainingBytes(src), m_parse__);
 }
 
@@ -301,6 +302,7 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::add_channel_list(std::shared_ptr<cCh
     m_channel_list_init = true;
     size_t len = ptr->getLen();
     m_vap_list = (sVapsList *)((uint8_t *)(m_vap_list) + len - ptr->get_initial_size());
+    m_radio_max_bss = (uint8_t *)((uint8_t *)(m_radio_max_bss) + len - ptr->get_initial_size());
     m_channel_list_ptr = ptr;
     if (!buffPtrIncrementSafe(len)) {
         LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << len << ") Failed!";
@@ -312,6 +314,10 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::add_channel_list(std::shared_ptr<cCh
 
 sVapsList& cACTION_APMANAGER_JOINED_NOTIFICATION::vap_list() {
     return (sVapsList&)(*m_vap_list);
+}
+
+uint8_t& cACTION_APMANAGER_JOINED_NOTIFICATION::radio_max_bss() {
+    return (uint8_t&)(*m_radio_max_bss);
 }
 
 void cACTION_APMANAGER_JOINED_NOTIFICATION::class_swap()
@@ -356,6 +362,7 @@ size_t cACTION_APMANAGER_JOINED_NOTIFICATION::get_initial_size()
     class_size += sizeof(sNodeHostap); // params
     class_size += sizeof(sApChannelSwitch); // cs_params
     class_size += sizeof(sVapsList); // vap_list
+    class_size += sizeof(uint8_t); // radio_max_bss
     return class_size;
 }
 
@@ -397,6 +404,11 @@ bool cACTION_APMANAGER_JOINED_NOTIFICATION::init()
         return false;
     }
     if (!m_parse__) { m_vap_list->struct_init(); }
+    m_radio_max_bss = reinterpret_cast<uint8_t*>(m_buff_ptr__);
+    if (!buffPtrIncrementSafe(sizeof(uint8_t))) {
+        LOG(ERROR) << "buffPtrIncrementSafe(" << std::dec << sizeof(uint8_t) << ") Failed!";
+        return false;
+    }
     if (m_parse__) { class_swap(); }
     return true;
 }

@@ -2959,7 +2959,8 @@ void ApManager::handle_hostapd_attached()
     notification->params().zwdfs = m_ap_support_zwdfs;
 
     notification->params().hybrid_mode_supported = ap_wlan_hal->hybrid_mode_supported();
-    notification->params().radio_max_bss = ap_wlan_hal->get_radio_info().radio_max_bss_supported;
+
+    notification->radio_max_bss() = ap_wlan_hal->get_radio_info().radio_max_bss_supported;
 
     auto channel_list_class = notification->create_channel_list();
     build_channels_list(cmdu_tx, ap_wlan_hal->get_radio_info().channels_list, channel_list_class);
