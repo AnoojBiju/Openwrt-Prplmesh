@@ -24,6 +24,10 @@
 #include <net/if.h>
 #include <unistd.h>
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
+
 using namespace beerocks;
 using namespace beerocks::net;
 using namespace beerocks::transport;
@@ -110,6 +114,10 @@ create_bridge_state_manager(std::shared_ptr<NetlinkEventListener> netlink_event_
 int main(int argc, char *argv[])
 {
     std::cout << "IEEE1905 Transport Process Start" << std::endl;
+
+#ifdef INCLUDE_BREAKPAD
+    breakpad_ExceptionHandler();
+#endif
 
     mapf::Logger::Instance().LoggerInit("transport");
 

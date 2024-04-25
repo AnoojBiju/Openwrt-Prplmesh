@@ -64,6 +64,10 @@ if (ENABLE_VBSS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_VBSS")
 endif()
 
+if (TARGET_PLATFORM STREQUAL "rdkb")
+    list(APPEND LINKED_LIBS breakpadwrapper)
+endif()
+
 target_link_libraries(${PROJECT_NAME} ${LINKED_LIBS})
 
 target_include_directories(${PROJECT_NAME} PRIVATE

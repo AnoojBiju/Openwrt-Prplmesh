@@ -25,6 +25,10 @@
 #include "controller.h"
 #include "db/db.h"
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
+
 #ifdef ENABLE_NBAPI
 #include "ambiorix_impl.h"
 #include "on_action.h"
@@ -622,6 +626,10 @@ fill_nbapi_config_from_master_conf(std::shared_ptr<beerocks::nbapi::Ambiorix> am
 int main(int argc, char *argv[])
 {
     std::cout << "Beerocks Controller Process Start" << std::endl;
+
+#ifdef INCLUDE_BREAKPAD
+    breakpad_ExceptionHandler();
+#endif
 
     init_signals();
 
