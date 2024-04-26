@@ -3946,6 +3946,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE";
         auto response_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_RESPONSE>();
@@ -3986,6 +3987,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE";
         auto response_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_DUMP_RESULTS_RESPONSE>();
@@ -4015,6 +4017,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE";
         auto response_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_ABORT_RESPONSE>();
@@ -4044,6 +4047,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION";
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>();
@@ -4080,6 +4084,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION";
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION>();
@@ -4122,6 +4127,7 @@ bool slave_thread::handle_cmdu_monitor_message(const std::string &fronthaul_ifac
         break;
     }
     case beerocks_message::ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION: {
+        LOG(DEBUG) << "Received ACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION";
         auto notification_in =
             beerocks_header
                 ->addClass<beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION>();

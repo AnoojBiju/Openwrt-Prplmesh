@@ -828,6 +828,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
     event_handler->event_type  = AMX_CL_SCAN_COMPLETE_EVT;
     event_handler->callback_fn = [](AmbiorixVariant &event_data, void *context) -> void {
         if (!event_data) {
+            LOG(DEBUG) << " Bad event_data";
             return;
         }
         std::string notif_name;
@@ -848,6 +849,7 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
             return;
         }
 
+        LOG(DEBUG) << " Call process_scan_complete_event";
         hal->process_scan_complete_event(result);
     };
     event_handler->context = this;
@@ -856,7 +858,8 @@ void base_wlan_hal_whm::subscribe_to_scan_complete_events()
                          " && (notification == '" +
                          AMX_CL_SCAN_COMPLETE_EVT + "')";
 
-    m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
+    bool res = m_ambiorix_cl.subscribe_to_object_event(m_radio_path, event_handler, filter);
+    LOG(DEBUG) << " Subscribtion is " << res;
 }
 
 } // namespace whm

@@ -402,6 +402,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
 
         if (!does_current_scan_match_incoming_src(src_mac) ||
             !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED)) {
+            LOG(DEBUG) << "!does_current_scan_match_incoming_src(src_mac) || !is_current_scan_in_state(eState::WAIT_FOR_SCAN_TRIGGERED) check failed";
             return false;
         }
 
@@ -422,15 +423,18 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
         }
 
         if (!is_current_scan_running()) {
+            LOG(DEBUG) << "!is_current_scan_running() check succeeded";
             return true;
         }
 
         if (!does_current_scan_match_incoming_src(src_mac)) {
+            LOG(DEBUG) << "!does_current_scan_match_incoming_src(src_mac) check failed";
             return false;
         }
 
         if (notification->is_dump() == 0) {
             if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_READY)) {
+                LOG(DEBUG) << "!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_READY) check failed";
                 return false;
             }
 
@@ -439,6 +443,7 @@ bool ChannelScanTask::handle_vendor_specific(ieee1905_1::CmduMessageRx &cmdu_rx,
                                    SCAN_RESULTS_DUMP_WAIT_TIME);
         } else {
             if (!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP)) {
+                LOG(DEBUG) << "!is_current_scan_in_state(eState::WAIT_FOR_RESULTS_DUMP) check failed";
                 return false;
             }
             if (!store_radio_scan_result(m_current_scan_info.scan_request, src_mac,
