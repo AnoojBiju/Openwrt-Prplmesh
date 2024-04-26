@@ -2384,7 +2384,7 @@ bool Controller::handle_intel_slave_join(
     std::string slave_name =
         is_gw_slave
             ? gw_name
-            : ("IRE_" +
+            : ("Prpl_" +
                (notification->platform_settings().local_master ? "MASTER_" : std::string()) +
                bridge_mac_str.substr(bridge_mac_str.size() - 5, bridge_mac_str.size() - 1));
 
@@ -2704,7 +2704,7 @@ bool Controller::handle_intel_slave_join(
     // sending event to CS task
     LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
     auto cs_new_event                  = new channel_selection_task::sSlaveJoined_event;
-    cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
+    cs_new_event->backhaul_is_wireless = beerocks::utils::is_device_wireless(backhaul_iface_type);
     cs_new_event->backhaul_channel     = backhaul_channel;
     cs_new_event->channel              = notification->cs_params().channel;
     cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
@@ -2825,7 +2825,8 @@ bool Controller::handle_non_intel_slave_join(
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
-              << "    radio_identifier = " << radio_mac << std::endl;
+              << "    radio_identifier = " << radio_mac << std::endl
+              << "    radio band= " << m1.rf_bands() << std::endl;
 
     LOG(DEBUG) << "simulate backhaul connected to the GW's LAN switch ";
     auto gw = database.get_gw();

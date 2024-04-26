@@ -54,7 +54,7 @@ public:
     ~Station();
 
     const sMacAddr mac;
-    std::string parent_mac;
+    std::string parent_mac = beerocks::net::network_utils::ZERO_MAC_STRING;
     std::string name;
     uint8_t operating_class = 0;
 

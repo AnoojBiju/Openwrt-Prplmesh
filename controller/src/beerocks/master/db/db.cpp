@@ -321,10 +321,12 @@ std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMa
     // Save stations's parent
     std::shared_ptr<Agent::sRadio::sBss> parent_bss = get_bss(parent_mac);
     if (parent_bss) {
+        LOG(DEBUG) << "Setting wireless station";
         set_station_bss(station, parent_bss);
     } else {
         std::shared_ptr<Agent::sEthSwitch> parent_switch = get_eth_switch(parent_mac);
         if (parent_switch) {
+            LOG(DEBUG) << "Setting wired station";
             station->set_eth_switch(parent_switch);
         }
     }
@@ -956,7 +958,7 @@ bool db::is_sta_wireless(const std::string &mac)
         LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return false;
     }
-    return utils::is_node_wireless(station->iface_type);
+    return utils::is_device_wireless(station->iface_type);
 }
 
 std::string db::obj_to_string(const sMacAddr &mac)
@@ -1076,7 +1078,7 @@ std::string db::get_sta_parent(const std::string &mac)
 {
     std::shared_ptr<Station> pSta = get_station(tlvf::mac_from_string(mac));
     if (!pSta) {
-        LOG(WARNING) << "station " << mac << "does not exist!";
+        LOG(WARNING) << "station " << mac << " does not exist!";
         return std::string();
     }
     return pSta->parent_mac;
