@@ -51,7 +51,9 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
     beerocks_header->actionhdr()->last() = 0;
 
-    uint8_t *data_start = nullptr;
+    uint8_t *data_start           = nullptr;
+    uint8_t *local_agent_ptr      = nullptr;
+    bool is_local_agent_processed = false;
 
     std::ptrdiff_t size = 0, size_left = 0, node_len = 0;
     response->node_num() = 0;
@@ -62,7 +64,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return false;
             }
-
+            LOG(DEBUG) << "Sending BML_NW_MAP_RESPONSE";
             controller_ctx->send_cmdu(fd, cmdu_tx);
 
             response =
@@ -77,14 +79,16 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             beerocks_header                      = message_com::get_beerocks_header(cmdu_tx);
             beerocks_header->actionhdr()->last() = 0;
             response->node_num()                 = 0;
-            data_start                           = nullptr;
             size                                 = 0;
+            data_start                           = nullptr;
+            if (!is_local_agent_processed) {
+                local_agent_ptr = nullptr;
+            }
         }
         return true;
     };
-
+    LOG(DEBUG) << "Badhri sizeof(BML_NODE): " << sizeof(BML_NODE);
     for (const auto &agent : database.m_agents) {
-        LOG(ERROR) << "Parsing agent " << agent.second->al_mac;
         if (agent.second->state != beerocks::STATE_CONNECTED) {
             continue;
         }
@@ -100,14 +104,33 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             return;
         }
 
-        if (data_start == nullptr) {
-            data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
+        if (local_agent_ptr == nullptr) {
+            local_agent_ptr = reinterpret_cast<uint8_t *>(response->buffer(0));
+            LOG(DEBUG) << "Badhri local_agent_ptr: " << static_cast<void *>(local_agent_ptr);
         }
 
-        fill_bml_agent_data(database, agent.second, data_start + size, size_left);
+        if (data_start == nullptr) {
+            if (!is_local_agent_processed)
+                data_start = local_agent_ptr + node_len;
+            else
+                data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
+            LOG(DEBUG) << "Badhri data_start: " << static_cast<void *>(data_start);
+        }
+
+        if (!agent.second->is_gateway) {
+            LOG(ERROR) << "Parsing non-local agent " << agent.second->al_mac
+                       << " inserting at: " << static_cast<void *>(data_start + size);
+            fill_bml_agent_data(database, agent.second, data_start + size, size_left);
+            size += node_len;
+            LOG(DEBUG) << "Badhri size = " << size;
+        } else {
+            LOG(ERROR) << "Parsing local agent " << agent.second->al_mac
+                       << " inserting at: " << static_cast<void *>(local_agent_ptr);
+            fill_bml_agent_data(database, agent.second, local_agent_ptr, size_left);
+            is_local_agent_processed = true;
+        }
 
         response->node_num()++;
-        size += node_len;
 
         for (const auto &radio : agent.second->radios) {
             for (const auto &bss : radio.second->bsses) {
@@ -145,6 +168,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     }
 
     beerocks_header->actionhdr()->last() = 1;
+    LOG(DEBUG) << "Sending ACTION_BML_NW_MAP_RESPONSE";
     controller_ctx->send_cmdu(fd, cmdu_tx);
 }
 
@@ -208,7 +232,8 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
 
     tlvf::mac_to_array(station->mac, node->mac);
     if (station->wifi_channel.is_empty()) {
-        LOG(WARNING) << "Station : " << node->mac << " has empty wifi channel";
+        LOG(WARNING) << "Station : " << tlvf::mac_to_string(station->mac)
+                     << " has empty wifi channel";
     }
     node->channel                     = station->wifi_channel.get_channel();
     node->bw                          = station->wifi_channel.get_bandwidth();
