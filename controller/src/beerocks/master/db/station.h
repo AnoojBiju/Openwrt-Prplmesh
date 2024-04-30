@@ -19,7 +19,6 @@
 #include <unordered_map>
 
 #include "agent.h"
-#include "node.h"
 
 namespace son {
 class db;
@@ -81,6 +80,7 @@ public:
     bool supports_6ghz                 = true;
     beerocks::WifiChannel wifi_channel;
     std::chrono::steady_clock::time_point last_seen;
+    beerocks::eIfaceType iface_type = beerocks::IFACE_TYPE_ETHERNET;
 
     /*
      * Persistent configurations - start
@@ -172,6 +172,7 @@ public:
     void clear_cross_rssi();
     void set_bss(std::shared_ptr<Agent::sRadio::sBss> bss);
     std::shared_ptr<Agent::sRadio::sBss> get_bss();
+    std::shared_ptr<Agent::sRadio::sBss> get_previous_bss() { return m_previous_bss.lock(); };
     void clear_sta_stats_info();
     bool is_bSta();
     void set_bSta(bool bSta);
@@ -186,6 +187,7 @@ public:
 private:
     int m_client_locating_task_id_new_connection   = -1;
     int m_client_locating_task_id_exist_connection = -1;
+    int load_balancer_task_id                      = -1;
 
     bool m_supports_11v            = true;
     int m_failed_11v_request_count = 0;
@@ -200,6 +202,7 @@ private:
     class rssi_measurement;
     std::unordered_map<std::string, std::shared_ptr<rssi_measurement>> m_cross_rx_rssi;
     std::weak_ptr<Agent::sRadio::sBss> m_bss;
+    std::weak_ptr<Agent::sRadio::sBss> m_previous_bss;
     std::weak_ptr<Agent::sEthSwitch> m_eth_switch;
     std::vector<uint8_t> m_assoc_frame;
 };

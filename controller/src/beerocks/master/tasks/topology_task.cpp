@@ -327,10 +327,9 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
             auto removed = radio->bsses.keep_new_remove_old();
             for (const auto &bss : removed) {
                 // Remove all clients from that vap
-                auto client_list = database.get_node_children(tlvf::mac_to_string(bss->bssid),
-                                                              beerocks::TYPE_CLIENT);
-                for (auto &client : client_list) {
-                    son_actions::handle_dead_node(client, true, database, tasks);
+                for (const auto &client : bss->connected_stations) {
+                    son_actions::handle_dead_station(tlvf::mac_to_string(client.first), true,
+                                                     database, tasks);
                 }
 
                 // Remove the vap from DB
@@ -363,8 +362,12 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
     // than 65 seconds (timeout according to standard + 5 seconds grace) have passed since we added
     // this node. This promise that the reported al_mac will get the Topology Discovery messages
     // from its neighbors and add them to the report.
+    std::shared_ptr<Agent> neighbor = database.get_agent(src_mac);
+    if (!neighbor) {
+        return false;
+    }
     bool check_dead_neighbors =
-        (database.get_last_state_change(tlvf::mac_to_string(src_mac)) +
+        (neighbor->last_state_change +
              std::chrono::seconds(beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC +
                                   5) <
          std::chrono::steady_clock::now());
@@ -401,12 +404,14 @@ bool topology_task::handle_topology_response(const sMacAddr &src_mac,
 
     recently_reported_neighbors[al_mac] = std::chrono::steady_clock::now();
     // Remove neighbors from recently_reported_neighbors map if they stay there more than 5 seconds.
-    for (auto neighbor = recently_reported_neighbors.begin();
-         neighbor != recently_reported_neighbors.end();) {
-        if (std::chrono::seconds(5) < (std::chrono::steady_clock::now() - neighbor->second)) {
-            neighbor = recently_reported_neighbors.erase(neighbor);
+    for (auto recently_reported_neighbor = recently_reported_neighbors.begin();
+         recently_reported_neighbor != recently_reported_neighbors.end();) {
+        if (std::chrono::seconds(5) <
+            (std::chrono::steady_clock::now() - recently_reported_neighbor->second)) {
+            recently_reported_neighbor =
+                recently_reported_neighbors.erase(recently_reported_neighbor);
         } else {
-            ++neighbor;
+            ++recently_reported_neighbor;
         }
     }
 
@@ -543,21 +548,34 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
             continue;
         }
 
-        std::string neighbor_al_mac_on_db_str = tlvf::mac_to_string(neighbor_al_mac_on_db);
-        auto backhhaul_mac                    = database.get_node_parent(neighbor_al_mac_on_db_str);
-
+        std::shared_ptr<Agent> neighbor = database.get_agent(neighbor_al_mac_on_db);
+        if (!neighbor) {
+            continue;
+        }
+        std::shared_ptr<Station> neighbor_bh_sta = database.get_station(neighbor->parent_mac);
+        if (!neighbor_bh_sta) {
+            continue;
+        }
+        if (!neighbor_bh_sta->get_bss()) {
+            continue;
+        }
+        std::shared_ptr<Agent> neighbor_parent_agent =
+            database.get_agent_by_radio_uid(neighbor_bh_sta->get_bss()->radio.radio_uid);
+        if (!neighbor_parent_agent) {
+            continue;
+        }
         // It is possible that re-routing took place, and the node is now a neighbour of some
         // other node. To filter such cases, compare the current al_mac of the neighbor to the
         // al_mac of the reporter. If they are not equal then it means than the neighbor is
         // currently under another node.
-        auto current_parent_al_mac = database.get_node_parent_ire(backhhaul_mac);
-        if (current_parent_al_mac != src_mac) {
+        if (neighbor_parent_agent->al_mac != src_mac) {
             continue;
         }
 
         LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                    << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
-        son_actions::handle_dead_node(backhhaul_mac, true, database, tasks);
+        son_actions::handle_dead_station(tlvf::mac_to_string(neighbor->parent_mac), true, database,
+                                         tasks);
     }
 }
 
@@ -640,14 +658,12 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         client->clear_cross_rssi();
         database.dm_clear_sta_stats(tlvf::mac_from_string(client_mac_str));
 
-        if (!(database.get_node_type(client_mac_str) == beerocks::TYPE_IRE_BACKHAUL &&
-              database.get_sta_handoff_flag(*client))) {
+        if (!(client->is_bSta() && database.get_sta_handoff_flag(*client))) {
             // The node is not an IRE in handoff
-            database.set_node_type(client_mac_str, beerocks::TYPE_CLIENT);
+            client->set_bSta(false);
         }
 
-        database.set_node_backhaul_iface_type(client_mac_str,
-                                              beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
+        database.set_sta_backhaul_iface_type(client_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
         if (vs_tlv) {
             database.set_sta_vap_id(client_mac_str, vs_tlv->vap_id());
@@ -742,7 +758,7 @@ bool topology_task::handle_topology_notification(const sMacAddr &src_mac,
         }
 
         // TODO: Validate usages of reported_by_parent flag usages (PPM-1948)
-        son_actions::handle_dead_node(client_mac_str, reported_by_parent, database, tasks);
+        son_actions::handle_dead_station(client_mac_str, reported_by_parent, database, tasks);
     }
 
     return true;

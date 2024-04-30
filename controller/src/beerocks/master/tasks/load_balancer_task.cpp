@@ -44,17 +44,25 @@ void load_balancer_task::work()
 
     switch (state) {
     case START: {
-        int prev_task_id = database.get_load_balancer_task_id(ire_mac);
+        int prev_task_id = database.get_agent_load_balancer_task_id(tlvf::mac_from_string(ire_mac));
         tasks.kill_task(prev_task_id);
-        if (!database.assign_load_balancer_task_id(ire_mac, id)) {
-            TASK_LOG(ERROR) << "can't assign this task to node " << ire_mac;
+        if (!database.assign_agent_load_balancer_task_id(tlvf::mac_from_string(ire_mac), id)) {
+            TASK_LOG(ERROR) << "can't assign this task to agent " << ire_mac;
             finish();
             return;
         }
 
         state = REQUEST_LOAD_MEASUREMENTS;
 
-        hostaps = database.get_node_children(ire_mac, beerocks::TYPE_SLAVE);
+        hostaps.clear();
+        std::shared_ptr<Agent> agent = database.get_agent(tlvf::mac_from_string(ire_mac));
+        if (!agent) {
+            finish();
+            return;
+        }
+        for (const auto &radio : agent->radios) {
+            hostaps.insert(tlvf::mac_to_string(radio.first));
+        }
         break;
     }
     case REQUEST_LOAD_MEASUREMENTS: {
@@ -243,7 +251,7 @@ void load_balancer_task::work()
             /*
                  * assign task to chosen client as well
                  */
-            database.assign_load_balancer_task_id(chosen_client, id);
+            database.assign_station_load_balancer_task_id(tlvf::mac_from_string(chosen_client), id);
         } else {
             TASK_LOG(ERROR) << "chosen client is empty! finishing task";
 
@@ -295,8 +303,8 @@ void load_balancer_task::work()
         std::string chosen_hostap;
         int chosen_hostap_predicted_bitrate       = INT32_MIN;
         int chosen_hostap_bytes_per_second_gained = INT32_MIN;
-        bool sta_is_5ghz                          = database.is_node_5ghz(chosen_client);
-        bool confine                              = false;
+        bool sta_is_5ghz = database.is_sta_5ghz(tlvf::mac_from_string(chosen_client));
+        bool confine     = false;
 
         auto sta_capabilities          = database.get_sta_current_capabilities(chosen_client);
         uint16_t sta_phy_tx_rate_100kb = database.get_sta_rx_phy_rate_100kb(chosen_client);

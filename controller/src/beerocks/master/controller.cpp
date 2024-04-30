@@ -215,7 +215,7 @@ bool Controller::start()
         auto eth_switch_mac = beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(
             database.get_local_bridge_mac());
         auto eth_switch_mac_str = tlvf::mac_to_string(eth_switch_mac);
-        database.add_node_wired_backhaul(eth_switch_mac, database.get_local_bridge_mac());
+        database.add_eth_switch(eth_switch_mac, database.get_local_bridge_mac());
         database.set_eth_switch_state(eth_switch_mac_str, beerocks::STATE_CONNECTED);
         database.set_eth_switch_name(eth_switch_mac, "GW_CONTROLLER_ETH");
     }
@@ -814,9 +814,9 @@ bool Controller::handle_cmdu_1905_autoconfiguration_search(const sMacAddr &src_m
         std::shared_ptr<Agent> agent;
         // if al_mac is same as local bridge mac then add node it as GW else as IRE node
         if (database.get_local_bridge_mac() == al_mac) {
-            agent = database.add_node_gateway(al_mac);
+            agent = database.add_gateway(al_mac);
         } else {
-            agent = database.add_node_ire(al_mac);
+            agent = database.add_agent(al_mac);
         }
         if (!agent) {
             LOG(ERROR) << "Failed adding agent: " << al_mac;
@@ -1191,7 +1191,7 @@ bool Controller::handle_cmdu_1905_autoconfiguration_WSC(const sMacAddr &src_mac,
 
     // Update BSSes in the Agent
     if (agent->radios.find(ruid) == agent->radios.end()) {
-        database.add_node_radio(ruid, al_mac);
+        database.add_radio(ruid, al_mac);
     }
     auto radio = agent->radios.get(ruid);
     if (!radio) {
@@ -1960,7 +1960,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
     for (auto radio_tlv : cmdu_rx.getClassList<wfa_map::tlvApRadioBasicCapabilities>()) {
 
         LOG(DEBUG) << "Radio is reported in AP Capabilites with ruid=" << radio_tlv->radio_uid();
-        database.add_node_radio(radio_tlv->radio_uid(), agent->al_mac);
+        database.add_radio(radio_tlv->radio_uid(), agent->al_mac);
 
         //TODO: We can decide to parse Radio CAPs here instead of WSC (autoconfig_wsc_parse_radio_caps)
         // to lower CPU usage on onboarding (PPM-1727)
@@ -1976,16 +1976,7 @@ bool Controller::handle_cmdu_1905_ap_capability_report(const sMacAddr &src_mac,
                   << removed_radio->radio_uid;
 
         database.dm_remove_radio(*removed_radio);
-
-        if (database.get_node_type(tlvf::mac_to_string(removed_radio->radio_uid)) !=
-            beerocks::TYPE_SLAVE) {
-
-            LOG(ERROR) << "Missing or wrong radio node, contrary to database with ruid="
-                       << removed_radio->radio_uid;
-            continue;
-        }
-        son_actions::handle_dead_node(tlvf::mac_to_string(removed_radio->radio_uid), true, database,
-                                      m_task_pool);
+        son_actions::handle_dead_radio(removed_radio->radio_uid, true, database, m_task_pool);
     }
 
     bool all_radio_capabilities_saved_successfully = true;
@@ -2421,8 +2412,7 @@ bool Controller::handle_intel_slave_join(
             // rejecting join if gw haven't joined yet
             if ((parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) &&
                 (!database.get_bss(parent_bssid_mac) ||
-                 (database.get_node_state(tlvf::mac_to_string(parent_bssid_mac)) !=
-                  beerocks::STATE_CONNECTED))) {
+                 (!database.get_bss(parent_bssid_mac)->enabled))) {
                 LOG(DEBUG) << "sending back join reject!";
                 LOG(DEBUG) << "reject_debug: parent_bssid_has_node="
                            << (int)(database.get_bss(parent_bssid_mac) != nullptr);
@@ -2432,9 +2422,9 @@ bool Controller::handle_intel_slave_join(
             }
         }
 
-        // sending to BML listeners, client disconnect notification on ire backhaul before changing it type from TYPE_CLIENT to TYPE_IRE_BACKHAUL
-        if (database.get_node_type(backhaul_mac) == beerocks::TYPE_CLIENT &&
-            database.get_sta_state(backhaul_mac) == beerocks::STATE_CONNECTED) {
+        // sending to BML listeners, client disconnect notification on ire backhaul before changing it type from TYPE_CLIENT to bSTA
+        std::shared_ptr<Station> bh_sta = database.get_station(tlvf::mac_from_string(backhaul_mac));
+        if (bh_sta && !bh_sta->is_bSta() && bh_sta->state == beerocks::STATE_CONNECTED) {
             LOG(DEBUG) << "BML, sending IRE connect CONNECTION_CHANGE for mac " << backhaul_mac
                        << ", FORCING DISCONNECT NOTIFICATION!";
             bml_task::connection_change_event new_event;
@@ -2449,8 +2439,7 @@ bool Controller::handle_intel_slave_join(
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
                        << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
-                                                parent_bssid_mac);
+            database.add_backhaul_station(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
         } else if (database.get_sta_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
@@ -2462,21 +2451,16 @@ bool Controller::handle_intel_slave_join(
                 return false;
             }
 
-            auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
-            auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
-
-            if (gw_lan_switches.empty()) {
+            if (gw->eth_switches.empty()) {
                 LOG(ERROR) << "GW has no LAN SWITCH node!";
                 return false;
             }
 
-            auto gw_lan_switch = *gw_lan_switches.begin();
-
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
-                       << " gw_lan_switch = " << gw_lan_switch
-                       << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-            database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
-                                                tlvf::mac_from_string(gw_lan_switch));
+                       << " gw_lan_switch = " << gw->eth_switches.begin()->first
+                       << " STATE_CONNECTED";
+            database.add_backhaul_station(tlvf::mac_from_string(backhaul_mac),
+                                          gw->eth_switches.begin()->first);
             database.set_sta_state(backhaul_mac, beerocks::STATE_CONNECTED);
         }
     } else {
@@ -2484,9 +2468,11 @@ bool Controller::handle_intel_slave_join(
     }
 
     //if the IRE connects via a different backhaul, mark previous backhaul as disconnected
-    std::string previous_backhaul = database.get_node_parent(bridge_mac_str);
-    if (!previous_backhaul.empty() && previous_backhaul != backhaul_mac &&
-        database.get_node_type(previous_backhaul) == beerocks::TYPE_IRE_BACKHAUL) {
+    std::string previous_backhaul = tlvf::mac_to_string(database.get_agent_parent(bridge_mac));
+    std::shared_ptr<Station> previous_bh_sta =
+        database.get_station(tlvf::mac_from_string(previous_backhaul));
+    if (!previous_backhaul.empty() && previous_backhaul != backhaul_mac && previous_bh_sta &&
+        previous_bh_sta->is_bSta()) {
         LOG(DEBUG) << "marking previous backhaul " << previous_backhaul << " for IRE " << bridge_mac
                    << " as disconnected";
         database.set_sta_state(previous_backhaul, beerocks::STATE_DISCONNECTED);
@@ -2501,10 +2487,10 @@ bool Controller::handle_intel_slave_join(
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
     if (is_gw_slave) {
-        database.add_node_gateway(bridge_mac);
+        database.add_gateway(bridge_mac);
         agent->is_gateway = true;
     } else {
-        database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
+        database.add_agent(bridge_mac, tlvf::mac_from_string(backhaul_mac));
     }
 
     database.set_agent_state(bridge_mac_str, beerocks::STATE_CONNECTED);
@@ -2517,13 +2503,16 @@ bool Controller::handle_intel_slave_join(
         /*
         * handle the IRE node itself, representing the backhaul
         */
-        database.set_node_backhaul_iface_type(backhaul_mac, backhaul_iface_type);
-        database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
+        database.set_sta_backhaul_iface_type(tlvf::mac_from_string(backhaul_mac),
+                                             backhaul_iface_type);
 
-        database.set_node_ipv4(backhaul_mac, bridge_ipv4);
-        database.set_node_ipv4(bridge_mac_str, bridge_ipv4);
+        database.set_sta_ipv4(backhaul_mac, bridge_ipv4);
+        database.set_agent_ipv4(bridge_mac_str, bridge_ipv4);
 
-        database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
+        std::shared_ptr<Station> bh_sta = database.get_station(tlvf::mac_from_string(backhaul_mac));
+        if (bh_sta) {
+            bh_sta->set_bSta(true);
+        }
 
         database.set_sta_name(backhaul_mac, slave_name + "_BH");
         database.set_agent_name(bridge_mac_str, slave_name);
@@ -2534,13 +2523,12 @@ bool Controller::handle_intel_slave_join(
             beerocks::net::network_utils::get_eth_sw_mac_from_bridge_mac(bridge_mac);
 
         std::string eth_switch_mac = tlvf::mac_to_string(eth_sw_mac_binary);
-        database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+        database.add_eth_switch(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
         database.set_eth_switch_state(eth_switch_mac, beerocks::STATE_CONNECTED);
         database.set_eth_switch_name(eth_sw_mac_binary, slave_name + "_ETH");
-        database.set_node_ipv4(eth_switch_mac, bridge_ipv4);
 
         //run locating task on ire
-        if (!database.is_node_wireless(backhaul_mac)) {
+        if (!database.is_sta_wireless(backhaul_mac)) {
             LOG(DEBUG) << "run_client_locating_task client_mac = " << bridge_mac;
             auto new_task = std::make_shared<client_locating_task>(database, cmdu_tx, m_task_pool,
                                                                    bridge_mac_str, true, 2000);
@@ -2556,9 +2544,8 @@ bool Controller::handle_intel_slave_join(
                 LOG(INFO) << "client_locating_task is not run again for this ire: " << a->al_mac;
                 continue;
             }
-            auto ire_backhaul_mac =
-                database.get_node_parent_backhaul(tlvf::mac_to_string(a->al_mac));
-            if (!database.is_node_wireless(ire_backhaul_mac)) {
+            std::shared_ptr<Station> agent_bh_sta = database.get_station(a->parent_mac);
+            if (agent_bh_sta && !agent_bh_sta->get_bss()) {
                 LOG(DEBUG) << "run_client_locating_task client_mac = " << a->al_mac;
                 auto new_task = std::make_shared<client_locating_task>(
                     database, cmdu_tx, m_task_pool, tlvf::mac_to_string(a->al_mac), true, 2000);
@@ -2629,7 +2616,7 @@ bool Controller::handle_intel_slave_join(
             return false;
         }
     } else {
-        database.add_node_radio(radio_mac, bridge_mac);
+        database.add_radio(radio_mac, bridge_mac);
     }
 
     //reset/init radio stats when adding slave's radio node
@@ -2650,17 +2637,12 @@ bool Controller::handle_intel_slave_join(
     }
 
     database.set_radio_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
-    database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
-                                          is_gw_slave ? beerocks::IFACE_TYPE_GW_BRIDGE
-                                                      : beerocks::IFACE_TYPE_BRIDGE);
     database.set_radio_iface_name(radio_mac, notification->hostap().iface_name);
     database.set_radio_iface_type(bridge_mac, radio_mac, hostap_iface_type);
 
     database.set_radio_ant_num(radio_mac, (beerocks::eWiFiAntNum)notification->hostap().ant_num);
     database.set_radio_ant_gain(radio_mac, notification->hostap().ant_gain);
     database.set_radio_tx_power(radio_mac, notification->hostap().tx_power);
-
-    database.set_node_ipv4(tlvf::mac_to_string(radio_mac), bridge_ipv4);
 
     if (database.get_radio_5ghz_support(radio_mac)) {
         if (notification->low_pass_filter_on()) {
@@ -2709,7 +2691,7 @@ bool Controller::handle_intel_slave_join(
     }
 
     // calling this function to update arp monitor with new ip addr (bridge ip), which is diffrent from the ip received from, dhcp on the backhaul
-    if (backhaul_manager && (!is_gw_slave) && database.is_node_wireless(backhaul_mac)) {
+    if (backhaul_manager && (!is_gw_slave) && database.is_sta_wireless(backhaul_mac)) {
         son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool, backhaul_mac);
     }
 
@@ -2748,10 +2730,8 @@ bool Controller::handle_intel_slave_join(
     // When it joins the controller we need to activate it if not activated.
     database.set_radio_active(radio_mac, true);
 
-    // Update all (Slaves) last seen timestamp
-    if (database.get_node_type(tlvf::mac_to_string(radio_mac)) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(tlvf::mac_to_string(radio_mac));
-    }
+    // Update all radios last seen timestamp
+    database.update_radio_last_seen(radio_mac);
 
     return true;
 }
@@ -2854,20 +2834,15 @@ bool Controller::handle_non_intel_slave_join(
         return false;
     }
 
-    auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
-    auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
-
-    if (gw_lan_switches.empty()) {
+    if (gw->eth_switches.empty()) {
         LOG(ERROR) << "GW has no LAN SWITCH node!";
         return false;
     }
 
-    auto gw_lan_switch = *gw_lan_switches.begin();
-
     LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
-               << " gw_lan_switch = " << gw_lan_switch << " TYPE_IRE_BACKHAUL , STATE_CONNECTED";
-    database.add_node_wireless_backhaul(tlvf::mac_from_string(backhaul_mac),
-                                        tlvf::mac_from_string(gw_lan_switch));
+               << " gw_lan_switch = " << gw->eth_switches.begin()->first << " STATE_CONNECTED";
+    std::shared_ptr<Station> bh_sta = database.add_backhaul_station(
+        tlvf::mac_from_string(backhaul_mac), gw->eth_switches.begin()->first);
     database.set_sta_state(backhaul_mac, beerocks::STATE_CONNECTED);
 
     // TODO bridge handling.
@@ -2885,15 +2860,15 @@ bool Controller::handle_non_intel_slave_join(
     LOG(DEBUG) << "adding node " << bridge_mac << " under " << backhaul_mac << ", and mark as type "
                << ire_type;
 
-    database.add_node_ire(bridge_mac, tlvf::mac_from_string(backhaul_mac));
+    database.add_agent(bridge_mac, tlvf::mac_from_string(backhaul_mac));
 
     database.set_agent_state(bridge_mac_str, beerocks::STATE_CONNECTED);
-    database.set_node_backhaul_iface_type(backhaul_mac, beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
-    database.set_node_backhaul_iface_type(bridge_mac_str, beerocks::IFACE_TYPE_BRIDGE);
-    database.set_node_type(backhaul_mac, beerocks::TYPE_IRE_BACKHAUL);
+    database.set_sta_backhaul_iface_type(tlvf::mac_from_string(backhaul_mac),
+                                         beerocks::eIfaceType::IFACE_TYPE_ETHERNET);
+    bh_sta->set_bSta(true);
     database.set_sta_name(backhaul_mac, agent->device_info.manufacturer + "_BH");
     database.set_agent_name(bridge_mac_str, agent->device_info.manufacturer);
-    database.add_node_wired_backhaul(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
+    database.add_eth_switch(tlvf::mac_from_string(eth_switch_mac), bridge_mac);
     database.set_eth_switch_state(eth_switch_mac, beerocks::STATE_CONNECTED);
     database.set_eth_switch_name(tlvf::mac_from_string(eth_switch_mac),
                                  agent->device_info.manufacturer + "_ETH");
@@ -2904,7 +2879,7 @@ bool Controller::handle_non_intel_slave_join(
 
     // Add radio if it doesn't already exist
     if (!database.get_radio_by_uid(radio_mac)) {
-        database.add_node_radio(radio_mac, bridge_mac);
+        database.add_radio(radio_mac, bridge_mac);
     }
 
     //reset/init radio stats when adding slave's radio node
@@ -2913,8 +2888,6 @@ bool Controller::handle_non_intel_slave_join(
     // TODO Assume no backhaul manager
 
     database.set_radio_state(tlvf::mac_to_string(radio_mac), beerocks::STATE_CONNECTED);
-    database.set_node_backhaul_iface_type(tlvf::mac_to_string(radio_mac),
-                                          beerocks::IFACE_TYPE_BRIDGE);
     database.set_radio_iface_name(radio_mac, "N/A");
     database.set_radio_iface_type(bridge_mac, radio_mac, beerocks::IFACE_TYPE_WIFI_UNSPECIFIED);
 
@@ -2977,10 +2950,8 @@ bool Controller::handle_cmdu_control_message(
         return true;
     }
 
-    //Update all (Slaves) last seen timestamp
-    if (database.get_node_type(radio_mac_str) == beerocks::TYPE_SLAVE) {
-        database.update_node_last_seen(radio_mac_str);
-    }
+    //Update all radios last seen timestamp
+    database.update_radio_last_seen(radio_mac);
 
     switch (beerocks_header->action_op()) {
     case beerocks_message::ACTION_CONTROL_HOSTAP_SET_RESTRICTED_FAILSAFE_CHANNEL_RESPONSE: {
@@ -3023,23 +2994,21 @@ bool Controller::handle_cmdu_control_message(
             LOG(INFO) << "AP Disabled on unknown vap, vap_id=" << vap_id;
             break;
         }
-        auto client_list =
-            database.get_node_children(tlvf::mac_to_string(disabled_bssid), beerocks::TYPE_CLIENT);
+        auto bss = database.get_bss(disabled_bssid);
+        if (!bss) {
+            LOG(ERROR) << "Failed to get BSS with BSSID: " << disabled_bssid;
+            break;
+        }
 
-        for (auto &client : client_list) {
-            son_actions::handle_dead_node(client, true, database, m_task_pool);
+        for (const auto &client : bss->connected_stations) {
+            son_actions::handle_dead_station(tlvf::mac_to_string(client.first), true, database,
+                                             m_task_pool);
         }
 
         // Update BSSes in the Agent
         auto radio = database.get_radio(src_mac, radio_mac);
         if (!radio) {
             LOG(ERROR) << "No radio found for radio_uid " << radio_mac << " on " << src_mac;
-            break;
-        }
-
-        auto bss = database.get_bss(disabled_bssid);
-        if (!bss) {
-            LOG(ERROR) << "Failed to get BSS with BSSID: " << disabled_bssid;
             break;
         }
 
@@ -3155,7 +3124,10 @@ bool Controller::handle_cmdu_control_message(
         }
 
         radio->bsses.keep_new_prepare();
-
+        typedef struct {
+            std::string mac;
+            std::string ssid;
+        } sVapElement;
         std::unordered_map<int8_t, sVapElement> vaps_info;
         std::string vaps_list;
         for (int8_t vap_id = beerocks::IFACE_VAP_ID_MIN; vap_id <= beerocks::IFACE_VAP_ID_MAX;
@@ -3196,10 +3168,9 @@ bool Controller::handle_cmdu_control_message(
         for (const auto &bss : removed) {
 
             // Remove all clients from that vap
-            auto client_list =
-                database.get_node_children(tlvf::mac_to_string(bss->bssid), beerocks::TYPE_CLIENT);
-            for (auto &client : client_list) {
-                son_actions::handle_dead_node(client, true, database, m_task_pool);
+            for (const auto &client : bss->connected_stations) {
+                son_actions::handle_dead_station(tlvf::mac_to_string(client.first), true, database,
+                                                 m_task_pool);
             }
 
             // Remove the vap from DB
@@ -3240,9 +3211,9 @@ bool Controller::handle_cmdu_control_message(
         // IMPORTANT: Ignore RTM_DELNEIGH messages on the GRX350/IRE220 platforms.
         // Since the transport layer is accelerated, the OS may incorrectly decide
         // that a connected client has disconnected.
-        //  if(notification->params.type == ARP_TYPE_DELNEIGH && !database.is_node_wireless(client_mac)) {
+        //  if(notification->params.type == ARP_TYPE_DELNEIGH && !database.is_sta__wireless(client_mac)) {
         //     LOG(INFO) << "ARP type RTM_DELNEIGH received!! handle dead client mac = " << client_mac;
-        //     son_actions::handle_dead_node(client_mac, true, database, tasks);
+        //     son_actions::handle_dead_station(client_mac, true, database, tasks);
         //     break;
         //  }
 
@@ -3251,20 +3222,17 @@ bool Controller::handle_cmdu_control_message(
             break;
         }
 
-        bool new_node = !database.has_station(tlvf::mac_from_string(client_mac));
-
-        beerocks::eType new_node_type = database.get_node_type(client_mac);
-
-        if ((new_node == false) && (new_node_type != beerocks::TYPE_CLIENT) &&
-            (new_node_type != beerocks::TYPE_UNDEFINED)) {
-            LOG(DEBUG) << "node " << client_mac << " type: " << (int)new_node_type
-                       << " is (not a client/backhaul node) and (not stale), ignoring";
-            break;
+        std::shared_ptr<Station> station = database.get_station(tlvf::mac_from_string(client_mac));
+        std::shared_ptr<Agent> agent     = nullptr;
+        if (!station) {
+            agent = database.get_agent(tlvf::mac_from_string(client_mac));
         }
+        bool new_node = !station && !agent;
+
         bool run_locating_task = false;
         // Since wireless clients are added to the DB on association, an ARP on non-existing node
         // can only be received for Ethernet clients
-        if (new_node || !database.is_node_wireless(client_mac)) {
+        if (new_node || !database.is_sta_wireless(client_mac)) {
 
             // Assume node is connected to the GW's LAN switch
             // client_locating_task will find the correct position
@@ -3272,15 +3240,16 @@ bool Controller::handle_cmdu_control_message(
                 LOG(DEBUG) << "handle_control_message - calling add_node_to_gw_default_location "
                               "client_mac = "
                            << client_mac;
-                if (!son_actions::add_node_to_default_location(database, client_mac)) {
-                    LOG(ERROR) << "handle_control_message - add_node_to_default_location failed!";
+                if (!son_actions::add_station_to_default_location(database, client_mac)) {
+                    LOG(ERROR)
+                        << "handle_control_message - add_station_to_default_location failed!";
                     break;
                 }
-                new_node_type = database.get_node_type(client_mac);
+                station = database.get_station(tlvf::mac_from_string(client_mac));
             }
 
             // New IP
-            if (new_node || database.get_node_ipv4(client_mac) != client_ipv4) {
+            if (new_node || database.get_sta_ipv4(client_mac) != client_ipv4) {
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
                 database.set_sta_ipv4(client_mac, client_ipv4);
                 son_actions::handle_completed_connection(database, cmdu_tx, m_task_pool,
@@ -3288,7 +3257,7 @@ bool Controller::handle_cmdu_control_message(
             }
 
             // Run locating task only on CLIENTs or IREs
-            if ((new_node_type == beerocks::TYPE_CLIENT) || (new_node_type == beerocks::TYPE_IRE)) {
+            if (station || agent) {
                 run_locating_task = true;
             }
 
@@ -3301,7 +3270,7 @@ bool Controller::handle_cmdu_control_message(
                            << " client_ipv4 =" << client_ipv4;
 
                 // The IP has changed
-            } else if (database.get_node_ipv4(client_mac) != client_ipv4) {
+            } else if (database.get_sta_ipv4(client_mac) != client_ipv4) {
 
                 LOG(DEBUG) << "Update node IP - mac: " << client_mac << " ipv4: " << client_ipv4;
                 database.set_sta_ipv4(client_mac, client_ipv4);
@@ -3424,7 +3393,7 @@ bool Controller::handle_cmdu_control_message(
         LOG(DEBUG) << "Parent agent BH " << parent_agent_bh;
         std::shared_ptr<Station> parent_backhaul = database.get_station(parent_agent_bh);
         if (is_backhaul_manager && parent_backhaul && parent_backhaul->get_bss() &&
-            database.is_node_5ghz(client_mac)) {
+            database.is_sta_5ghz(tlvf::mac_from_string(client_mac))) {
             auto priv_ap_mac = ap_mac;
             ap_mac           = database.get_5ghz_sibling_bss(ap_mac);
             LOG(DEBUG) << "update rssi measurement BH manager from ap_mac = " << priv_ap_mac
@@ -3481,7 +3450,7 @@ bool Controller::handle_cmdu_control_message(
                     << " phy_rate_100kb (RX|TX)=" << int(notification->params().rx_phy_rate_100kb)
                     << " | " << int(notification->params().tx_phy_rate_100kb));
 
-        if ((database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) &&
+        if (!client->is_bSta() &&
             (database.get_sta_state(client_mac) == beerocks::STATE_CONNECTED) &&
             (!database.get_sta_handoff_flag(*client)) && is_parent) {
 
@@ -3517,12 +3486,16 @@ bool Controller::handle_cmdu_control_message(
         LOG(DEBUG) << "ACTION_CONTROL_CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
                    << " hostap mac=" << radio_mac;
 
-        if (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+        std::shared_ptr<Station> client = database.get_station(notification->mac());
+        if (!client) {
+            break;
+        }
+        if (client->is_bSta()) {
             LOG(INFO) << "IRE CLIENT_NO_RESPONSE_NOTIFICATION, client_mac=" << client_mac
                       << " hostap mac=" << radio_mac
                       << " closing socket and marking as disconnected";
             bool reported_by_parent = radio_mac_str == database.get_sta_parent(client_mac);
-            son_actions::handle_dead_node(client_mac, reported_by_parent, database, m_task_pool);
+            son_actions::handle_dead_station(client_mac, reported_by_parent, database, m_task_pool);
         }
         break;
     }
@@ -3538,15 +3511,16 @@ bool Controller::handle_cmdu_control_message(
         std::string client_mac = tlvf::mac_to_string(notification_in->mac());
         std::string ipv4 = beerocks::net::network_utils::ipv4_to_string(notification_in->ipv4());
         LOG(DEBUG) << "dhcp complete for client " << client_mac << " new ip=" << ipv4
-                   << " previous ip=" << database.get_node_ipv4(client_mac);
+                   << " previous ip=" << database.get_sta_ipv4(client_mac);
 
-        if (!database.has_station(tlvf::mac_from_string(client_mac))) {
+        std::shared_ptr<Station> station = database.get_station(tlvf::mac_from_string(client_mac));
+        if (!station) {
             LOG(DEBUG) << "client mac not in DB, add temp node " << client_mac;
-            database.add_station(src_mac, tlvf::mac_from_string(client_mac));
+            station = database.add_station(src_mac, tlvf::mac_from_string(client_mac));
             database.update_sta_last_seen(client_mac);
         }
 
-        if (database.get_node_type(client_mac) != beerocks::TYPE_CLIENT) {
+        if (station->is_bSta()) {
             LOG(INFO) << "Ignoring DHCP notification for mac " << client_mac
                       << ", as it's not a client";
             return true;
@@ -3556,7 +3530,7 @@ bool Controller::handle_cmdu_control_message(
         database.set_sta_name(
             client_mac, std::string(notification_in->name(beerocks::message::NODE_NAME_LENGTH)));
 
-        if (database.is_node_wireless(client_mac)) {
+        if (database.is_sta_wireless(client_mac)) {
             auto notification_out = beerocks::message_com::create_vs_message<
                 beerocks_message::cACTION_CONTROL_CLIENT_NEW_IP_ADDRESS_NOTIFICATION>(cmdu_tx);
 
@@ -3736,7 +3710,8 @@ bool Controller::handle_cmdu_control_message(
                 * therefore, we need to create a load balancing task to optimize the network
                 */
             LOG(DEBUG) << "high load conditions, starting load balancer for ire " << ire_mac;
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac);
+            int prev_task_id =
+                database.get_agent_load_balancer_task_id(tlvf::mac_from_string(ire_mac));
             if (m_task_pool.is_task_running(prev_task_id)) {
                 LOG(DEBUG) << "load balancer task already running for " << ire_mac;
             } else {

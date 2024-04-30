@@ -37,7 +37,6 @@ public:
                                                     uint8_t *tx_buffer, std::ptrdiff_t buf_size);
     static std::ptrdiff_t fill_bml_station_statistics(db &database, std::shared_ptr<Station> pSta,
                                                       uint8_t *tx_buffer, std::ptrdiff_t buf_size);
-    static std::ptrdiff_t get_bml_node_statistics_len(std::shared_ptr<node> n);
 
     static void send_bml_event_to_listeners(db &database, ieee1905_1::CmduMessageTx &cmdu_tx,
                                             const std::vector<int> &bml_listeners);

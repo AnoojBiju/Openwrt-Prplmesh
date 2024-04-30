@@ -197,10 +197,11 @@ void client_steering_task::steer_sta()
     auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
     if (!client) {
         LOG(ERROR) << "client " << m_sta_mac << " not found";
+        return;
     }
 
-    if (m_database.get_node_type(m_sta_mac) != beerocks::TYPE_IRE_BACKHAUL) {
-        if (client && !m_database.set_sta_handoff_flag(*client, true)) {
+    if (!client->is_bSta()) {
+        if (!m_database.set_sta_handoff_flag(*client, true)) {
             LOG(ERROR) << "can't set handoff flag for " << m_sta_mac;
         }
     }
@@ -219,9 +220,7 @@ void client_steering_task::steer_sta()
         return;
     }
 
-    if (client) {
-        dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
-    }
+    dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
 
     // Send 17.1.27	Client Association Control Request : Unblock
     std::unordered_set<sMacAddr> unblock_list{tlvf::mac_from_string(m_sta_mac)};
@@ -234,11 +233,11 @@ void client_steering_task::steer_sta()
     bml_task::client_allow_req_available_event client_allow_event;
     client_allow_event.sta_mac    = m_sta_mac;
     client_allow_event.hostap_mac = m_target_bssid;
-    client_allow_event.ip         = m_database.get_node_ipv4(m_sta_mac);
+    client_allow_event.ip         = m_database.get_sta_ipv4(m_sta_mac);
     m_tasks.push_event(m_database.get_bml_task_id(), bml_task::CLIENT_ALLOW_REQ_EVENT_AVAILABLE,
                        &client_allow_event);
 
-    if (m_database.get_node_type(m_sta_mac) == beerocks::TYPE_IRE_BACKHAUL) {
+    if (client->is_bSta()) {
         TASK_LOG(DEBUG) << "SLAVE " << m_sta_mac
                         << " has an active socket, sending BACKHAUL_ROAM_REQUEST";
         auto roam_request =
@@ -286,7 +285,7 @@ void client_steering_task::steer_sta()
         return;
     }
 
-    auto hostaps                   = m_database.get_active_hostaps();
+    auto hostaps                   = m_database.get_active_radios();
     std::string original_radio_mac = m_database.get_bss_parent_radio(m_original_bssid);
 
     hostaps.erase(target_radio_mac); // remove chosen hostap from the general list

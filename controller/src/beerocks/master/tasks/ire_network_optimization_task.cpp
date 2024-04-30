@@ -45,8 +45,8 @@ void ire_network_optimization_task::work()
         direction = DIRECTION_UP;
 
         current_hierarchy = 1;
-        ires = database.get_nodes_from_hierarchy(current_hierarchy, beerocks::TYPE_IRE_BACKHAUL);
-        current_ire_it = ires.begin();
+        ires              = database.get_backhauls_from_hierarchy(current_hierarchy);
+        current_ire_it    = ires.begin();
 
         state = ITERATION;
         break;
@@ -66,14 +66,13 @@ void ire_network_optimization_task::work()
                 break;
             }
 
-            ires =
-                database.get_nodes_from_hierarchy(current_hierarchy, beerocks::TYPE_IRE_BACKHAUL);
+            ires           = database.get_backhauls_from_hierarchy(current_hierarchy);
             current_ire_it = ires.begin();
         }
 
         if (current_ire_it != ires.end()) {
             std::string ire = *current_ire_it;
-            if (!database.is_node_wireless(ire)) {
+            if (!database.is_sta_wireless(ire)) {
                 ++current_ire_it;
                 break;
             }

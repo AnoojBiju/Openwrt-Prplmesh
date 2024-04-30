@@ -94,7 +94,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                  * request from all hostaps
                  */
             LOG(DEBUG) << "CLI requesting stats measurements from all hostaps";
-            auto hostaps = database.get_active_hostaps();
+            auto hostaps = database.get_active_radios();
             for (auto hostap : hostaps) {
                 LOG(DEBUG) << "CLI requesting stats measurement from " << hostap;
                 son_actions::send_cmdu_to_agent(
@@ -103,7 +103,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             }
         } else {
             LOG(DEBUG) << "CLI requesting stats measurements from " << hostap_mac;
-            const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+            const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
             son_actions::send_cmdu_to_agent(database.get_radio_parent_agent(request_in->ap_mac()),
                                             cmdu_tx, database, parent_radio);
         }
@@ -133,7 +133,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         request->params().bssid   = cli_request->bssid();
         request->params().vap_id  = cli_request->vap_id();
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
         break;
     }
@@ -160,7 +160,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         request->params().bssid  = cli_request->bssid();
         request->params().vap_id = cli_request->vap_id();
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
 
         break;
@@ -240,7 +240,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         auto sta_list         = association_control_request_tlv->sta_list(0);
         std::get<1>(sta_list) = tlvf::mac_from_string(client_mac);
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
         break;
     }
@@ -254,10 +254,13 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        std::string client_mac = tlvf::mac_to_string(cli_request->client_mac());
-        std::string hostap_mac = tlvf::mac_to_string(cli_request->hostap_mac());
-        std::string sta_parent = database.get_node_parent(client_mac);
-        auto agent_mac         = database.get_bss_parent_agent(cli_request->hostap_mac());
+        std::string client_mac          = tlvf::mac_to_string(cli_request->client_mac());
+        std::string hostap_mac          = tlvf::mac_to_string(cli_request->hostap_mac());
+        std::shared_ptr<Station> client = database.get_station(cli_request->client_mac());
+        if (!client || !client->get_bss()) {
+            break;
+        }
+        auto agent_mac = database.get_bss_parent_agent(cli_request->hostap_mac());
 
         auto request = message_com::create_vs_message<
             beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx);
@@ -268,11 +271,13 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
 
-        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        auto sta_parent_wifi_channel =
+            database.get_radio_wifi_channel(client->get_bss()->radio.radio_uid);
         if (sta_parent_wifi_channel.is_empty()) {
-            LOG(WARNING) << "empty wifi channel of " << sta_parent << " in DB";
+            LOG(WARNING) << "empty wifi channel of " << client->get_bss()->radio.radio_uid
+                         << " in DB";
         }
-        request->params().mac     = tlvf::mac_from_string(client_mac);
+        request->params().mac     = cli_request->client_mac();
         request->params().ipv4    = network_utils::ipv4_from_string(network_utils::ZERO_IP_STRING);
         request->params().channel = sta_parent_wifi_channel.get_channel();
         request->params().bandwidth = sta_parent_wifi_channel.get_bandwidth();
@@ -282,7 +287,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         request->params().cross                  = 0;
         request->params().mon_ping_burst_pkt_num = 0;
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
         LOG(DEBUG) << "CLI cross rx_rssi measurement request for sta=" << client_mac
                    << " hostap=" << hostap_mac;
@@ -327,7 +332,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         auto sta_list         = association_control_request_tlv->sta_list(0);
         std::get<1>(sta_list) = tlvf::mac_from_string(client_mac);
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
         break;
     }
@@ -377,7 +382,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
         }
         ///////////////////////////////////////////////
 
-        std::string hostap_mac = database.get_node_parent(client_mac);
+        std::string hostap_mac = database.get_sta_parent(client_mac);
         auto agent_mac         = database.get_bss_parent_agent(tlvf::mac_from_string(hostap_mac));
         LOG(DEBUG) << "CLI beacon request for " << client_mac << " to " << hostap_mac;
 
@@ -418,7 +423,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             request->params().use_optional_ssid = 0;
         }
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
 
         break;
@@ -466,7 +471,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
 
         request->cs_params() = cli_request->cs_params();
 
-        const auto parent_radio = database.get_node_parent_radio(hostap_mac);
+        const auto parent_radio = database.get_bss_parent_radio(hostap_mac);
         son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
         break;
     }
@@ -519,7 +524,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             break;
         }
         std::string mac       = tlvf::mac_to_string(cli_request->mac());
-        std::string node_info = database.node_to_string(mac);
+        std::string node_info = database.obj_to_string(cli_request->mac());
         std::size_t length    = node_info.size();
         LOG(TRACE) << "CLI dump node info for " << mac
                    << " node info size = " << std::to_string(length);
@@ -578,19 +583,10 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
             if (tasks.is_task_running(client->roaming_task_id)) {
                 LOG(TRACE) << "CLI roaming task already running for " << client_mac;
             } else {
-
-                if (database.get_node_type(client_mac) == beerocks::TYPE_CLIENT) {
-                    LOG(TRACE) << "CLI start roaming task for " << client_mac;
-                    auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
-                                                                        client_mac, 0, "");
-                    tasks.add_task(new_task);
-                } else if (database.get_node_type(client_mac) == beerocks::TYPE_IRE_BACKHAUL) {
-                    LOG(TRACE) << "CLI start roaming task for " << client_mac;
-                    //auto new_task = std::make_shared<optimize_ire_task>(database, cmdu_tx, tasks, client_mac, "");
-                    auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
-                                                                        client_mac, 0, "");
-                    tasks.add_task(new_task);
-                }
+                LOG(TRACE) << "CLI start roaming task for " << client_mac;
+                auto new_task = std::make_shared<optimal_path_task>(database, cmdu_tx, tasks,
+                                                                    client_mac, 0, "");
+                tasks.add_task(new_task);
             }
         } else {
             isOK = false;
@@ -619,7 +615,7 @@ void son_management::handle_cli_message(int sd, std::shared_ptr<beerocks_header>
                  * when a notification arrives, it means a large change in rx_rssi occurred (above the defined thershold)
                  * therefore, we need to create a load balancing task to optimize the network
                  */
-            int prev_task_id = database.get_load_balancer_task_id(ire_mac_str);
+            int prev_task_id = database.get_agent_load_balancer_task_id(ire_mac);
             if (tasks.is_task_running(prev_task_id)) {
                 LOG(TRACE) << "CLI load balancer task already running for " << ire_mac;
             } else {
@@ -1273,7 +1269,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
 
             std::string dst_mac = tlvf::mac_to_string(bml_request->params().mac);
             if (dst_mac == network_utils::WILD_MAC_STRING) {
-                auto slaves = database.get_active_hostaps();
+                auto slaves = database.get_active_radios();
                 for (const auto &slave : slaves) {
                     if (database.is_radio_active(tlvf::mac_from_string(slave))) {
                         auto agent_mac =
@@ -1283,7 +1279,7 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
                 }
             } else {
                 auto agent_mac          = database.get_bss_parent_agent(bml_request->params().mac);
-                const auto parent_radio = database.get_node_parent_radio(dst_mac);
+                const auto parent_radio = database.get_bss_parent_radio(dst_mac);
                 son_actions::send_cmdu_to_agent(agent_mac, cmdu_tx, database, parent_radio);
             }
         }
@@ -1609,19 +1605,22 @@ void son_management::handle_bml_message(int sd, std::shared_ptr<beerocks_header>
             LOG(ERROR) << "addClass cACTION_BML_STEERING_CLIENT_MEASURE_REQUEST failed";
             break;
         }
+        std::shared_ptr<Station> client = database.get_station(request->client_mac());
+        if (!client || !client->get_bss()) {
+            break;
+        }
 
         pre_association_steering_task::sSteeringRssiMeasurementRequestEvent new_event;
-        new_event.sd           = sd;
-        std::string client_mac = tlvf::mac_to_string(request->client_mac());
-        std::string sta_parent = database.get_sta_parent(client_mac);
+        new_event.sd = sd;
 
-        auto sta_parent_wifi_channel = database.get_node_wifi_channel(sta_parent);
+        auto sta_parent_wifi_channel =
+            database.get_radio_wifi_channel(client->get_bss()->radio.radio_uid);
         if (sta_parent_wifi_channel.is_empty()) {
             LOG(WARNING) << "empty wifi channel of " << sta_parent_wifi_channel << " in DB";
             break;
         }
         new_event.bssid            = tlvf::mac_to_string(request->bssid());
-        new_event.params.mac       = tlvf::mac_from_string(client_mac);
+        new_event.params.mac       = request->client_mac();
         new_event.params.ipv4      = network_utils::ipv4_from_string(network_utils::ZERO_IP_STRING);
         new_event.params.channel   = sta_parent_wifi_channel.get_channel();
         new_event.params.bandwidth = sta_parent_wifi_channel.get_bandwidth();

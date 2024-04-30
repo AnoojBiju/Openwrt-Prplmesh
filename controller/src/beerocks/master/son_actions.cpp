@@ -37,27 +37,28 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
                                               task_pool &tasks, std::string client_mac)
 {
     LOG(INFO) << "handle_completed_connection client_mac=" << client_mac;
+    std::shared_ptr<Station> client = database.get_station(tlvf::mac_from_string(client_mac));
+    if (!client) {
+        return;
+    }
     if (!database.set_sta_state(client_mac, beerocks::STATE_CONNECTED)) {
-        LOG(ERROR) << "set node state failed";
+        LOG(ERROR) << "set sta state failed";
     }
-
     // update bml listeners
-    auto n_type = database.get_node_type(client_mac);
-    if (n_type == TYPE_CLIENT) {
-        LOG(DEBUG) << "BML, sending connect CONNECTION_CHANGE for mac " << client_mac << " of type "
-                   << int(n_type);
-        bml_task::connection_change_event new_event;
-        new_event.mac = client_mac;
-        tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
-    }
+    LOG(DEBUG) << "BML, sending connect CONNECTION_CHANGE for mac " << client_mac;
+    bml_task::connection_change_event new_event;
+    new_event.mac = client_mac;
+    tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
 
     auto new_hostap_mac      = database.get_sta_parent(client_mac);
-    auto previous_hostap_mac = database.get_node_previous_parent(client_mac);
-    auto hostaps             = database.get_active_hostaps();
+    auto previous_hostap_mac = client->get_previous_bss()
+                                   ? tlvf::mac_to_string(client->get_previous_bss()->bssid)
+                                   : network_utils::ZERO_MAC_STRING;
+    auto hostaps = database.get_active_radios();
 
     hostaps.erase(new_hostap_mac); //next operations will be done only on the other APs
 
-    if (database.is_node_wireless(client_mac)) {
+    if (database.is_sta_wireless(client_mac)) {
         LOG(DEBUG) << "node " << client_mac << " is wireless";
         /*
          * send disassociate request to previous hostap to clear STA mac from its list
@@ -79,32 +80,30 @@ void son_actions::handle_completed_connection(db &database, ieee1905_1::CmduMess
     }
 }
 
-bool son_actions::add_node_to_default_location(db &database, std::string client_mac)
+bool son_actions::add_station_to_default_location(db &database, std::string client_mac)
 {
-    std::string gw_lan_switch;
+    sMacAddr gw_lan_switch;
 
     auto gw = database.get_gw();
     if (!gw) {
         LOG(WARNING)
-            << "add_node_to_default_location - can't get GW node, adding to default location...";
+            << "add_station_to_default_location - can't get GW node, adding to default location...";
     } else {
-        auto gw_mac          = tlvf::mac_to_string(gw->al_mac);
-        auto gw_lan_switches = database.get_node_children(gw_mac, beerocks::TYPE_ETH_SWITCH);
-        if (gw_lan_switches.empty()) {
-            LOG(ERROR) << "add_node_to_default_location - GW has no LAN SWITCH node!";
+        if (gw->eth_switches.empty()) {
+            LOG(ERROR) << "add_station_to_default_location - GW has no LAN SWITCH node!";
             return false;
         }
-        gw_lan_switch = *gw_lan_switches.begin();
+        gw_lan_switch = gw->eth_switches.begin()->first;
     }
 
     if (!database.add_station(network_utils::ZERO_MAC, tlvf::mac_from_string(client_mac),
-                              tlvf::mac_from_string(gw_lan_switch))) {
-        LOG(ERROR) << "add_node_to_default_location - add_node failed";
+                              gw_lan_switch)) {
+        LOG(ERROR) << "add_station_to_default_location - add_station failed";
         return false;
     }
 
     if (!database.set_sta_state(client_mac, beerocks::STATE_CONNECTING)) {
-        LOG(ERROR) << "add_node_to_default_location - set_sta_state failed.";
+        LOG(ERROR) << "add_station_to_default_location - set_sta_state failed.";
         return false;
     }
 
@@ -115,7 +114,7 @@ void son_actions::unblock_sta(db &database, ieee1905_1::CmduMessageTx &cmdu_tx, 
 {
     LOG(DEBUG) << "unblocking " << sta_mac << " from network";
 
-    auto hostaps              = database.get_active_hostaps();
+    auto hostaps              = database.get_active_radios();
     const auto &current_bssid = database.get_sta_parent(sta_mac);
     const auto &ssid          = database.get_bss_ssid(tlvf::mac_from_string(current_bssid));
 
@@ -265,23 +264,60 @@ void son_actions::send_cli_debug_message(db &database, ieee1905_1::CmduMessageTx
     }
 }
 
-void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db &database,
-                                   task_pool &tasks)
+void son_actions::handle_dead_radio(const sMacAddr &mac, bool reported_by_parent, db &database,
+                                    task_pool &tasks)
 {
-    beerocks::eType mac_type = database.get_node_type(mac);
-    auto node_state          = database.get_node_state(mac);
+    LOG(DEBUG) << "NOTICE: handling dead radio " << mac << " reported by parent "
+               << reported_by_parent;
 
-    LOG(DEBUG) << "NOTICE: handling dead node " << mac << " type enum " << int(mac_type)
-               << " reported by parent " << reported_by_parent;
+    std::shared_ptr<Agent::sRadio> radio = database.get_radio_by_uid(mac);
+    if (!radio) {
+        return;
+    }
 
-    if ((mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) &&
-        database.is_node_wireless(mac)) {
-        auto station = database.get_station(tlvf::mac_from_string(mac));
-        if (!station) {
-            LOG(ERROR) << "Station " << mac << " not found";
-            return;
+    std::string mac_str = tlvf::mac_to_string(mac);
+    if (reported_by_parent) {
+        database.set_radio_state(mac_str, beerocks::STATE_DISCONNECTED);
+        set_radio_active(database, tasks, mac_str, false);
+
+        /*
+         * set all stations in the subtree as disconnected
+         */
+        int agent_monitoring_task_id = database.get_agent_monitoring_task_id();
+        for (const auto &bss : radio->bsses) {
+            for (const auto &client : bss.second->connected_stations) {
+                // kill old roaming task
+                int prev_task_id = client.second->roaming_task_id;
+                if (tasks.is_task_running(prev_task_id)) {
+                    tasks.kill_task(prev_task_id);
+                }
+
+                tasks.push_event(agent_monitoring_task_id, STATE_DISCONNECTED, &mac_str);
+                bml_task::connection_change_event new_event;
+                new_event.mac = tlvf::mac_to_string(client.first);
+                tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE,
+                                 &new_event);
+                LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac "
+                           << new_event.mac;
+            }
         }
-        // If there is running association handleing task already, terminate it.
+    }
+    LOG(DEBUG) << "handling dead radio, done for mac " << mac;
+}
+
+void son_actions::handle_dead_station(std::string mac, bool reported_by_parent, db &database,
+                                      task_pool &tasks)
+{
+    LOG(DEBUG) << "NOTICE: handling dead station " << mac << " reported by parent "
+               << reported_by_parent;
+
+    std::shared_ptr<Station> station = database.get_station(tlvf::mac_from_string(mac));
+    if (!station) {
+        return;
+    }
+
+    if (database.is_sta_wireless(mac)) {
+        // If there is running association handling task already, terminate it.
         int prev_task_id = station->association_handling_task_id;
         if (tasks.is_task_running(prev_task_id)) {
             tasks.kill_task(prev_task_id);
@@ -289,143 +325,61 @@ void son_actions::handle_dead_node(std::string mac, bool reported_by_parent, db 
     }
 
     if (reported_by_parent) {
-        if (mac_type == beerocks::TYPE_IRE_BACKHAUL || mac_type == beerocks::TYPE_CLIENT) {
-            database.set_sta_state(mac, beerocks::STATE_DISCONNECTED);
+        database.set_sta_state(mac, beerocks::STATE_DISCONNECTED);
 
-            auto station = database.get_station(tlvf::mac_from_string(mac));
-            if (!station) {
-                LOG(ERROR) << "Station " << mac << " not found";
-                return;
-            }
+        // Clear node ipv4
+        database.set_sta_ipv4(mac, std::string());
 
-            // Clear node ipv4
-            database.set_node_ipv4(mac);
+        // Notify steering task, if any, of disconnect.
+        int steering_task = station->steering_task_id;
+        if (tasks.is_task_running(steering_task))
+            tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
 
-            // Notify steering task, if any, of disconnect.
-            int steering_task = station->steering_task_id;
-            if (tasks.is_task_running(steering_task))
-                tasks.push_event(steering_task, client_steering_task::STA_DISCONNECTED);
+        // Notify btm_request task, if any, of disconnect.
+        int btm_request_task = station->btm_request_task_id;
+        if (tasks.is_task_running(btm_request_task))
+            tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
 
-            // Notify btm_request task, if any, of disconnect.
-            int btm_request_task = station->btm_request_task_id;
-            if (tasks.is_task_running(btm_request_task))
-                tasks.push_event(btm_request_task, btm_request_task::STA_DISCONNECTED);
+        if (database.get_sta_handoff_flag(*station)) {
+            LOG(DEBUG) << "handoff_flag == true, mac " << mac;
+            // We're in the middle of steering, don't mark as disconnected (yet).
+            return;
+        } else {
+            LOG(DEBUG) << "handoff_flag == false, mac " << mac;
 
-            if (database.get_sta_handoff_flag(*station)) {
-                LOG(DEBUG) << "handoff_flag == true, mac " << mac;
-                // We're in the middle of steering, don't mark as disconnected (yet).
-                return;
-            } else {
-                LOG(DEBUG) << "handoff_flag == false, mac " << mac;
-
-                // If we're not in the middle of steering, kill roaming task
-                int prev_task_id = station->roaming_task_id;
-                if (tasks.is_task_running(prev_task_id)) {
-                    tasks.kill_task(prev_task_id);
-                }
-            }
-
-            // If there is an instance of association handling task, kill it
-            int association_handling_task_id = station->association_handling_task_id;
-            if (tasks.is_task_running(association_handling_task_id)) {
-                tasks.kill_task(association_handling_task_id);
+            // If we're not in the middle of steering, kill roaming task
+            int prev_task_id = station->roaming_task_id;
+            if (tasks.is_task_running(prev_task_id)) {
+                tasks.kill_task(prev_task_id);
             }
         }
 
-        // close slave socket
-        if (mac_type == beerocks::TYPE_SLAVE) {
-            database.set_radio_state(mac, beerocks::STATE_DISCONNECTED);
-            set_radio_active(database, tasks, mac, false);
-        }
-
-        /*
-         * set all nodes in the subtree as disconnected
-         */
-        if (mac_type != beerocks::TYPE_CLIENT) {
-            int agent_monitoring_task_id = database.get_agent_monitoring_task_id();
-            auto nodes                   = database.get_node_subtree(mac);
-            for (auto &node_mac : nodes) {
-                if (database.get_node_type(node_mac) == beerocks::TYPE_IRE) {
-                    std::string ire_mac = node_mac;
-                    tasks.push_event(agent_monitoring_task_id, agent_monitoring_task::DISCONNECTED,
-                                     &ire_mac);
-                    // get in here when handling dead node on IRE backhaul
-                    // set all platform bridges as non operational
-                    LOG(DEBUG) << "setting platform with bridge mac " << node_mac
-                               << " as non operational";
-
-                    auto agent = database.m_agents.get(tlvf::mac_from_string(node_mac));
-                    if (!agent) {
-                        LOG(ERROR) << "agent " << node_mac << " not found";
-                        return;
-                    }
-                    agent->state = STATE_DISCONNECTED;
-                } else if (database.get_node_type(node_mac) == beerocks::TYPE_IRE_BACKHAUL ||
-                           database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
-
-                    auto station = database.get_station(tlvf::mac_from_string(node_mac));
-                    if (!station) {
-                        LOG(ERROR) << "station " << node_mac << " not found";
-                        return;
-                    }
-
-                    // kill old roaming task
-                    int prev_task_id = station->roaming_task_id;
-                    if (tasks.is_task_running(prev_task_id)) {
-                        tasks.kill_task(prev_task_id);
-                    }
-                }
-
-                database.set_radio_state(node_mac, beerocks::STATE_DISCONNECTED);
-                set_radio_active(database, tasks, node_mac,
-                                 false); //implementation checks for hostap node type
-
-                if (database.get_node_type(node_mac) == beerocks::TYPE_IRE ||
-                    database.get_node_type(node_mac) == beerocks::TYPE_CLIENT) {
-                    tasks.push_event(agent_monitoring_task_id, STATE_DISCONNECTED, &mac);
-                    bml_task::connection_change_event new_event;
-                    new_event.mac = node_mac;
-                    tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE,
-                                     &new_event);
-                    LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac "
-                               << new_event.mac;
-                }
-
-                if (database.get_node_type(node_mac) == beerocks::TYPE_IRE) {
-                    LOG(DEBUG) << "Remove network device with mac " << node_mac
-                               << " from datamodel";
-                    database.remove_node(tlvf::mac_from_string(node_mac));
-                }
-            }
+        // If there is an instance of association handling task, kill it
+        int association_handling_task_id = station->association_handling_task_id;
+        if (tasks.is_task_running(association_handling_task_id)) {
+            tasks.kill_task(association_handling_task_id);
         }
     }
 
     // update bml listeners
-    if (node_state == beerocks::STATE_CONNECTED) {
-        if (mac_type == beerocks::TYPE_CLIENT) {
+    if (!station->is_bSta()) {
+        bml_task::connection_change_event new_event;
+        new_event.mac = mac;
+        tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
+        LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac " << new_event.mac;
+    } else {
+        auto backhaul_bridge = database.get_agent_by_parent(tlvf::mac_from_string(mac));
+        if (backhaul_bridge) {
+            LOG(ERROR) << "backhaul has no bridge under it!";
+        } else {
             bml_task::connection_change_event new_event;
-            new_event.mac = mac;
+            new_event.mac = tlvf::mac_to_string(backhaul_bridge->al_mac);
+            LOG(DEBUG) << "BML, sending IRE disconnect CONNECTION_CHANGE for mac " << new_event.mac;
             tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
-            LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac "
-                       << new_event.mac;
-        } else if (mac_type == beerocks::TYPE_IRE_BACKHAUL) {
-            auto backhauls_bridge = database.get_node_children(mac, beerocks::TYPE_IRE);
-            if (backhauls_bridge.empty()) {
-                LOG(ERROR) << "backhaul has no bridge node under it!";
-            } else {
-                for (auto it = backhauls_bridge.begin(); it != backhauls_bridge.end(); it++) {
-                    bml_task::connection_change_event new_event;
-                    new_event.mac = *it;
-                    LOG(DEBUG) << "BML, sending IRE disconnect CONNECTION_CHANGE for mac "
-                               << new_event.mac;
-                    tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE,
-                                     &new_event);
-                }
-            }
         }
     }
 
-    LOG(DEBUG) << "handling dead node, done for mac " << mac;
+    LOG(DEBUG) << "handling dead station, done for mac " << mac;
 }
 
 bool son_actions::validate_beacon_measurement_report(beerocks_message::sBeaconResponse11k report,

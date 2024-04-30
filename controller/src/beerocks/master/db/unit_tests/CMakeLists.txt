@@ -12,7 +12,6 @@ if (BUILD_TESTS)
         ${db_unit_tests}
         ${CMAKE_CURRENT_LIST_DIR}/db_test.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../db.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/../node.cpp
         ${CMAKE_CURRENT_LIST_DIR}/../station.cpp
     )
 
