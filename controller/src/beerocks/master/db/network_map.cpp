@@ -51,10 +51,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
 
     beerocks_header->actionhdr()->last() = 0;
 
-    uint8_t *data_start           = nullptr;
-    uint8_t *local_agent_ptr      = nullptr;
-    bool is_local_agent_processed = false;
-
+    uint8_t *data_start = nullptr;
     std::ptrdiff_t size = 0, size_left = 0, node_len = 0;
     response->node_num() = 0;
 
@@ -64,7 +61,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 LOG(ERROR) << "node size is bigger than buffer size";
                 return false;
             }
-            LOG(DEBUG) << "Sending BML_NW_MAP_RESPONSE";
+
             controller_ctx->send_cmdu(fd, cmdu_tx);
 
             response =
@@ -79,21 +76,91 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             beerocks_header                      = message_com::get_beerocks_header(cmdu_tx);
             beerocks_header->actionhdr()->last() = 0;
             response->node_num()                 = 0;
-            size                                 = 0;
             data_start                           = nullptr;
-            if (!is_local_agent_processed) {
-                local_agent_ptr = nullptr;
-            }
+            size                                 = 0;
+            size_left =
+                beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
         }
         return true;
     };
-    LOG(DEBUG) << "Badhri sizeof(BML_NODE): " << sizeof(BML_NODE);
-    for (const auto &agent : database.m_agents) {
-        if (agent.second->state != beerocks::STATE_CONNECTED) {
-            continue;
+
+    // Fill the data for the local agent first
+    const auto local_agent_mac = database.get_local_agent_mac();
+    auto local_agent_iter      = database.m_agents.find(local_agent_mac);
+    if (local_agent_iter != database.m_agents.end()) {
+        const auto &local_agent = local_agent_iter->second;
+        if (local_agent->state == beerocks::STATE_CONNECTED) {
+            LOG(DEBUG) << "Processing Local Agent: " << local_agent->al_mac;
+            node_len = sizeof(BML_NODE);
+            size_left =
+                beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+            LOG(DEBUG) << "Badhri node_len: " << node_len << " size_left: " << size_left;
+
+            if (!send_nw_map_message_if_needed()) {
+                return;
+            }
+
+            if (!response->alloc_buffer(node_len)) {
+                LOG(ERROR) << "Failed allocating buffer!";
+                return;
+            }
+
+            if (data_start == nullptr) {
+                data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
+            }
+
+            LOG(DEBUG) << "Badhri data_start: " << static_cast<void *>(data_start + size);
+            fill_bml_agent_data(database, local_agent, data_start + size, size_left);
+
+            response->node_num()++;
+            size += node_len;
+            for (const auto &radio : local_agent->radios) {
+                for (const auto &bss : radio.second->bsses) {
+                    for (const auto &station_pair : bss.second->connected_stations) {
+                        const auto &station = station_pair.second;
+                        LOG(ERROR) << "Handling station " << station->mac;
+                        if (station->state != beerocks::STATE_CONNECTED) {
+                            LOG(ERROR) << "State not connected for STA " << station->mac;
+                            continue;
+                        }
+                        node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
+                        size_left = beerocks_header->getMessageBuffLength() -
+                                    beerocks_header->getMessageLength();
+
+                        if (!send_nw_map_message_if_needed()) {
+                            return;
+                        }
+
+                        if (!response->alloc_buffer(node_len)) {
+                            LOG(ERROR) << "Failed allocating buffer!";
+                            return;
+                        }
+
+                        if (data_start == nullptr) {
+                            data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
+                        }
+
+                        fill_bml_station_data(database, station, data_start + size, size_left);
+
+                        response->node_num()++;
+                        size += node_len;
+                    }
+                }
+            }
         }
+    }
+
+    // Fill the data for other agents
+    for (const auto &agent_pair : database.m_agents) {
+        const auto &agent = agent_pair.second;
+        if (agent->state != beerocks::STATE_CONNECTED || agent->al_mac == local_agent_mac) {
+            continue; // Skip local agent and disconnected agents
+        }
+
+        LOG(DEBUG) << "Processing Non-Local Agent: " << agent->al_mac;
         node_len  = sizeof(BML_NODE);
         size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
+        LOG(DEBUG) << "Badhri node_len: " << node_len << " size_left: " << size_left;
 
         if (!send_nw_map_message_if_needed()) {
             return;
@@ -104,41 +171,22 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             return;
         }
 
-        if (local_agent_ptr == nullptr) {
-            local_agent_ptr = reinterpret_cast<uint8_t *>(response->buffer(0));
-            LOG(DEBUG) << "Badhri local_agent_ptr: " << static_cast<void *>(local_agent_ptr);
-        }
-
         if (data_start == nullptr) {
-            if (!is_local_agent_processed)
-                data_start = local_agent_ptr + node_len;
-            else
-                data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
-            LOG(DEBUG) << "Badhri data_start: " << static_cast<void *>(data_start);
+            data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
         }
-
-        if (!agent.second->is_gateway) {
-            LOG(ERROR) << "Parsing non-local agent " << agent.second->al_mac
-                       << " inserting at: " << static_cast<void *>(data_start + size);
-            fill_bml_agent_data(database, agent.second, data_start + size, size_left);
-            size += node_len;
-            LOG(DEBUG) << "Badhri size = " << size;
-        } else {
-            LOG(ERROR) << "Parsing local agent " << agent.second->al_mac
-                       << " inserting at: " << static_cast<void *>(local_agent_ptr);
-            fill_bml_agent_data(database, agent.second, local_agent_ptr, size_left);
-            is_local_agent_processed = true;
-        }
+        LOG(DEBUG) << "Badhri data_start: " << static_cast<void *>(data_start + size);
+        fill_bml_agent_data(database, agent, data_start + size, size_left);
 
         response->node_num()++;
+        size += node_len;
 
-        for (const auto &radio : agent.second->radios) {
+        for (const auto &radio : agent->radios) {
             for (const auto &bss : radio.second->bsses) {
-                for (const auto &station : bss.second->connected_stations) {
-                    LOG(ERROR) << "Handling station " << station.second->mac;
-                    if (station.second->state != beerocks::STATE_CONNECTED) {
-                        LOG(ERROR)
-                            << "State not connected for STA " << station.second->mac << " skipping";
+                for (const auto &station_pair : bss.second->connected_stations) {
+                    const auto &station = station_pair.second;
+                    LOG(ERROR) << "Handling station " << station->mac;
+                    if (station->state != beerocks::STATE_CONNECTED) {
+                        LOG(ERROR) << "State not connected for STA " << station->mac;
                         continue;
                     }
                     node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
@@ -158,7 +206,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                         data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
                     }
 
-                    fill_bml_station_data(database, station.second, data_start + size, size_left);
+                    fill_bml_station_data(database, station, data_start + size, size_left);
 
                     response->node_num()++;
                     size += node_len;
@@ -168,7 +216,6 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     }
 
     beerocks_header->actionhdr()->last() = 1;
-    LOG(DEBUG) << "Sending ACTION_BML_NW_MAP_RESPONSE";
     controller_ctx->send_cmdu(fd, cmdu_tx);
 }
 
@@ -204,6 +251,7 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
 
     std::ptrdiff_t node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
     if (node_len > buffer_size) {
+        LOG(ERROR) << "buffer overflow";
         return 0;
     }
     memset(node, 0, node_len);
@@ -261,6 +309,45 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
     return node_len;
 }
 
+auto process_backhaul = [](db &database, std::shared_ptr<Station> backhaul, BML_NODE *node,
+                           bool is_gateway) {
+    if (backhaul) {
+        node->isWiFiBH = utils::is_device_wireless(backhaul->iface_type);
+
+        if (backhaul->get_bss()) {
+            LOG(DEBUG) << "Badhri Backhaul BSSID: " << backhaul->get_bss()->bssid;
+            LOG(DEBUG) << "Badhri Backhaul Radio_uid: " << backhaul->get_bss()->radio.radio_uid;
+
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_bss()->bssid));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_radio_parent_agent(
+                                      backhaul->get_bss()->radio.radio_uid)));
+
+            if (!is_gateway) {
+                auto parent_backhaul_wifi_channel =
+                    database.get_radio_wifi_channel(backhaul->get_bss()->radio.radio_uid);
+                if (parent_backhaul_wifi_channel.is_empty()) {
+                    LOG(WARNING) << "empty wifi channel of "
+                                 << backhaul->get_bss()->radio.radio_uid;
+                }
+
+                node->channel   = parent_backhaul_wifi_channel.get_channel();
+                node->bw        = parent_backhaul_wifi_channel.get_bandwidth();
+                node->freq_type = parent_backhaul_wifi_channel.get_freq_type();
+                node->channel_ext_above_secondary =
+                    parent_backhaul_wifi_channel.get_ext_above_secondary();
+            }
+        } else if (backhaul->get_eth_switch()) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_eth_switch()->mac));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_eth_switch_parent_agent(
+                                      backhaul->get_eth_switch()->mac)));
+        }
+    }
+};
+
 std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Agent> agent,
                                                 uint8_t *tx_buffer,
                                                 const std::ptrdiff_t &buffer_size,
@@ -275,7 +362,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
 
     std::ptrdiff_t node_len = sizeof(BML_NODE);
     if (node_len > buffer_size) {
-        //LOG(DEBUG) << "buffer overflow!";
+        LOG(ERROR) << "buffer overflow!";
         return 0;
     }
     memset(node, 0, node_len);
@@ -302,14 +389,14 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
             node->state = BML_NODE_STATE_UNKNOWN;
         }
     }
-
+    LOG(DEBUG) << "Badhri agent->al_mac: " << tlvf::mac_to_string(agent->al_mac);
     tlvf::mac_from_string(node->mac, tlvf::mac_to_string(agent->al_mac));
 
     // remote bridge
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac, tlvf::mac_to_string(agent->parent_mac));
     LOG(DEBUG) << "Badhri agent->parent_mac = " << agent->parent_mac;
-
-    std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
+    process_backhaul(database, database.get_station(agent->parent_mac), node, agent->is_gateway);
+    /*std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
     if (backhaul) {
         node->isWiFiBH = utils::is_device_wireless(backhaul->iface_type);
         if (backhaul->get_bss()) {
@@ -341,7 +428,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
                                   tlvf::mac_to_string(database.get_eth_switch_parent_agent(
                                       backhaul->get_eth_switch()->mac)));
         }
-    }
+    }*/
 
     network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
     string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
@@ -355,7 +442,8 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
 
         tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
         LOG(DEBUG) << "Badhri radio.first: " << radio.first;
-        std::shared_ptr<Station> backhaul = database.get_station(radio.first);
+        process_backhaul(database, database.get_station(radio.first), node, agent->is_gateway);
+        /*std::shared_ptr<Station> backhaul = database.get_station(radio.first);
         if (backhaul) {
             node->isWiFiBH = utils::is_device_wireless(backhaul->iface_type);
             if (backhaul->get_bss()) {
@@ -387,7 +475,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
                                       tlvf::mac_to_string(database.get_eth_switch_parent_agent(
                                           backhaul->get_eth_switch()->mac)));
             }
-        }
+        }*/
         unsigned vap_id = 0;
         for (const auto &bss : radio.second->bsses) {
             if (bss.second->get_vap_id() >= 0) {

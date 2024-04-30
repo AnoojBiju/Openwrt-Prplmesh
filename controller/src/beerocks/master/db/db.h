@@ -2769,6 +2769,7 @@ public:
     Controller *get_controller_ctx() { return m_controller_ctx; }
 
     const sMacAddr &get_local_bridge_mac() { return m_local_bridge_mac; }
+    sMacAddr get_local_agent_mac() { return m_local_agent_mac; }
 
     //
     // vars
@@ -3147,6 +3148,8 @@ private:
     * value = Latest dialog token from sta beacon measurement.
     */
     std::unordered_map<sMacAddr, uint8_t> m_dialog_tokens;
+
+    sMacAddr m_local_agent_mac = beerocks::net::network_utils::ZERO_MAC;
 };
 
 } // namespace son

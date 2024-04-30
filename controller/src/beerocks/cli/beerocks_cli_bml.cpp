@@ -37,7 +37,8 @@ static void fill_conn_map_node(
     n->rx_rssi                     = node->rx_rssi;
     n->isWiFiBH                    = node->isWiFiBH;
     n->mac                         = tlvf::mac_to_string(node->mac);
-    n->ip_v4                       = network_utils::ipv4_to_string(node->ip_v4);
+    LOG(DEBUG) << "Badhri n->mac: " << n->mac;
+    n->ip_v4 = network_utils::ipv4_to_string(node->ip_v4);
     n->name.assign(node->name[0] ? node->name : "N/A");
 
     if (node->type != BML_NODE_TYPE_CLIENT) { // GW or IRE
@@ -139,7 +140,9 @@ static void bml_utils_dump_conn_map(
         // CLIENT
         if (node->type == BML_NODE_TYPE_CLIENT) {
             ss << ind_inc(ind_str) << node_type_to_conn_map_string(node->type)
-               << " mac: " << node->mac << ", ipv4: " << node->ip_v4 << ", name: " << node->name;
+               << " mac: " << node->mac << ", ipv4: " << node->ip_v4
+               << (node->name != "N/A" ? ", name: " + node->name : "");
+
             if (node->channel) { // channel != 0
                 ss << ", ch: " << std::to_string(node->channel) << ", bw: "
                    << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
@@ -156,21 +159,27 @@ static void bml_utils_dump_conn_map(
                 node->gw_ire.backhaul_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
                 ss << ind_inc(ind_str)
                    << std::string(node->isWiFiBH ? "WiFi_BACKHAUL:" : "Eth_BACKHAUL:")
-                   << " mac: " << node->gw_ire.backhaul_mac
-                   << ", ch: " << std::to_string(node->channel) << ", bw: "
-                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
-                   << utils::convert_channel_ext_above_to_string(node->channel_ext_above_secondary,
-                                                                 (beerocks::eWiFiBandwidth)node->bw)
-                   //<< ", rx_rssi: "       << std::to_string(node->rx_rssi)
-                   << std::endl;
+                   << " mac: " << node->gw_ire.backhaul_mac;
+                if (!node->isWiFiBH) {
+                    ss << std::endl;
+                } else {
+                    ss << ", ch: " << std::to_string(node->channel) << ", bw: "
+                       << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                       << utils::convert_channel_ext_above_to_string(
+                              node->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)node->bw)
+                       << std::endl;
+                }
+                //<< ", rx_rssi: "       << std::to_string(node->rx_rssi)
             }
 
             // BRIDGE
             if (parent_bssid != network_utils::ZERO_MAC_STRING)
                 ind_inc(ind_str);
 
-            ss << ind_str << node_type_to_conn_map_string(node->type) << " name: " << node->name
-               << ", mac: " << node->mac << ", ipv4: " << node->ip_v4 << std::endl;
+            ss << ind_str << node_type_to_conn_map_string(node->type)
+               << (node->name != "N/A" ? (" name: " + node->name + ", AL-MAC: " + node->mac)
+                                       : (" AL-MAC: " + node->mac))
+               << ", ipv4: " << node->ip_v4 << std::endl;
 
             // ETHERNET
             // generate eth address from bridge address
@@ -752,6 +761,7 @@ void cli_bml::connection_map_cb(const struct BML_NODE_ITER *node_iter, bool to_c
     }
 
     current_node = node_iter->get_node();
+    LOG(DEBUG) << "Badhri current_node: " << static_cast<void *>(current_node);
     if (current_node) {
         fill_conn_map_node(pThis->conn_map_nodes, current_node);
 

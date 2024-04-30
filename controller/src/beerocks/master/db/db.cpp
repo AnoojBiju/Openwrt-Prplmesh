@@ -250,6 +250,7 @@ std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
     auto agent = m_agents.add(mac);
 
     agent->is_gateway = true;
+    m_local_agent_mac = mac;
 
     auto data_model_path = dm_add_device_element(mac);
     if (data_model_path.empty()) {
@@ -276,6 +277,10 @@ std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
 
 std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
+    if (mac == network_utils::ZERO_MAC) {
+        LOG(ERROR) << "agent mac is null, returning nullptr";
+        return {};
+    }
     auto agent = m_agents.add(mac);
     if (!agent) {
         LOG(ERROR) << "Failed to add Agent " << mac;
@@ -458,6 +463,10 @@ bool db::add_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr &mac,
                                          const sMacAddr &parent_mac)
 {
+    if (mac == network_utils::ZERO_MAC) {
+        LOG(ERROR) << "station mac is null, returning nullptr";
+        return {};
+    }
     auto station = m_stations.add(mac);
     auto bss     = get_bss(parent_mac, al_mac);
     LOG(DEBUG) << "Adding Station node "

@@ -572,13 +572,17 @@ int bml_internal::process_cmdu_header(std::shared_ptr<beerocks_header> beerocks_
         } break;
         // Network Map Response
         case beerocks_message::ACTION_BML_NW_MAP_RESPONSE: {
+            LOG(TRACE) << "Received ACTION_BML_NW_MAP_RESPONSE";
             auto response =
                 beerocks_header->addClass<beerocks_message::cACTION_BML_NW_MAP_RESPONSE>();
             uint32_t num_of_nodes = response->node_num();
             char *firstNode       = (char *)((num_of_nodes > 0) ? response->buffer(0) : nullptr);
+            LOG(DEBUG) << "Badhri beerocks_header->actionhdr()->last(): "
+                       << static_cast<int>(beerocks_header->actionhdr()->last());
 
             // Process the message
-            handle_nw_map_query_update(num_of_nodes, (int)beerocks_header->actionhdr()->last(),
+            handle_nw_map_query_update(num_of_nodes,
+                                       static_cast<int>(beerocks_header->actionhdr()->last()),
                                        firstNode, true);
 
         } break;
