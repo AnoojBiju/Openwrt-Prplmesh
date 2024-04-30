@@ -14,7 +14,7 @@
 namespace beerocks {
 
 /**
- * @brief A WifiChannel represents a channel of 2.4ghz, 5ghz or 6ghz band, which comprise
+ * @brief A WifiChannel represents a channel of 2.4GHz, 5GHz or 6GHz band, which comprise
  * of a channel number, center frequency, bandwidth, etc.
  */
 class WifiChannel {
@@ -85,9 +85,9 @@ public:
     uint16_t get_center_frequency() const;
 
     /**
-     * @brief Get the center frequency of a 160MHz bandwidth of a 6ghz band
+     * @brief Get the center frequency of a 160MHz bandwidth of a 6GHz band
      * 
-     * @return the center frequency of a 160MHz bandwidth of a 6ghz band
+     * @return the center frequency of a 160MHz bandwidth of a 6GHz band
      * otherwise, return 0.
      */
     uint16_t get_center_frequency_2() const;
@@ -115,12 +115,12 @@ public:
     eFreqType get_freq_type() const;
 
     /**
-     * @brief Get the channel extion above primary object
+     * @brief Get the channel extension above primary object
      * 
      * @return
-     * 1  - means the secondary channel will be 20mghz above primary channel,
+     * 1  - means the secondary channel will be 20MHz above primary channel,
      * 0  - means the secondary channel is same as primary channel
-     * -1 - means the secondary channel will be 20mghz below primary channel
+     * -1 - means the secondary channel will be 20MHz below primary channel
      */
     int get_ext_above_primary() const;
 
@@ -148,9 +148,9 @@ public:
     /**
      * @brief check if the channel is a DFS channel.
      * 
-     * A DFS channel can only be of 5ghz band.
+     * A DFS channel can only be of 5GHz band.
      * 
-     * @return true if the band type is 5ghz and the channel is a DFS channel
+     * @return true if the band type is 5GHz and the channel is a DFS channel
      * @return false otherwise
      */
     bool is_dfs_channel() const;
@@ -201,11 +201,11 @@ private:
     /**
      * @brief channel's center frequency.
      * The center frequency value is different from frequency
-     * value when the bandwidth is above 20mghz.
+     * value when the bandwidth is above 20MHz.
      */
     uint16_t m_center_frequency;
     /**
-     * @brief relavent only for 6ghz band and when the bandwidth is ether 160MHz or 80+80MHz.
+     * @brief relavent only for 6GHz band and when the bandwidth is ether 160MHz or 80+80MHz.
      * Otherwise, equal to 0.
      * The Center Frequency 2 field indicates the center frequency of the
      * 160 MHz channel in the 6 GHz band.
@@ -224,12 +224,12 @@ private:
     eFreqType m_freq_type;
     /**
      * @brief Indicate whether the channel is a DFS channel. This is
-     * only relavent for 5ghz band.
+     * only relavent for 5GHz band.
      */
     bool m_is_dfs;
     /**
      * @brief Is channel extention (the secondary channel) above the primary channel
-     * When the bandwidth is above 20mghz, a secondary channel is used.
+     * When the bandwidth is above 20MHz, a secondary channel is used.
      * positive value means the secondary channel will be above primary channel
      * zero value means the secondary channel is same as primary channel
      * negative value means the secondary channel will be below primary channel
