@@ -7,7 +7,7 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/framework_logging.conf" DESTINATION c
 file(COPY "${CMAKE_CURRENT_BINARY_DIR}/framework_logging.conf" DESTINATION "${CMAKE_MULTIAP_OUTPUT_DIRECTORY}/config/")
 
 # mapfcommon sources
-set(sources logger.cpp encryption.cpp utils.cpp)
+set(sources logger.cpp encryption.cpp utils.cpp hmac_wrapper.cpp)
 
 # We use OpenSSL >=3.0.0 for data encryption
 find_package(OpenSSL 3.0 QUIET)
