@@ -72,6 +72,8 @@
 #include <mapf/common/err.h>
 #include <mapf/common/logger.h>
 
+#include "hmac_wrapper.h"
+
 namespace mapf {
 namespace encryption {
 
@@ -322,54 +324,6 @@ bool sha256::digest(uint8_t *digest)
     return EVP_DigestFinal(m_ctx, digest, &digest_length);
 }
 
-class Evp {
-public:
-    Evp(const uint8_t *key, size_t key_length)
-    {
-        m_ctx = EVP_MD_CTX_new();
-        if (!m_ctx) {
-            MAPF_ERR("EVP_MD_CTX_new failed");
-        }
-
-        const EVP_MD *md = EVP_sha256();
-        if (EVP_DigestInit_ex(m_ctx, md, nullptr) != 1) {
-            EVP_MD_CTX_free(m_ctx);
-            MAPF_ERR("EVP_DigestInit_ex failed");
-        }
-
-        if (EVP_DigestUpdate(m_ctx, key, key_length) != 1) {
-            EVP_MD_CTX_free(m_ctx);
-            MAPF_ERR("EVP_DigestUpdate failed");
-        }
-    }
-
-    ~Evp() { EVP_MD_CTX_free(m_ctx); }
-
-    bool update(const uint8_t *message, size_t message_length)
-    {
-        if (EVP_DigestUpdate(m_ctx, message, message_length) != 1) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * @brief Calculate and return the evp digest
-     * @param[out] digest Output buffer, must be 32 bytes
-     * @return
-     */
-    bool digest(uint8_t *digest)
-    {
-        if (EVP_DigestFinal_ex(m_ctx, digest, nullptr) != 1) {
-            return false;
-        }
-        return true;
-    }
-
-private:
-    EVP_MD_CTX *m_ctx;
-};
-
 bool aes_encrypt(const uint8_t *key, const uint8_t *iv, uint8_t *plaintext, int plen,
                  uint8_t *ciphertext, int &clen)
 {
@@ -502,13 +456,13 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
     uint8_t key[32];
     sha.digest(key);
 
-    Evp evp(key, sizeof(key));
-    evp.update(m1_nonce, 16);
-    evp.update(mac, 6);
-    evp.update(m2_nonce, 16);
+    hmac_wrapper hmac(key, sizeof(key));
+    hmac.update(m1_nonce, 16);
+    hmac.update(mac, 6);
+    hmac.update(m2_nonce, 16);
 
     uint8_t kdk[32];
-    evp.digest(kdk);
+    hmac.digest(kdk, 32);
 
     // Finally, take "kdk" and using a function provided in the "Wi-Fi
     // simple configuration" standard, obtain THREE KEYS that we will use
@@ -536,13 +490,14 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
     for (unsigned iter = 1; iter < sizeof(keys) / 32; iter++) {
         uint32_t kdf_iter = htonl(iter);
 
-        Evp evp_iter(kdk, sizeof(kdk));
-        evp_iter.update(reinterpret_cast<const uint8_t *>(&kdf_iter), sizeof(kdf_iter));
-        evp_iter.update(reinterpret_cast<const uint8_t *>(personalization_string.data()),
-                        personalization_string.length());
-        evp_iter.update(reinterpret_cast<const uint8_t *>(&kdf_key_length), sizeof(kdf_key_length));
+        hmac_wrapper hmac_iter(kdk, sizeof(kdk));
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(&kdf_iter), sizeof(kdf_iter));
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(personalization_string.data()),
+                         personalization_string.length());
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(&kdf_key_length),
+                         sizeof(kdf_key_length));
         static_assert(sizeof(keys.buf[1]) == 32, "Correct size");
-        evp_iter.digest(keys.buf[iter - 1]);
+        hmac_iter.digest(keys.buf[iter - 1], 32);
     }
     std::copy(keys.keys.authkey, keys.keys.authkey + sizeof(keys.keys.authkey), authkey);
     std::copy(keys.keys.keywrapkey, keys.keys.keywrapkey + sizeof(keys.keys.keywrapkey),
@@ -551,13 +506,13 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
 
 bool kwa_compute(const uint8_t *authkey, uint8_t *data, uint32_t data_len, uint8_t *kwa)
 {
-    uint8_t evp_[32];
-    Evp evp_kwa(authkey, 32);
-    if (!evp_kwa.update(data, data_len))
+    uint8_t hmac_[32];
+    hmac_wrapper hmac_kwa(authkey, 32);
+    if (!hmac_kwa.update(data, data_len))
         return false;
-    if (!evp_kwa.digest(evp_))
+    if (!hmac_kwa.digest(hmac_, 32))
         return false;
-    std::copy_n(evp_, 8, kwa);
+    std::copy_n(hmac_, 8, kwa);
     return true;
 }
 
