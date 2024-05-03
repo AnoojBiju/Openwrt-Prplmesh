@@ -55,7 +55,7 @@ public:
     {
         struct timeval now;
         struct timespec timeout;
-        // set the absolut timeout
+        // set the absolute timeout
         gettimeofday(&now, NULL);
         timeout.tv_sec  = now.tv_sec + (timeout_ms / 1000);
         timeout.tv_nsec = (now.tv_usec + (timeout_ms % 1000) * 1000) * 1000;
