@@ -1570,7 +1570,6 @@ void Controller::set_esp(const std::string &param_name, const sMacAddr &reportin
     estimated_service_param.bytes[0] = est_service_info_field[0];
     estimated_service_param.bytes[1] = est_service_info_field[1];
     estimated_service_param.bytes[2] = est_service_info_field[2];
-
     database.set_estimated_service_param(reporting_agent_bssid, param_name,
                                          estimated_service_param.value);
 }

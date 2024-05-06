@@ -7,14 +7,12 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/framework_logging.conf" DESTINATION c
 file(COPY "${CMAKE_CURRENT_BINARY_DIR}/framework_logging.conf" DESTINATION "${CMAKE_MULTIAP_OUTPUT_DIRECTORY}/config/")
 
 # mapfcommon sources
-set(sources logger.cpp encryption.cpp utils.cpp)
+set(sources logger.cpp encryption.cpp utils.cpp hmac_wrapper.cpp)
 
-# We use OpenSSL 1.1.x for Encryption
-find_package(OpenSSL 1.1 QUIET)
+# We use OpenSSL >=3.0.0 for data encryption
+find_package(OpenSSL 3.0 QUIET)
 if(NOT OpenSSL_FOUND)
-	# Try older versions and use compatability layer
-	find_package(OpenSSL 1.0 REQUIRED)
-	set(sources "${sources};openssl_compat.c")
+	find_package(OpenSSL 1.1 REQUIRED)
 endif()
 
 # Create a single common library
