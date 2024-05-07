@@ -2703,7 +2703,7 @@ bool Controller::handle_intel_slave_join(
     // sending event to CS task
     LOG(DEBUG) << "CS_task,sending SLAVE_JOINED_EVENT for mac " << radio_mac;
     auto cs_new_event                  = new channel_selection_task::sSlaveJoined_event;
-    cs_new_event->backhaul_is_wireless = beerocks::utils::is_node_wireless(backhaul_iface_type);
+    cs_new_event->backhaul_is_wireless = beerocks::utils::is_device_wireless(backhaul_iface_type);
     cs_new_event->backhaul_channel     = backhaul_channel;
     cs_new_event->channel              = notification->cs_params().channel;
     cs_new_event->low_pass_filter_on   = notification->low_pass_filter_on();
