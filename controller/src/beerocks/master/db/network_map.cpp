@@ -83,9 +83,11 @@ void network_map::send_bml_network_map_message(db &database, int fd,
         return true;
     };
 
-    for (const auto &agent : database.m_agents) {
-        LOG(ERROR) << "Parsing agent " << agent.second->al_mac;
-        if (agent.second->state != beerocks::STATE_CONNECTED) {
+    for (const auto &agent_pair : database.m_agents) {
+        const auto &agent = agent_pair.second;
+        LOG(ERROR) << "Parsing agent " << agent->al_mac;
+        if (agent->state != beerocks::STATE_CONNECTED) {
+            LOG(DEBUG) << "Agent: " << agent->al_mac << " not connected, continue";
             continue;
         }
         node_len  = sizeof(BML_NODE);
@@ -104,17 +106,18 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
         }
 
-        fill_bml_agent_data(database, agent.second, data_start + size, size_left);
+        fill_bml_agent_data(database, agent, data_start + size, size_left);
 
         response->node_num()++;
         size += node_len;
 
-        for (const auto &radio : agent.second->radios) {
+        for (const auto &radio : agent->radios) {
             for (const auto &bss : radio.second->bsses) {
-                for (const auto &station : bss.second->connected_stations) {
-                    LOG(ERROR) << "Handling station " << station.second->mac;
-                    if (station.second->state != beerocks::STATE_CONNECTED) {
-                        LOG(ERROR) << "State not connected for STA " << station.second->mac;
+                for (const auto &station_pair : bss.second->connected_stations) {
+                    const auto &station = station_pair.second;
+                    LOG(ERROR) << "Handling station " << station->mac;
+                    if (station->state != beerocks::STATE_CONNECTED) {
+                        LOG(ERROR) << "State not connected for STA " << station->mac;
                         continue;
                     }
                     node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
@@ -134,7 +137,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                         data_start = reinterpret_cast<uint8_t *>(response->buffer(0));
                     }
 
-                    fill_bml_station_data(database, station.second, data_start + size, size_left);
+                    fill_bml_station_data(database, station, data_start + size, size_left);
 
                     response->node_num()++;
                     size += node_len;
@@ -165,6 +168,40 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_ma
     }
     return 0;
 }
+
+auto process_backhaul = [](db &database, std::shared_ptr<Station> backhaul, BML_NODE *node,
+                           bool is_gateway) {
+    if (backhaul) {
+        if (backhaul->get_bss()) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_bss()->bssid));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_radio_parent_agent(
+                                      backhaul->get_bss()->radio.radio_uid)));
+
+            if (!is_gateway) {
+                auto parent_backhaul_wifi_channel =
+                    database.get_radio_wifi_channel(backhaul->get_bss()->radio.radio_uid);
+                if (parent_backhaul_wifi_channel.is_empty()) {
+                    LOG(WARNING) << "empty wifi channel of "
+                                 << backhaul->get_bss()->radio.radio_uid;
+                }
+
+                node->channel   = parent_backhaul_wifi_channel.get_channel();
+                node->bw        = parent_backhaul_wifi_channel.get_bandwidth();
+                node->freq_type = parent_backhaul_wifi_channel.get_freq_type();
+                node->channel_ext_above_secondary =
+                    parent_backhaul_wifi_channel.get_ext_above_secondary();
+            }
+        } else if (backhaul->get_eth_switch()) {
+            tlvf::mac_from_string(node->parent_bssid,
+                                  tlvf::mac_to_string(backhaul->get_eth_switch()->mac));
+            tlvf::mac_from_string(node->parent_bridge,
+                                  tlvf::mac_to_string(database.get_eth_switch_parent_agent(
+                                      backhaul->get_eth_switch()->mac)));
+        }
+    }
+};
 
 std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<Station> station,
                                                   uint8_t *tx_buffer,
@@ -248,7 +285,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
 
     std::ptrdiff_t node_len = sizeof(BML_NODE);
     if (node_len > buffer_size) {
-        //LOG(DEBUG) << "buffer overflow!";
+        LOG(ERROR) << "buffer overflow!";
         return 0;
     }
     memset(node, 0, node_len);
@@ -281,36 +318,7 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
     // remote bridge
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac, tlvf::mac_to_string(agent->parent_mac));
 
-    std::shared_ptr<Station> backhaul = database.get_station(agent->parent_mac);
-    if (backhaul) {
-        if (backhaul->get_bss()) {
-            tlvf::mac_from_string(node->parent_bssid,
-                                  tlvf::mac_to_string(backhaul->get_bss()->bssid));
-            tlvf::mac_from_string(node->parent_bridge,
-                                  tlvf::mac_to_string(database.get_radio_parent_agent(
-                                      backhaul->get_bss()->radio.radio_uid)));
-
-            if (!agent->is_gateway) {
-                auto parent_backhaul_wifi_channel =
-                    database.get_radio_wifi_channel(backhaul->get_bss()->radio.radio_uid);
-                if (parent_backhaul_wifi_channel.is_empty()) {
-                    LOG(WARNING) << "empty wifi channel of "
-                                 << backhaul->get_bss()->radio.radio_uid;
-                }
-                node->channel   = parent_backhaul_wifi_channel.get_channel();
-                node->bw        = parent_backhaul_wifi_channel.get_bandwidth();
-                node->freq_type = parent_backhaul_wifi_channel.get_freq_type();
-                node->channel_ext_above_secondary =
-                    parent_backhaul_wifi_channel.get_ext_above_secondary();
-            }
-        } else if (backhaul->get_eth_switch()) {
-            tlvf::mac_from_string(node->parent_bssid,
-                                  tlvf::mac_to_string(backhaul->get_eth_switch()->mac));
-            tlvf::mac_from_string(node->parent_bridge,
-                                  tlvf::mac_to_string(database.get_eth_switch_parent_agent(
-                                      backhaul->get_eth_switch()->mac)));
-        }
-    }
+    process_backhaul(database, database.get_station(agent->parent_mac), node, agent->is_gateway);
 
     network_utils::ipv4_from_string(node->ip_v4, agent->ipv4);
     string_utils::copy_string(node->name, agent->name.c_str(), sizeof(node->name));
@@ -322,6 +330,8 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
             break;
         }
         tlvf::mac_to_array(radio.first, node->data.gw_ire.radio[i].radio_mac);
+        //Useful for scenarios where radio mac address and the station interface mac address are same.
+        process_backhaul(database, database.get_station(radio.first), node, agent->is_gateway);
 
         unsigned vap_id = 0;
         for (const auto &bss : radio.second->bsses) {
