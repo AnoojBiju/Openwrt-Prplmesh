@@ -60,7 +60,7 @@ std::string utils::get_iface_type_string(beerocks::eIfaceType iface_type)
     }
 }
 
-bool utils::is_node_wireless(beerocks::eIfaceType iface_type)
+bool utils::is_device_wireless(beerocks::eIfaceType iface_type)
 {
     return ((iface_type > beerocks::IFACE_TYPE_UNSUPPORTED) &&
             (iface_type < beerocks::IFACE_TYPE_WIFI_END));

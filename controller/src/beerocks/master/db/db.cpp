@@ -276,6 +276,10 @@ std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
 
 std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent_mac)
 {
+    if (mac == network_utils::ZERO_MAC) {
+        LOG(ERROR) << "mac supplied for add_agent is zero_mac";
+        return {};
+    }
     auto agent = m_agents.add(mac);
     if (!agent) {
         LOG(ERROR) << "Failed to add Agent " << mac;
@@ -456,6 +460,10 @@ bool db::add_radio(const sMacAddr &mac, const sMacAddr &parent_mac)
 std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr &mac,
                                          const sMacAddr &parent_mac)
 {
+    if (mac == network_utils::ZERO_MAC) {
+        LOG(ERROR) << "mac supplied for add_station is zero_mac";
+        return {};
+    }
     auto station = m_stations.add(mac);
     auto bss     = get_bss(parent_mac, al_mac);
     LOG(DEBUG) << "Adding Station node "
@@ -956,7 +964,7 @@ bool db::is_sta_wireless(const std::string &mac)
         LOG(WARNING) << __FUNCTION__ << " - station " << mac << " does not exist!";
         return false;
     }
-    return utils::is_node_wireless(station->iface_type);
+    return utils::is_device_wireless(station->iface_type);
 }
 
 std::string db::obj_to_string(const sMacAddr &mac)
