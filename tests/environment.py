@@ -670,7 +670,7 @@ class ALEntityDocker(ALEntity):
             debug("Parsing line " + line)
             # TODO we need to parse indentation to get the exact topology.
             # For the time being, just parse the repeaters.
-            bridge = re.search(r' {8}IRE_BRIDGE: .* mac: ' + RE_MAC, line)
+            bridge = re.search(r' {8}IRE_BRIDGE: .* AL-MAC: ' + RE_MAC, line)
             radio = re.match(r' {16}RADIO: .* mac: ' + RE_MAC, line)
             vap = re.match(r' {20}fVAP.* bssid: ' + RE_MAC + r', ssid: (?P<ssid>.*)$', line)
             client = re.match(r' {24}CLIENT: mac: ' + RE_MAC, line)
