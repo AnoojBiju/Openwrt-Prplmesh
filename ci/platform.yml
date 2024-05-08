@@ -127,6 +127,8 @@ build-for-osp:
   timeout: 3h
   tags:
     - osp-build-fetch
+  rules:
+    - when: always
 
 build-for-cgr:
   stage: build
