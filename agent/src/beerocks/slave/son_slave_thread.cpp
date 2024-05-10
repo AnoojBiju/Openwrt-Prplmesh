@@ -4353,6 +4353,8 @@ bool slave_thread::agent_fsm()
                     // Set zwdfs to initial value.
                     radio->front.zwdfs = false;
                 }
+                if (fronthaul_iface == "wlan2")
+                    return true;
                 if (!radio_manager.fronthaul_started) {
                     // Start the fronthaul process. Before starting, kill the existing one.
                     fronthaul_stop(fronthaul_iface);

@@ -9,6 +9,9 @@
 #ifndef _AP_MANAGER_H
 #define _AP_MANAGER_H
 
+//#define DEBUG_NEW new (__FILE__, __LINE__)
+//#define new DEBUG_NEW
+
 // AP HAL
 #include <bwl/ap_wlan_hal.h>
 

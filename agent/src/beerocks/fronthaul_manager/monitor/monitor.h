@@ -9,6 +9,9 @@
 #ifndef MONITOR_THREAD_H
 #define MONITOR_THREAD_H
 
+//#define DEBUG_NEW new (__FILE__, __LINE__)
+//#define new DEBUG_NEW
+
 #include "monitor_rssi.h"
 #ifdef FEATURE_PRE_ASSOCIATION_STEERING
 #include "pre_association_steering/monitor_pre_association_steering_hal.h"
