@@ -35,6 +35,7 @@ static void fill_conn_map_node(
     n->freq_type                   = node->freq_type;
     n->channel_ext_above_secondary = node->channel_ext_above_secondary;
     n->rx_rssi                     = node->rx_rssi;
+    n->isWiFiBH                    = node->isWiFiBH;
     n->mac                         = tlvf::mac_to_string(node->mac);
     n->ip_v4                       = network_utils::ipv4_to_string(node->ip_v4);
     n->name.assign(node->name[0] ? node->name : "N/A");
@@ -138,7 +139,9 @@ static void bml_utils_dump_conn_map(
         // CLIENT
         if (node->type == BML_NODE_TYPE_CLIENT) {
             ss << ind_inc(ind_str) << node_type_to_conn_map_string(node->type)
-               << " mac: " << node->mac << ", ipv4: " << node->ip_v4 << ", name: " << node->name;
+               << " mac: " << node->mac << ", ipv4: " << node->ip_v4
+               << (node->name != "N/A" ? ", name: " + node->name : "");
+
             if (node->channel) { // channel != 0
                 ss << ", ch: " << std::to_string(node->channel) << ", bw: "
                    << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
@@ -151,23 +154,31 @@ static void bml_utils_dump_conn_map(
         } else { //PLATFORM
 
             // IRE BACKHAUL
-            if (node->type == BML_NODE_TYPE_IRE) {
-                ss << ind_inc(ind_str) << "IRE_BACKHAUL:"
-                   << " mac: " << node->gw_ire.backhaul_mac
-                   << ", ch: " << std::to_string(node->channel) << ", bw: "
-                   << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
-                   << utils::convert_channel_ext_above_to_string(node->channel_ext_above_secondary,
-                                                                 (beerocks::eWiFiBandwidth)node->bw)
-                   //<< ", rx_rssi: "       << std::to_string(node->rx_rssi)
-                   << std::endl;
+            if (node->type == BML_NODE_TYPE_IRE &&
+                node->gw_ire.backhaul_mac != beerocks::net::network_utils::ZERO_MAC_STRING) {
+                ss << ind_inc(ind_str)
+                   << std::string(node->isWiFiBH ? "WiFi_BACKHAUL:" : "Eth_BACKHAUL:")
+                   << " mac: " << node->gw_ire.backhaul_mac;
+                if (!node->isWiFiBH) {
+                    ss << std::endl;
+                } else {
+                    ss << ", ch: " << std::to_string(node->channel) << ", bw: "
+                       << utils::convert_bandwidth_to_int((beerocks::eWiFiBandwidth)node->bw)
+                       << utils::convert_channel_ext_above_to_string(
+                              node->channel_ext_above_secondary, (beerocks::eWiFiBandwidth)node->bw)
+                       << std::endl;
+                }
+                //<< ", rx_rssi: "       << std::to_string(node->rx_rssi)
             }
 
             // BRIDGE
             if (parent_bssid != network_utils::ZERO_MAC_STRING)
                 ind_inc(ind_str);
 
-            ss << ind_str << node_type_to_conn_map_string(node->type) << " name: " << node->name
-               << ", mac: " << node->mac << ", ipv4: " << node->ip_v4 << std::endl;
+            ss << ind_str << node_type_to_conn_map_string(node->type)
+               << (node->name != "N/A" ? (" name: " + node->name + ", AL-MAC: " + node->mac)
+                                       : (" AL-MAC: " + node->mac))
+               << ", ipv4: " << node->ip_v4 << std::endl;
 
             // ETHERNET
             // generate eth address from bridge address
@@ -182,8 +193,8 @@ static void bml_utils_dump_conn_map(
             // RADIO
             for (auto radio : node->gw_ire.radio) {
 
-                ss << ind_str << "RADIO: " << radio->ifname << " mac: " << radio->radio_mac
-                   << ", ch: "
+                ss << ind_str << (radio->ifname != "N/A" ? "RADIO: " + radio->ifname : "RADIO")
+                   << " mac: " << radio->radio_mac << ", ch: "
                    << (radio->channel != 255 ? std::to_string(radio->channel) : std::string("N/A"))
                    << ((son::wireless_utils::is_dfs_channel(radio->channel) &&
                         !radio->cac_completed)
@@ -207,7 +218,9 @@ static void bml_utils_dump_conn_map(
                            << int(j) << "]:"
                            << " "
                            << ((*vap)->vap_id >= 0
-                                   ? (radio->ifname + "." + std::to_string((*vap)->vap_id))
+                                   ? (radio->ifname != "N/A"
+                                          ? (radio->ifname + "." + std::to_string((*vap)->vap_id))
+                                          : "")
                                    : "")
                            << " bssid: " << (*vap)->bssid << ", ssid: " << (*vap)->ssid
                            << std::endl;

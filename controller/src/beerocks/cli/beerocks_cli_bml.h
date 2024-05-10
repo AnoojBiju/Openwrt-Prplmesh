@@ -30,6 +30,7 @@ public:
         uint8_t freq_type;
         uint8_t channel_ext_above_secondary;
         int8_t rx_rssi;
+        bool isWiFiBH;
         std::string mac;
         std::string ip_v4;
         std::string name;

@@ -172,6 +172,7 @@ std::ptrdiff_t network_map::fill_bml_node_data(db &database, std::string node_ma
 auto process_backhaul = [](db &database, std::shared_ptr<Station> backhaul, BML_NODE *node,
                            bool is_gateway) {
     if (backhaul) {
+        node->isWiFiBH = utils::is_device_wireless(backhaul->iface_type);
         if (backhaul->get_bss()) {
             tlvf::mac_from_string(node->parent_bssid,
                                   tlvf::mac_to_string(backhaul->get_bss()->bssid));

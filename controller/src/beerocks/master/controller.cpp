@@ -2383,7 +2383,7 @@ bool Controller::handle_intel_slave_join(
     std::string slave_name =
         is_gw_slave
             ? gw_name
-            : ("IRE_" +
+            : ("Prpl_" +
                (notification->platform_settings().local_master ? "MASTER_" : std::string()) +
                bridge_mac_str.substr(bridge_mac_str.size() - 5, bridge_mac_str.size() - 1));
 
@@ -2824,7 +2824,8 @@ bool Controller::handle_non_intel_slave_join(
               << "    al_mac=" << bridge_mac << std::endl
               << "    eth_switch_mac=" << eth_switch_mac << std::endl
               << "    backhaul_mac=" << backhaul_mac << std::endl
-              << "    radio_identifier = " << radio_mac << std::endl;
+              << "    radio_identifier = " << radio_mac << std::endl
+              << "    radio band= " << m1.rf_bands() << std::endl;
 
     LOG(DEBUG) << "simulate backhaul connected to the GW's LAN switch ";
     auto gw = database.get_gw();
