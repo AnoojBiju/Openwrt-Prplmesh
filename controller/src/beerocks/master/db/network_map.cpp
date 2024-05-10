@@ -85,8 +85,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     };
 
     // Fill the data for the local agent first
-    const auto local_agent_mac = database.get_local_agent_mac();
-    auto local_agent_iter      = database.m_agents.find(local_agent_mac);
+    const auto &local_agent_mac  = database.get_local_agent_mac();
+    const auto &local_agent_iter = database.m_agents.find(local_agent_mac);
     if (local_agent_iter != database.m_agents.end()) {
         const auto &local_agent = local_agent_iter->second;
         if (local_agent->state == beerocks::STATE_CONNECTED) {
@@ -154,7 +154,8 @@ void network_map::send_bml_network_map_message(db &database, int fd,
     for (const auto &agent_pair : database.m_agents) {
         const auto &agent = agent_pair.second;
         if (agent->state != beerocks::STATE_CONNECTED || agent->al_mac == local_agent_mac) {
-            continue; // Skip local agent and disconnected agents
+            LOG(DEBUG) << "Badhri Skipping Local Agent or Disconnected Agent: " << agent->al_mac;
+            continue;
         }
 
         LOG(DEBUG) << "Processing Non-Local Agent: " << agent->al_mac;
