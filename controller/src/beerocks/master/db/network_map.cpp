@@ -70,7 +70,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                     cmdu_tx, id);
 
             if (response == nullptr) {
-                LOG(ERROR) << "Failed building message!";
+                LOG(ERROR) << "Failed building message ACTION_BML_NW_MAP_RESPONSE!";
                 return false;
             }
 
@@ -79,17 +79,13 @@ void network_map::send_bml_network_map_message(db &database, int fd,
             response->node_num()                 = 0;
             data_start                           = nullptr;
             size                                 = 0;
+            size_left =
+                beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
         }
         return true;
     };
 
-    for (const auto &agent_pair : database.m_agents) {
-        const auto &agent = agent_pair.second;
-        LOG(ERROR) << "Parsing agent " << agent->al_mac;
-        if (agent->state != beerocks::STATE_CONNECTED) {
-            LOG(DEBUG) << "Agent: " << agent->al_mac << " not connected, continue";
-            continue;
-        }
+    auto process_agent = [&](const auto &agent) {
         node_len  = sizeof(BML_NODE);
         size_left = beerocks_header->getMessageBuffLength() - beerocks_header->getMessageLength();
 
@@ -117,7 +113,7 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                     const auto &station = station_pair.second;
                     LOG(ERROR) << "Handling station " << station->mac;
                     if (station->state != beerocks::STATE_CONNECTED) {
-                        LOG(ERROR) << "State not connected for STA " << station->mac;
+                        LOG(ERROR) << "STA: " << station->mac << " not connected!";
                         continue;
                     }
                     node_len  = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
@@ -144,6 +140,32 @@ void network_map::send_bml_network_map_message(db &database, int fd,
                 }
             }
         }
+    };
+
+    // Fill the data for the local agent first
+    const std::shared_ptr<Agent> &local_agent = database.get_local_agent();
+    if (local_agent) {
+        if (local_agent->state == beerocks::STATE_CONNECTED) {
+            LOG(DEBUG) << "Processing Local Agent: " << local_agent->al_mac;
+            process_agent(local_agent);
+        }
+    }
+
+    // Fill the data for non-local agents
+    for (const auto &agent_pair : database.m_agents) {
+        const auto &agent = agent_pair.second;
+        if (agent->is_gateway) {
+            LOG(DEBUG) << "Skipping Local Agent: " << agent->al_mac;
+            continue;
+        }
+
+        if (agent->state != beerocks::STATE_CONNECTED) {
+            LOG(DEBUG) << "Skipping Disconnected Agent: " << agent->al_mac;
+            continue;
+        }
+
+        LOG(DEBUG) << "Processing Non-Local Agent: " << agent->al_mac;
+        process_agent(agent);
     }
 
     beerocks_header->actionhdr()->last() = 1;
@@ -217,6 +239,7 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
 
     std::ptrdiff_t node_len = sizeof(BML_NODE) - sizeof(BML_NODE::N_DATA::N_GW_IRE);
     if (node_len > buffer_size) {
+        LOG(ERROR) << "buffer overflow";
         return 0;
     }
     memset(node, 0, node_len);
@@ -243,15 +266,15 @@ std::ptrdiff_t network_map::fill_bml_station_data(db &database, std::shared_ptr<
         }
     }
 
+    tlvf::mac_to_array(station->mac, node->mac);
     if (station->wifi_channel.is_empty()) {
-        LOG(WARNING) << "wifi channel is empty";
+        LOG(WARNING) << "Station : " << tlvf::mac_to_string(station->mac)
+                     << " has empty wifi channel";
     }
     node->channel                     = station->wifi_channel.get_channel();
     node->bw                          = station->wifi_channel.get_bandwidth();
     node->freq_type                   = station->wifi_channel.get_freq_type();
     node->channel_ext_above_secondary = station->wifi_channel.get_ext_above_secondary();
-
-    tlvf::mac_to_array(station->mac, node->mac);
 
     // remote bridge
     std::shared_ptr<Agent::sRadio::sBss> parent_bss = station->get_bss();
