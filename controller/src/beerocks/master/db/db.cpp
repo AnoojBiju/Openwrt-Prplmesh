@@ -245,6 +245,19 @@ std::string db::get_sta_data_model_path(const std::string &mac)
     return pSta->dm_path;
 }
 
+const std::shared_ptr<Agent> db::get_local_agent()
+{
+    auto local_agent_it =
+        std::find_if(m_agents.begin(), m_agents.end(),
+                     [](const auto &agent_pair) { return agent_pair.second->is_gateway; });
+
+    if (local_agent_it != m_agents.end()) {
+        return local_agent_it->second;
+    }
+
+    return nullptr;
+}
+
 std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
 {
     auto agent = m_agents.add(mac);

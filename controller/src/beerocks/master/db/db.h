@@ -2761,6 +2761,8 @@ public:
 
     bool is_prplmesh(const sMacAddr &mac);
     void set_prplmesh(const sMacAddr &mac);
+    //To get the local_agent.
+    const std::shared_ptr<Agent> get_local_agent();
 
     //
     // Controller context
