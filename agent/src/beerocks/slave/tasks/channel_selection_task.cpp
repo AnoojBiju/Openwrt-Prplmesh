@@ -860,6 +860,12 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
     } else if (is_there_a_pending_preference ||
                m_send_preference_report_after_cac_completion_event ||
                m_send_preference_report_after_csa_finished_event) {
+        LOG(DEBUG) << "is_there_a_pending_preference = " << is_there_a_pending_preference;
+        LOG(DEBUG) << "m_send_preference_report_after_cac_completion_event = "
+                   << m_send_preference_report_after_cac_completion_event;
+        LOG(DEBUG) << "m_send_preference_report_after_csa_finished_event = "
+                   << m_send_preference_report_after_csa_finished_event;
+
         // If there is a pending preference query, need to build a preference report
         build_channel_preference_report(radio_mac);
 

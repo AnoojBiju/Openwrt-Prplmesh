@@ -87,8 +87,8 @@ private:
     };
 
     struct sPendingChannelPreferenceReport {
-        uint16_t mid;
-        std::unordered_map<sMacAddr, bool> preference_ready;
+        uint16_t mid = 0;
+        std::unordered_map<sMacAddr, bool> preference_ready{};
     };
 
     struct sPendingChannelSelection {
