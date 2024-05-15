@@ -714,8 +714,8 @@ void ChannelSelectionTask::abort_zwdfs_flow(bool external_channel_switch)
     }
 
     if (external_channel_switch) {
-        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:" << " state="
-                   << m_zwdfs_states_string.at(m_zwdfs_state);
+        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:"
+                   << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
     }
 
     if (m_zwdfs_ant_in_use) {
@@ -736,6 +736,8 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
         return;
     }
+
+    m_send_preference_report_after_cac_started_event = true;
 
     auto db = AgentDB::get();
     auto radio =
@@ -857,7 +859,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
     bool is_there_a_pending_preference = m_pending_preference.mid > 0;
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
-    } else if (is_there_a_pending_preference ||
+    } else if (is_there_a_pending_preference || m_send_preference_report_after_cac_started_event ||
                m_send_preference_report_after_cac_completion_event ||
                m_send_preference_report_after_csa_finished_event) {
         // If there is a pending preference query, need to build a preference report
@@ -873,6 +875,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
 
             // Clear the pending preference MID.
             m_pending_preference.mid                            = 0;
+            m_send_preference_report_after_cac_started_event    = false;
             m_send_preference_report_after_cac_completion_event = false;
             m_send_preference_report_after_csa_finished_event   = false;
         }
