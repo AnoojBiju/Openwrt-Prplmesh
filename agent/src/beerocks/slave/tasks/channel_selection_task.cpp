@@ -714,8 +714,8 @@ void ChannelSelectionTask::abort_zwdfs_flow(bool external_channel_switch)
     }
 
     if (external_channel_switch) {
-        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:"
-                   << " state=" << m_zwdfs_states_string.at(m_zwdfs_state);
+        LOG(DEBUG) << "External channel switch detected - Abort ZWDFS in progress:" << " state="
+                   << m_zwdfs_states_string.at(m_zwdfs_state);
     }
 
     if (m_zwdfs_ant_in_use) {
