@@ -199,6 +199,11 @@ public:
                                                     uint32_t profile_id);
 
     /**
+     * @brief return search path of all EndPoint Profiles matching an Alias
+    */
+    static std::string search_path_ep_profiles_by_alias(const std::string &profile_alias);
+
+    /**
      * @brief return accesspoint object instance path from path of child AssociatedDevice object
      * instance
      */
