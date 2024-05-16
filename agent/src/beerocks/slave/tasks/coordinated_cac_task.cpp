@@ -599,7 +599,9 @@ void CoordinatedCacTask::handle_event(uint8_t event_enum_value, const void *even
 
 void CoordinatedCacTask::handle_event(eTaskEvent event, std::shared_ptr<void> event_obj)
 {
-    LOG(DEBUG) << "got event to handle: " << event;
+    std::ostringstream oss;
+    oss << event; // Explicitly use the operator<< for eTaskEvent
+    LOG(DEBUG) << "got event to handle: " << oss.str();
 
     switch (event) {
 
