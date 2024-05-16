@@ -167,12 +167,12 @@ main() {
         OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
         dbg "Haze platform, build on prplos master (wps fix)"
-        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        OPENWRT_TOOLCHAIN_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
+        OPENWRT_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos-v3.0.1"
-        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        OPENWRT_TOOLCHAIN_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
+        OPENWRT_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
     else
         dbg "Building on prplOS-next"
     fi
