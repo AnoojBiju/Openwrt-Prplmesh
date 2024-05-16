@@ -166,9 +166,9 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
         OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos master (wps fix)"
-        OPENWRT_TOOLCHAIN_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
-        OPENWRT_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
+        dbg "Haze platform, build on prplos master (wps fix) - no obuspa app"
+        OPENWRT_TOOLCHAIN_VERSION='f7d767b2f2a6618ec2c89cc64f50ea24f5008676'
+        OPENWRT_VERSION='f7d767b2f2a6618ec2c89cc64f50ea24f5008676'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos-v3.0.1"
         OPENWRT_TOOLCHAIN_VERSION='0861d841539ccb04b846c249f46b83aeba6f73e1'
