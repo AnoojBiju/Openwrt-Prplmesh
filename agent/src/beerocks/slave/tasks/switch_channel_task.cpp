@@ -598,8 +598,9 @@ void SwitchChannelTask::handle_event(eTaskEvent event, std::shared_ptr<void> eve
                      << " without data. Unable to handle the event.";
         return;
     }
-
-    LOG(DEBUG) << "Received event to handle: " << event;
+    std::ostringstream oss;
+    oss << event; // Explicitly use the operator<< for eTaskEvent
+    LOG(DEBUG) << "Received event to handle: " << oss.str();
 
     switch (event) {
     case eTaskEvent::SWITCH_CHANNEL_REQUEST: {
