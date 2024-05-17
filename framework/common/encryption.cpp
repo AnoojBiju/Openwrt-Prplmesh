@@ -85,7 +85,7 @@ static bool generate_random_bytestream(uint8_t *buf, unsigned len)
 }
 
 /**
-  Diffie-Hellman group 5, see RFC3523
+  Diffie-Hellman group 5, see RFC3526
 */
 const uint8_t diffie_hellman::dh1536_p[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2, 0x21, 0x68, 0xC2, 0x34,
