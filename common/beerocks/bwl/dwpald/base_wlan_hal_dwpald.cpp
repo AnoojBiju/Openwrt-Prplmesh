@@ -197,6 +197,7 @@ bool base_wlan_hal_dwpal::fsm_setup()
             [&](TTransition &transition, const void *args) -> bool {
                 // Attempt to read radio info
                 if (m_conn_state_retry_counter < CONN_STATE_MAX_RETRY) {
+		    LOG(DEBUG) << "******** INSIDE *********";
                     if ((conn_state[get_iface_name().c_str()]) && (refresh_radio_info())) {
                         LOG(DEBUG) << "Refresh radio information successfull";
                         m_conn_state_retry_counter = 0;
@@ -538,6 +539,30 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, int vap_id)
     return true;
 }
 
+bool base_wlan_hal_dwpal::dwpal_send_cmd_dummy(const std::string &cmd, int vap_id)
+{
+    int result;
+    int try_cnt = 0;
+
+    do {
+        LOG(DEBUG) << "Send dwpal cmd: " << cmd.c_str();
+        result = DWPALD_DISCONNECTED;
+        if ((conn_state[get_iface_name().c_str()] == true)) {
+	    result = 0;
+            if (result != 0) {
+                LOG(DEBUG) << "Failed to send cmd to DWPALD: " << cmd << " --> Retry";
+            }
+        }
+    } while (result != 0 && ++try_cnt < 3);
+
+    if (result < 0) {
+        LOG(ERROR) << "can't send wpa_ctrl_request";
+        LOG(ERROR) << "failed cmd: " << cmd;
+        return false;
+    }
+    return true;
+}
+
 bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, int vap_id)
 {
     if (!reply) {
@@ -546,6 +571,22 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, i
     }
 
     if (!dwpal_send_cmd(cmd, vap_id)) {
+        return false;
+    }
+
+    *reply = m_wpa_ctrl_buffer;
+
+    return true;
+}
+
+bool base_wlan_hal_dwpal::dwpal_send_cmd_dummy(const std::string &cmd, char **reply, int vap_id)
+{
+    if (!reply) {
+        LOG(ERROR) << "Invalid reply pointer!";
+        return false;
+    }
+
+    if (!dwpal_send_cmd_dummy(cmd, vap_id)) {
         return false;
     }
 

@@ -619,7 +619,7 @@ bool Monitor::monitor_fsm()
                 now + std::chrono::seconds(mon_db.MONITOR_DB_AP_POLLING_RATE_SEC));
 
             // Updated tx state in mon_man_hal
-            if (!mon_wlan_hal->refresh_radio_info()) {
+            /*if (!mon_wlan_hal->refresh_radio_info()) {
                 LOG(WARNING) << "Failed refreshing the radio info";
                 // Try to ping hostap
                 if (!mon_wlan_hal->ping()) {
@@ -636,7 +636,7 @@ bool Monitor::monitor_fsm()
                     send_cmdu(cmdu_tx);
                     return true;
                 }
-            }
+            }*/
 
             int8_t new_tx_state             = mon_wlan_hal->get_radio_info().tx_enabled;
             int8_t new_hostap_enabled_state = mon_wlan_hal->get_radio_info().wifi_ctrl_enabled;

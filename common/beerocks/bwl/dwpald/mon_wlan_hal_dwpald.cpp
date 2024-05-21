@@ -720,7 +720,7 @@ bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
     char *reply = nullptr;
 
     LOG(DEBUG) << "GET_RADIO_INFO";
-    if (!dwpal_send_cmd("GET_RADIO_INFO", &reply)) {
+    if (!dwpal_send_cmd_dummy("GET_RADIO_INFO", &reply)) {
         LOG(ERROR) << " failed";
         return false;
     }

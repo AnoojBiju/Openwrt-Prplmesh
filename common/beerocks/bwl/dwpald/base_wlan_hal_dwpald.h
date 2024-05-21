@@ -128,6 +128,10 @@ protected:
                         int vap_id = beerocks::IFACE_RADIO_ID);
 
     bool dwpal_send_cmd(const std::string &cmd, int vap_id = beerocks::IFACE_RADIO_ID);
+    bool dwpal_send_cmd_dummy(const std::string &cmd, char **reply,
+                        int vap_id = beerocks::IFACE_RADIO_ID);
+
+    bool dwpal_send_cmd_dummy(const std::string &cmd, int vap_id = beerocks::IFACE_RADIO_ID);
     bool attach_dwpald_interface(int vap_id);
 
     /**

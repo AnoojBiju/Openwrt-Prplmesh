@@ -1244,7 +1244,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-            ap_wlan_hal->refresh_radio_info();
+	    LOG(DEBUG) << "*********  1 *********";
+            //ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
         }
@@ -1385,7 +1386,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                         LOG(ERROR) << "Failed building message!";
                         return;
                     }
-                    ap_wlan_hal->refresh_radio_info();
+		    LOG(DEBUG) << "******** 2 *********";
+                    //ap_wlan_hal->refresh_radio_info();
                     fill_cs_params(notification->cs_params());
                     send_cmdu(cmdu_tx);
                 }
@@ -1409,8 +1411,9 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                                          request->cs_params().csa_count)) { //error
             std::string error("Failed to set AP channel!");
             LOG(ERROR) << error;
+	    LOG(DEBUG) << "******* 3 *******";
 
-            ap_wlan_hal->refresh_radio_info();
+            //ap_wlan_hal->refresh_radio_info();
 
             // Send the error reponse
             auto notification = message_com::create_vs_message<
@@ -1453,7 +1456,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
         auto timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(MAX_CANCEL_CAC_TIMEOUT_SEC);
         while (cancel_cac_success && std::chrono::steady_clock::now() < timeout) {
-            if (!ap_wlan_hal->refresh_radio_info()) {
+		LOG(DEBUG) << "***** 4 *****";
+            /*if (!ap_wlan_hal->refresh_radio_info()) {
                 LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                              << std::chrono::duration_cast<std::chrono::seconds>(
                                     timeout - std::chrono::steady_clock::now())
@@ -1461,7 +1465,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                              << " sec.";
                 UTILS_SLEEP_MSEC(500);
                 continue;
-            }
+            }*/
 
             if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED ||
                 (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::DFS) ||
@@ -1499,7 +1503,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-            ap_wlan_hal->refresh_radio_info();
+	    LOG(DEBUG) << "****** 5 *****";
+            //ap_wlan_hal->refresh_radio_info();
             fill_cs_params(notification->cs_params());
             send_cmdu(cmdu_tx);
         }
@@ -1677,10 +1682,11 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // Read supported_channels (From Netlink HW Features)
         // Refreshing the radio info updates the DFS State of each channel on the channels list.
-        if (!ap_wlan_hal->refresh_radio_info()) {
+	LOG(DEBUG) << "******* 6 ****";
+        /*if (!ap_wlan_hal->refresh_radio_info()) {
             LOG(ERROR) << "Failed to refresh_radio_info";
             return;
-        }
+        }*/
 
         // Update channels ranking (From ACS Report)
         if (!ap_wlan_hal->read_acs_report()) {
@@ -1890,9 +1896,10 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                        std::chrono::seconds(WAIT_FOR_RADIO_ENABLE_TIMEOUT_SEC);
         auto perform_update = false;
         while (std::chrono::steady_clock::now() < timeout) {
-            if (!ap_wlan_hal->refresh_radio_info()) {
+		LOG(DEBUG) << "*********** 7 **********";
+            /*if (!ap_wlan_hal->refresh_radio_info()) {
                 break;
-            }
+            }*/
 
             if (ap_wlan_hal->get_radio_info().radio_state == bwl::eRadioState::ENABLED) {
                 perform_update = true;
@@ -1915,7 +1922,8 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
                 LOG(ERROR) << "Failed building message!";
                 return;
             }
-            ap_wlan_hal->refresh_radio_info();
+	    LOG(DEBUG) << "******* 8 *******";
+            //ap_wlan_hal->refresh_radio_info();
             fill_cs_params(csa_notification->cs_params());
             send_cmdu(cmdu_tx);
 
@@ -2214,7 +2222,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
     case Event::CSA_Finished: {
 
         ap_wlan_hal->read_acs_report();
-        ap_wlan_hal->refresh_radio_info();
+	LOG(DEBUG) << "*********** 9 *********";
+        //ap_wlan_hal->refresh_radio_info();
 
         LOG(INFO) << ((event == Event::ACS_Completed) ? "ACS_Completed" : "CSA_Finished:")
                   << " channel = " << int(ap_wlan_hal->get_radio_info().channel)
@@ -2617,7 +2626,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             auto notify_disabled = true;
 
             while (std::chrono::steady_clock::now() < timeout) {
-                if (!ap_wlan_hal->refresh_radio_info()) {
+		    LOG(DEBUG) << "************* 10 ********";
+                /*if (!ap_wlan_hal->refresh_radio_info()) {
                     LOG(WARNING) << "Radio could be temporary disabled, wait grace time "
                                  << std::chrono::duration_cast<std::chrono::seconds>(
                                         timeout - std::chrono::steady_clock::now())
@@ -2625,7 +2635,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
                                  << " sec.";
                     UTILS_SLEEP_MSEC(500);
                     continue;
-                }
+                }*/
 
                 auto state = ap_wlan_hal->get_radio_info().radio_state;
                 if ((state != bwl::eRadioState::DISABLED) &&
@@ -3442,7 +3452,8 @@ void ApManager::csa_notification_timer_elapsed(
         return;
     }
 
-    ap_wlan_hal->refresh_radio_info();
+    LOG(DEBUG) << "************ 11 ********";
+    //ap_wlan_hal->refresh_radio_info();
     fill_sr_params(spatial_reuse_report->sr_params());
     send_cmdu(cmdu_tx);
 
@@ -3457,7 +3468,8 @@ void ApManager::csa_notification_timer_elapsed(
         LOG(ERROR) << "Failed building message!";
         return;
     }
-    ap_wlan_hal->refresh_radio_info();
+    LOG(DEBUG) << "******** 12 *****";
+    //ap_wlan_hal->refresh_radio_info();
     fill_cs_params(notification->cs_params());
     send_cmdu(cmdu_tx);
 }
