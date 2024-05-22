@@ -17,7 +17,7 @@
 #include <easylogging++.h>
 
 #include <cmath>
-
+#include <iomanip>
 using namespace beerocks;
 using namespace wbapi;
 
@@ -307,6 +307,18 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("class", uint8_t(req.op_class));
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
+
+    if (req.use_optional_ap_ch_report) {
+        std::stringstream optionalElements;
+        optionalElements << std::hex << std::setfill('0');
+        optionalElements << std::setw(2) << static_cast<unsigned>(AP_CHANNEL_REPORT_TYPE);
+        optionalElements << std::setw(2) << static_cast<unsigned>(req.use_optional_ap_ch_report);
+        for (auto i = 0; i < req.use_optional_ap_ch_report; i++) {
+            optionalElements << std::setw(2) << static_cast<unsigned>(req.ap_ch_report[i]);
+        }
+        args.add_child("optionalElements", optionalElements.str());
+    }
+
     std::string wifi_ap_path = wbapi_utils::search_path_ap_by_iface(vap_iface_name);
     bool ret = m_ambiorix_cl.call(wifi_ap_path, "sendRemoteMeasumentRequest", args, result);
 
