@@ -564,13 +564,12 @@ TEST_F(DbTest, test_set_ap_wifi6_capabilities)
 {
     const std::string radio_path_1_capabilities = std::string(g_radio_path_1) + ".Capabilities.";
 
-    // Device always exists
+    // Mock expectations for get_instance_index and add_instance
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_bridge_mac)).WillRepeatedly(Return(1));
 
-    // BSS node and path may not exist
+    //BSS node and path may not exist
     EXPECT_FALSE(m_db->get_radio_by_uid(tlvf::mac_from_string(g_radio_mac_1)));
 
-    // Expectations for add_radio
     EXPECT_CALL(*m_ambiorix, get_instance_index(_, g_radio_mac_1)).WillRepeatedly(Return(1));
     EXPECT_CALL(*m_ambiorix, add_instance(std::string(g_device_path) + ".1.Radio"))
         .WillOnce(Return(std::string(g_device_path) + ".1.Radio.1"));
@@ -579,7 +578,7 @@ TEST_F(DbTest, test_set_ap_wifi6_capabilities)
                                  Matcher<const sMacAddr &>(tlvf::mac_from_string(g_radio_mac_1))))
         .WillOnce(Return(true));
 
-    // Prepare scenario
+    // Add radio to database and verify
     EXPECT_TRUE(
         m_db->add_radio(tlvf::mac_from_string(g_radio_mac_1), tlvf::mac_from_string(g_bridge_mac)));
     EXPECT_TRUE(m_db->get_radio_by_uid(tlvf::mac_from_string(g_radio_mac_1)));
@@ -587,25 +586,28 @@ TEST_F(DbTest, test_set_ap_wifi6_capabilities)
               m_db->get_radio_data_model_path(tlvf::mac_from_string(g_radio_mac_1)));
 
     // Expectations for set_ap_wifi6_capabilities
-    // For WiFi6APRole
     EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "WiFi6APRole"))
         .WillOnce(Return(true));
-
     const std::string wifi6_ap_role_path = radio_path_1_capabilities + "WiFi6APRole.";
-
-    EXPECT_CALL(*m_ambiorix,
-                set(wifi6_ap_role_path, "MaxNumberOfTxSpatialStreams", Matcher<const int32_t &>(8)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix,
-                set(wifi6_ap_role_path, "MaxNumberOfRxSpatialStreams", Matcher<const int32_t &>(8)))
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "AgentRole", Matcher<const uint8_t &>(1)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "HE160", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "HE8080", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "MCSNSSLength", Matcher<const uint8_t &>(1)))
+        .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "SUBeamformer", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "SUBeamformee", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "MUBeamformer", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(wifi6_ap_role_path, "BeamformeeStsLess80", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(wifi6_ap_role_path, "BeamformeeStsGreater80", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "ULMUMIMO", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
@@ -613,64 +615,63 @@ TEST_F(DbTest, test_set_ap_wifi6_capabilities)
         .WillOnce(Return(true));
     EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "DLOFDMA", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
-
-    // For WiFi6bSTARole
-    EXPECT_CALL(*m_ambiorix, add_optional_subobject(radio_path_1_capabilities, "WiFi6bSTARole"))
+    EXPECT_CALL(*m_ambiorix,
+                set(wifi6_ap_role_path, "MaxNumberOfUsersSupportedTX", Matcher<const uint8_t &>(4)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(wifi6_ap_role_path, "MaxNumberOfUsersSupportedRX", Matcher<const uint8_t &>(4)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "RTS", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "MURTS", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "MULTIBSSID", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "MUEDCA", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "TwtRequester", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "TwtResponder", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix, set(wifi6_ap_role_path, "SpatialReuse", Matcher<const bool &>(true)))
+        .WillOnce(Return(true));
+    EXPECT_CALL(*m_ambiorix,
+                set(wifi6_ap_role_path, "AnticipatedChannelUsage", Matcher<const bool &>(true)))
         .WillOnce(Return(true));
 
-    const std::string wifi6_bsta_role_path = radio_path_1_capabilities + "WiFi6bSTARole.";
-
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "MaxNumberOfTxSpatialStreams",
-                                 Matcher<const int32_t &>(8)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "MaxNumberOfRxSpatialStreams",
-                                 Matcher<const int32_t &>(8)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "HE160", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "HE8080", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "SUBeamformer", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "MUBeamformer", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "ULMUMIMO", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "ULOFDMA", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-    EXPECT_CALL(*m_ambiorix, set(wifi6_bsta_role_path, "DLOFDMA", Matcher<const bool &>(true)))
-        .WillOnce(Return(true));
-
+    // Prepare the tlvApWifi6Capabilities object
     uint8_t buff[100];
-    wfa_map::tlvApHeCapabilities he_caps_tlv(buff, sizeof(buff));
-    he_caps_tlv.radio_uid()                  = tlvf::mac_from_string(g_radio_mac_1);
-    he_caps_tlv.radio_uid()                  = tlvf::mac_from_string(g_radio_mac_1);
-    he_caps_tlv.flags1().he_support_160mhz   = 1;
-    he_caps_tlv.flags1().he_support_80_80mhz = 1;
-    he_caps_tlv.flags1().max_num_of_supported_rx_spatial_streams = 7;
-    he_caps_tlv.flags1().max_num_of_supported_tx_spatial_streams = 7;
-    he_caps_tlv.flags2().dl_ofdm_capable                         = 1;
-    he_caps_tlv.flags2().ul_ofdm_capable                         = 1;
-    he_caps_tlv.flags2().dl_mu_mimo_and_ofdm_capable             = 1;
-    he_caps_tlv.flags2().ul_mu_mimo_and_ofdm_capable             = 1;
-    he_caps_tlv.flags2().ul_mu_mimo_capable                      = 1;
-    he_caps_tlv.flags2().mu_beamformer_capable                   = 1;
-    he_caps_tlv.flags2().su_beamformer_capable                   = 1;
-    uint8_t supported_he_mcs[]                                   = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    he_caps_tlv.set_supported_he_mcs(supported_he_mcs, sizeof(supported_he_mcs));
+    wfa_map::tlvApWifi6Capabilities wifi6_caps_tlv(buff, sizeof(buff));
+    wifi6_caps_tlv.radio_uid() = tlvf::mac_from_string(g_radio_mac_1);
 
-    int supported_MCS_index = 1;
-    EXPECT_CALL(*m_ambiorix, add_instance(wifi6_ap_role_path + "MCSNSS"))
-        .WillRepeatedly(
-            Return(wifi6_bsta_role_path + "MCSNSS." + std::to_string(supported_MCS_index++)));
-    EXPECT_CALL(*m_ambiorix, add_instance(wifi6_bsta_role_path + "MCSNSS"))
-        .WillRepeatedly(
-            Return(wifi6_bsta_role_path + "MCSNSS." + std::to_string(supported_MCS_index++)));
-    EXPECT_CALL(*m_ambiorix, set(_, "MCSNSSSet", Matcher<const uint8_t &>(_)))
-        .WillRepeatedly(Return(true));
+    // Create a new role and set capabilities
+    auto role = wifi6_caps_tlv.create_role();
 
-    // Execute test
-    EXPECT_TRUE(m_db->set_ap_wifi6_capabilities(he_caps_tlv));
+    role->flags1().he_support_160mhz            = 1;
+    role->flags1().he_support_80_80mhz          = 1;
+    role->flags1().agent_role                   = 0;
+    role->flags1().mcs_nss_length               = 1;
+    role->flags2().su_beamformer                = 1;
+    role->flags2().su_beamformee                = 1;
+    role->flags2().mu_Beamformer_status         = 1;
+    role->flags2().beamformee_sts_less_80mhz    = 1;
+    role->flags2().beamformee_sts_greater_80mhz = 1;
+    role->flags2().ul_mu_mimo                   = 1;
+    role->flags2().ul_ofdma                     = 1;
+    role->flags2().dl_ofdma                     = 1;
+    role->flags3().max_dl_mu_mimo_tx            = 4;
+    role->flags3().max_ul_mu_mimo_rx            = 4;
+    role->flags4().rts                          = 1;
+    role->flags4().mu_rts                       = 1;
+    role->flags4().multi_bssid                  = 1;
+    role->flags4().mu_edca                      = 1;
+    role->flags4().twt_requester                = 1;
+    role->flags4().twt_responder                = 1;
+    role->flags4().spatial_reuse                = 1;
+    role->flags4().anticipated_channel_usage    = 1;
+
+    // Execute the test
+    EXPECT_TRUE(m_db->set_ap_wifi6_capabilities(wifi6_caps_tlv));
 }
 
 TEST_F(DbTest, test_add_current_op_class)

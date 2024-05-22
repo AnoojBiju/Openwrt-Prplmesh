@@ -127,60 +127,34 @@ class NbapiCapabilities(PrplMeshBaseTest):
                                         tlv.vht_supported_tx_mcs)
                     self.assertEqualInt("MCSNSSRxSet", vht_caps['MCSNSSRxSet'],
                                         tlv.vht_supported_rx_mcs)
-                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_HE_CAPABILITIES']:
-                    radio = repeater.radios[tlv.ap_he_capability_radio_id]
+                if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_AP_WIFI_6_CAPABILITIES']:
+                    radio = repeater.radios[tlv.ap_wifi_6_capability_radio_id]
 
-                    # Assuming the radio has both AP and STA roles, and the paths are:
-                    wifi6_ap_role_path = radio.path + ".Capabilities.WiFi6APRole"
-                    wifi6_sta_role_path = radio.path + ".Capabilities.WiFi6bSTARole"
+                    # Determine the role type based on agent_role_first_bit
+                    agent_role_first_bit = tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.agent_role'] & 0x01
+                    
+                    if agent_role_first_bit == 0x0:
+                        role_path = ".Capabilities.WiFi6APRole"
+                    else:
+                        role_path = ".Capabilities.WiFi6bSTARole"
+                    
+                    wifi6_caps = controller.nbapi_get(radio.path + role_path)
 
-                    # Fetch capabilities for both roles
-                    wifi6_ap_caps = controller.nbapi_get(wifi6_ap_role_path)
-                    wifi6_sta_caps = controller.nbapi_get(wifi6_sta_role_path)
+                    self.assertEqualInt("HE160", wifi6_caps['HE160'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.he_160_mhz'])
+                    self.assertEqualInt("HE8080", wifi6_caps['HE8080'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.he_80plus_mhz'])
+                    self.assertEqualInt("SUBeamformer", wifi6_caps['SUBeamformer'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.su_beamformer'])
+                    self.assertEqualInt("MUBeamformer", wifi6_caps['MUBeamformer'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.mu_beamformer'])
+                    self.assertEqualInt("ULMUMIMO", wifi6_caps['ULMUMIMO'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.ul_mu_mimo'])
+                    self.assertEqualInt("ULOFDMA", wifi6_caps['ULOFDMA'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.he_ul_ofdma'])
+                    self.assertEqualInt("DLOFDMA", wifi6_caps['DLOFDMA'],
+                                    tlv.ap_wifi6_caps_tree['ieee1905.ap_wifi6.he_dl_ofdma'])
 
-                    # Compare AP role capabilities
-                    self.assertEqualInt("MaxNumberOfRxSpatialStreams",
-                                    wifi6_ap_caps['MaxNumberOfRxSpatialStreams'] - 1,
-                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
-                    self.assertEqualInt("MaxNumberOfTxSpatialStreams",
-                                    wifi6_ap_caps['MaxNumberOfTxSpatialStreams'] - 1,
-                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
-                    self.assertEqualInt("HE160", wifi6_ap_caps['HE160'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
-                    self.assertEqualInt("HE8080", wifi6_ap_caps['HE8080'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
-                    self.assertEqualInt("SUBeamformer", wifi6_ap_caps['SUBeamformer'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
-                    self.assertEqualInt("MUBeamformer", wifi6_ap_caps['MUBeamformer'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
-                    self.assertEqualInt("ULMUMIMO", wifi6_ap_caps['ULMUMIMO'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
-                    self.assertEqualInt("ULOFDMA", wifi6_ap_caps['ULOFDMA'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
-                    self.assertEqualInt("DLOFDMA", wifi6_ap_caps['DLOFDMA'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
-
-                    # Compare STA role capabilities if applicable
-                    self.assertEqualInt("MaxNumberOfRxSpatialStreams",
-                                    wifi6_sta_caps['MaxNumberOfRxSpatialStreams'] - 1,
-                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_rx_streams'])
-                    self.assertEqualInt("MaxNumberOfTxSpatialStreams",
-                                    wifi6_sta_caps['MaxNumberOfTxSpatialStreams'] - 1,
-                                    tlv.ap_he_caps_tree['ieee1905.he_cap.max_tx_streams'])
-                    self.assertEqualInt("HE160", wifi6_sta_caps['HE160'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_160_mhz'])
-                    self.assertEqualInt("HE8080", wifi6_sta_caps['HE8080'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_80plus_mhz'])
-                    self.assertEqualInt("SUBeamformer", wifi6_sta_caps['SUBeamformer'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.su_beamformer'])
-                    self.assertEqualInt("MUBeamformer", wifi6_sta_caps['MUBeamformer'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.mu_beamformer'])
-                    self.assertEqualInt("ULMUMIMO", wifi6_sta_caps['ULMUMIMO'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.ul_mu_mimo'])
-                    self.assertEqualInt("ULOFDMA", wifi6_sta_caps['ULOFDMA'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_ul_ofdma'])
-                    self.assertEqualInt("DLOFDMA", wifi6_sta_caps['DLOFDMA'],
-                                    tlv.ap_he_caps_tree['ieee1905.ap_he.he_dl_ofdma'])
                 if tlv.tlv_type == self.ieee1905['eTlvTypeMap']['TLV_PROFILE2_CAC_CAPABILITIES']:
                     debug("Checking Profile-2 CAC Capabilities TLV")
                     # TODO: Check Profile-2 CAC Capabilities TLV and related DM objects (PPM-2289).
