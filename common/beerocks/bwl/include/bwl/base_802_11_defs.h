@@ -15,6 +15,8 @@
 
 namespace bwl {
 
+#define AP_CHANNEL_REPORT_TYPE 51 // sub-element-id defined by 802.11
+
 /**
  * @brief 802.11 management frame
  * More info here: https://en.wikipedia.org/wiki/802.11_Frame_Types
