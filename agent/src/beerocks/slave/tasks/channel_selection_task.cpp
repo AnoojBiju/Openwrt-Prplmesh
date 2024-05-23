@@ -737,6 +737,8 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         return;
     }
 
+    m_send_preference_report_after_cac_started_event = true;
+
     auto db = AgentDB::get();
     auto radio =
         db->get_radio_by_mac(beerocks_header->actionhdr()->radio_mac(), AgentDB::eMacType::RADIO);
@@ -857,7 +859,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
     bool is_there_a_pending_preference = m_pending_preference.mid > 0;
     if (m_zwdfs_state == eZwdfsState::WAIT_FOR_CHANNELS_LIST) {
         ZWDFS_FSM_MOVE_STATE(eZwdfsState::CHOOSE_NEXT_BEST_CHANNEL);
-    } else if (is_there_a_pending_preference ||
+    } else if (is_there_a_pending_preference || m_send_preference_report_after_cac_started_event ||
                m_send_preference_report_after_cac_completion_event ||
                m_send_preference_report_after_csa_finished_event) {
         // If there is a pending preference query, need to build a preference report
@@ -873,6 +875,7 @@ void ChannelSelectionTask::handle_vs_channels_list_response(
 
             // Clear the pending preference MID.
             m_pending_preference.mid                            = 0;
+            m_send_preference_report_after_cac_started_event    = false;
             m_send_preference_report_after_cac_completion_event = false;
             m_send_preference_report_after_csa_finished_event   = false;
         }

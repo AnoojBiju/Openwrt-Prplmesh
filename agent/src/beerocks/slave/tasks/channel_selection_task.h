@@ -87,8 +87,8 @@ private:
     };
 
     struct sPendingChannelPreferenceReport {
-        uint16_t mid;
-        std::unordered_map<sMacAddr, bool> preference_ready;
+        uint16_t mid = 0;
+        std::unordered_map<sMacAddr, bool> preference_ready{};
     };
 
     struct sPendingChannelSelection {
@@ -260,6 +260,7 @@ private:
     // coordinated_cac_task which results in sending ACTION_BACKHAUL_CHANNELS_LIST_REQUEST.
     // Set this flag to true to send preference report when handling the response for the
     // above request in handle_vs_channels_list_response()
+    bool m_send_preference_report_after_cac_started_event    = false;
     bool m_send_preference_report_after_cac_completion_event = false;
 
     /**
