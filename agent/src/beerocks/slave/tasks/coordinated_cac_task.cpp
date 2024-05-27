@@ -92,8 +92,6 @@ void CacFsm::reset()
     m_original_secondary_channel_offset = 0;
 
     m_wait_for_switch_channel_report = DEFAULT_WAIT_FOR_SWITCH_CHANNEL_REPORT;
-    LOG(DEBUG) << "m_wait_for_switch_channel_report is set to: "
-               << m_wait_for_switch_channel_report.count() << " seconds";
 }
 
 void CacFsm::config_fsm()
@@ -209,8 +207,6 @@ void CacFsm::config_fsm()
                     (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
-                LOG(DEBUG) << "m_wait_for_switch_channel_report is reset to: "
-                           << m_wait_for_switch_channel_report.count() << " seconds";
                 return true;
             })
 
@@ -255,8 +251,6 @@ void CacFsm::config_fsm()
 
                     // reset the wait time
                     m_wait_for_switch_channel_report = DEFAULT_WAIT_FOR_SWITCH_CHANNEL_REPORT;
-                    LOG(DEBUG) << "m_wait_for_switch_channel_report is reset to: "
-                               << m_wait_for_switch_channel_report.count() << " seconds";
 
                     // sending switch channel request (II)
                     send_switch_channel_request(m_original_channel, m_original_bandwidth);
@@ -389,8 +383,6 @@ void CacFsm::config_fsm()
                     (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
-                LOG(DEBUG) << "m_wait_for_switch_channel_report is set to: "
-                           << m_wait_for_switch_channel_report.count() << " seconds";
                 return true;
             })
 
