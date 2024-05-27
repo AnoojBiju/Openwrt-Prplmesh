@@ -2979,8 +2979,9 @@ bool slave_thread::handle_cmdu_ap_manager_message(const std::string &fronthaul_i
             return false;
         }
 
+        // Existing channel is used to prevent overwritting of the channel issue (PPM-2858)
         radio->wifi_channel = beerocks::WifiChannel(
-            notification_in->params().channel, notification_in->params().center_frequency1,
+            radio->wifi_channel.get_channel(), notification_in->params().center_frequency1,
             static_cast<beerocks::eWiFiBandwidth>(notification_in->params().bandwidth));
 
         auto notification_out = message_com::create_vs_message<
