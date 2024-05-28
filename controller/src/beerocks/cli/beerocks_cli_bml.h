@@ -32,6 +32,7 @@ public:
         int8_t rx_rssi;
         bool isWiFiBH;
         std::string mac;
+        bool status;
         std::string ip_v4;
         std::string name;
 
