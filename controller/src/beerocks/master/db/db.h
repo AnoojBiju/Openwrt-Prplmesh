@@ -2273,6 +2273,15 @@ public:
     bool update_last_contact_time(const sMacAddr &agent_mac);
 
     /**
+     * @brief Get last contact time the agent.
+     *
+     * @param agent_mac agent AL-MAC address
+     * @return last_contact_time on success, false otherwise.
+     */
+
+    std::chrono::system_clock::time_point get_agent_last_contact_time(const sMacAddr &agent_mac);
+
+    /**
      * @brief Sets agents (Device) datamodel ManufacturerOUI object.
      *
      * This OUI is retrieved from agents AL-MAC first three bytes.
