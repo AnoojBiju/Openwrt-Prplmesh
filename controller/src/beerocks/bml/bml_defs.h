@@ -198,6 +198,9 @@ struct BML_NODE {
     /* The MAC address of the node. */
     uint8_t mac[BML_MAC_ADDR_LEN];
 
+    /* Agent status: Active/Inactive */
+    bool status;
+
     /* The IP address of the node. */
     uint8_t ip_v4[BML_IP_ADDR_LEN];
 
