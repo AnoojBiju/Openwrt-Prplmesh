@@ -26,6 +26,9 @@ using namespace beerocks;
 using namespace net;
 using namespace son;
 
+static constexpr int DEFAULT_AGENT_INACTIVITY_TIMEOUT =
+    beerocks::ieee1905_1_consts::DISCOVERY_NOTIFICATION_TIMEOUT_SEC + 5;
+
 void network_map::send_bml_network_map_message(db &database, int fd,
                                                ieee1905_1::CmduMessageTx &cmdu_tx, uint16_t id)
 {
@@ -338,6 +341,17 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
     }
 
     tlvf::mac_from_string(node->mac, tlvf::mac_to_string(agent->al_mac));
+
+    const auto agent_last_contacted = database.get_agent_last_contact_time(agent->al_mac);
+    const auto now                  = std::chrono::system_clock::now();
+    /*
+    65 seconds is derived from the logic of sending out
+    topology discovery packet by all 1905 entities
+    every 60 seconds and the remaining 5 seconds is
+    the grace time.
+    */
+    node->status =
+        (now - agent_last_contacted) > std::chrono::seconds(DEFAULT_AGENT_INACTIVITY_TIMEOUT);
 
     // remote bridge
     tlvf::mac_from_string(node->data.gw_ire.backhaul_mac, tlvf::mac_to_string(agent->parent_mac));

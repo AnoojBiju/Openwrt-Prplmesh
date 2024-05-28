@@ -37,6 +37,7 @@ static void fill_conn_map_node(
     n->rx_rssi                     = node->rx_rssi;
     n->isWiFiBH                    = node->isWiFiBH;
     n->mac                         = tlvf::mac_to_string(node->mac);
+    n->status                      = node->status;
     n->ip_v4                       = network_utils::ipv4_to_string(node->ip_v4);
     n->name.assign(node->name[0] ? node->name : "N/A");
 
@@ -178,7 +179,8 @@ static void bml_utils_dump_conn_map(
             ss << ind_str << node_type_to_conn_map_string(node->type)
                << (node->name != "N/A" ? (" name: " + node->name + ", AL-MAC: " + node->mac)
                                        : (" AL-MAC: " + node->mac))
-               << ", ipv4: " << node->ip_v4 << std::endl;
+               << ", ipv4: " << node->ip_v4
+               << ", Status: " << (node->status ? "Inactive" : "Active") << std::endl;
 
             // ETHERNET
             // generate eth address from bridge address
