@@ -13,7 +13,7 @@ channel_scan_task -> son_slave : ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUE
 son_slave -> monitor : ACTION_MONITOR_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST
 
 monitor -> bwl_whm : channel_scan_trigger()
-
+	
 bwl_whm -> pwhm : WiFi.Radio.x.startScan()
 
 bwl_whm -> bwl_whm : Event::Channel_Scan_Triggered (synthetic event)
