@@ -7347,6 +7347,17 @@ bool db::update_last_contact_time(const sMacAddr &agent_mac)
     return ret_val;
 }
 
+std::chrono::system_clock::time_point db::get_agent_last_contact_time(const sMacAddr &agent_mac)
+{
+    auto agent = m_agents.get(agent_mac);
+    if (!agent) {
+        LOG(WARNING) << "Agent with mac is not found in database mac=" << agent_mac;
+        return std::chrono::system_clock::time_point::min();
+    }
+
+    return agent->last_contact_time;
+}
+
 bool db::dm_set_agent_oui(std::shared_ptr<Agent> agent)
 {
 
