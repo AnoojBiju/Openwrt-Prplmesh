@@ -857,7 +857,10 @@ bool base_wlan_hal_whm::whm_get_radio_path(const std::string &iface, std::string
 std::string base_wlan_hal_whm::get_radio_mac()
 {
     if (m_radio_mac_address.empty()) {
-        m_ambiorix_cl.get_param(m_radio_mac_address, m_radio_path, "BaseMACAddress");
+        if (!beerocks::net::network_utils::linux_iface_get_mac(m_radio_info.iface_name,
+                                                               m_radio_mac_address)) {
+            LOG(ERROR) << "Failed to get radio mac from ifname " << m_radio_info.iface_name;
+        }
     }
     return m_radio_mac_address;
 }
