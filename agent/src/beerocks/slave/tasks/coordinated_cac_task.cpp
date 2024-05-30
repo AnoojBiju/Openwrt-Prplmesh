@@ -91,7 +91,7 @@ void CacFsm::reset()
     m_original_center_frequency         = 0;
     m_original_secondary_channel_offset = 0;
 
-    m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
+    m_wait_for_switch_channel_report = DEFAULT_WAIT_FOR_SWITCH_CHANNEL_REPORT;
 }
 
 void CacFsm::config_fsm()
@@ -203,7 +203,7 @@ void CacFsm::config_fsm()
         .on(fsm_event::SWITCH_CHANNEL_DURATION_TIME, {fsm_state::WAIT_FOR_SWITCH_CHANNEL_REPORT},
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
-                m_max_wait_for_switch_channel =
+                m_wait_for_switch_channel_report =
                     (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
@@ -250,7 +250,7 @@ void CacFsm::config_fsm()
                     m_switch_channel_start_time_point = std::chrono::steady_clock::now();
 
                     // reset the wait time
-                    m_max_wait_for_switch_channel = DEFAULT_MAX_WAIT_FOR_SWITCH_CHANNEL;
+                    m_wait_for_switch_channel_report = DEFAULT_WAIT_FOR_SWITCH_CHANNEL_REPORT;
 
                     // sending switch channel request (II)
                     send_switch_channel_request(m_original_channel, m_original_bandwidth);
@@ -379,7 +379,7 @@ void CacFsm::config_fsm()
             {fsm_state::WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT},
             [&](TTransition &transition, const void *args) -> bool {
                 // update the wait time
-                m_max_wait_for_switch_channel =
+                m_wait_for_switch_channel_report =
                     (*(static_cast<std::shared_ptr<sSwitchChannelDurationTime> *>(
                          const_cast<void *>(args))))
                         ->duration_sec;
@@ -392,6 +392,8 @@ void CacFsm::config_fsm()
                 // note: maybe we should take a look at the values
                 // of the report to make sure all is indeed good.
                 // currently we are satisfied just from getting in here
+                LOG(DEBUG) << "Got SWITCH_CHANNEL_REPORT during "
+                              "WAIT_FOR_SWITCH_BACK_TO_ORIGINAL_CHANNEL_REPORT state";
                 return true;
             })
         .on(fsm_event::PERIODIC,
@@ -399,7 +401,7 @@ void CacFsm::config_fsm()
             [&](TTransition &transition, const void *args) -> bool {
                 // check timeout
                 if (is_timeout_waiting_for_switch_channel_report()) {
-                    LOG(ERROR) << "timeout occurred waiting for switch channel report (II)";
+                    LOG(ERROR) << "Timeout occurred waiting for switch channel report (II)";
                     transition.change_destination(fsm_state::ERROR);
                     return true;
                 }
@@ -540,6 +542,8 @@ bool CacFsm::send_cac_request(beerocks::AgentDB::sRadio *db_radio)
             db_radio->wifi_channel.get_ext_above_primary() ? 1 : -1;
     }
 
+    LOG(DEBUG) << "Setting m_original_channel = " << m_original_channel;
+
     // save the time point we started the switch channel
     m_switch_channel_start_time_point = std::chrono::steady_clock::now();
 
@@ -561,7 +565,7 @@ bool CacFsm::is_timeout_waiting_for_switch_channel_report()
 {
     // check switch channel timeout
     return (std::chrono::steady_clock::now() - m_switch_channel_start_time_point) >
-           m_max_wait_for_switch_channel;
+           m_wait_for_switch_channel_report;
 }
 
 bool CacFsm::is_timeout_waiting_for_cac_termination()
@@ -599,7 +603,9 @@ void CoordinatedCacTask::handle_event(uint8_t event_enum_value, const void *even
 
 void CoordinatedCacTask::handle_event(eTaskEvent event, std::shared_ptr<void> event_obj)
 {
-    LOG(DEBUG) << "got event to handle: " << event;
+    std::ostringstream oss;
+    oss << event; // Explicitly use the operator<< for eTaskEvent
+    LOG(DEBUG) << "got event to handle: " << oss.str();
 
     switch (event) {
 

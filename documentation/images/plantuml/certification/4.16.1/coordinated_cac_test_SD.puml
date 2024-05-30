@@ -1,0 +1,44 @@
+@startuml
+participant "CTT Controller" as Controller
+participant "MAUT" as MAUT
+
+== Phase 1: CAC Request -> 1905.1 Ack -> Channel Preference Report -> 1905.1 Ack ==
+
+Controller -> Controller: Trigger (DEV_RESET_DEFAULT)
+note right: Reset of CTT Controller\nWait TIME_INIT
+
+Controller -> Controller: Trigger (DEV_SET_CONFIG, bss_info_x)
+note right: Loading of BSS info using Table 11\nWait TIME_LOAD_BSS
+
+Controller -> MAUT: Trigger (DEV_SEND_1905, DestALid, WTS_REPLACE_MAUT_ALID, MessageTypeValue, 0x8020)
+note right: Send CAC Request message
+
+MAUT -> Controller: 1905.1 Ack
+note left: Verify that the MAUT sends a 1905 Ack message\nwithin 1 sec of receiving the CAC Request message
+
+MAUT -> MAUT: Perform CAC on the requested channel\nusing the requested CAC type and bandwidth\nWait TIME_CAC
+
+MAUT -> Controller: Channel Preference Report
+note left: Verify that the MAUT sends a Channel Preference Report\nwithin TIME_CAC\nContains CAC completion TLV and Channel Preference TLV
+
+Controller -> MAUT: 1905.1 Ack
+note right: Verify that the Controller sends a 1905 Ack message\nwithin 1 sec of receiving the Channel Preference Report
+
+MAUT -> MAUT: Follow the CAC Completion Action\nspecified in the CAC Request message\nfrom Step 3
+note left: Verify that MAUT follows the CAC Completion Action\nspecified in the CAC Request message
+
+== Phase 2: CAC Request -> 1905.1 Ack -> CAC Termination -> 1905.1 Ack ==
+
+Controller -> MAUT: Trigger (DEV_SEND_1905, DestALid, WTS_REPLACE_MAUT_ALID, MessageTypeValue, 0x8020)
+note right: Send CAC Request message
+
+MAUT -> Controller: 1905.1 Ack
+note left: Verify that the MAUT sends a 1905 Ack message\nwithin 1 sec of receiving the CAC Request message
+
+Controller -> MAUT: Trigger (DEV_SEND_1905, DestALid, WTS_REPLACE_MAUT_ALID, MessageTypeValue, 0x8021)
+note right: Send CAC Termination message
+
+MAUT -> Controller: 1905.1 Ack
+note left: Verify that the MAUT sends a 1905 Ack message\nwithin 1 sec of receiving the CAC Termination message
+
+@enduml

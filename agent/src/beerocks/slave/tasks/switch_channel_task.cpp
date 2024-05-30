@@ -33,19 +33,8 @@ public:
 
 private:
     void config_fsm();
-    void reset()
-    {
-        m_switch_channel_request.reset();
-        m_switch_channel_notification.reset();
-        m_cac_started_notification.reset();
-        m_cac_completed_notification.reset();
-        m_max_wait_for_switch_channel_notification_sec =
-            DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION;
-    }
+    void reset();
     bool report_switch_channel_in_progress(TTransition &transition, const void *args);
-
-    static constexpr std::chrono::seconds DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION =
-        std::chrono::seconds(2);
 
 public:
     // the interface this fsm handles
@@ -74,7 +63,10 @@ public:
     std::shared_ptr<sCacCompletedNotification> m_cac_completed_notification;
 
     // max time to wait for a notification about switch channel
-    std::chrono::seconds m_max_wait_for_switch_channel_notification_sec;
+    static constexpr std::chrono::seconds DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION =
+        std::chrono::seconds(2);
+    std::chrono::seconds m_max_wait_for_switch_channel_notification_sec =
+        DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION;
 
     // the point in time we started waiting for notificaion report
     std::chrono::time_point<std::chrono::steady_clock>
@@ -218,6 +210,8 @@ void SwitchChannelFsm::config_fsm()
 
                     return true;
                 }
+                LOG(DEBUG)
+                    << "Sent switch channel request. Waiting for Switch Channel Notification";
 
                 // set the wait start time
                 m_wait_for_switch_channel_notification_time_point =
@@ -462,6 +456,15 @@ void SwitchChannelFsm::config_fsm()
     start();
 }
 
+void SwitchChannelFsm::reset()
+{
+    m_switch_channel_request.reset();
+    m_switch_channel_notification.reset();
+    m_cac_started_notification.reset();
+    m_cac_completed_notification.reset();
+    m_max_wait_for_switch_channel_notification_sec = DEFAULT_WAIT_FOR_SWITCH_CHANNEL_NOTIFICATION;
+}
+
 bool SwitchChannelFsm::report_switch_channel_in_progress(TTransition &transition, const void *args)
 {
     // we are in the middle of another switch channel.
@@ -484,6 +487,7 @@ bool SwitchChannelFsm::report_switch_channel_in_progress(TTransition &transition
 
     // report
     m_task_pool.send_event(eTaskEvent::SWITCH_CHANNEL_REPORT, switch_channel_report);
+    LOG(DEBUG) << "Switch Channel in progress";
 
     return false;
 }
@@ -598,8 +602,9 @@ void SwitchChannelTask::handle_event(eTaskEvent event, std::shared_ptr<void> eve
                      << " without data. Unable to handle the event.";
         return;
     }
-
-    LOG(DEBUG) << "Received event to handle: " << event;
+    std::ostringstream oss;
+    oss << event; // Explicitly use the operator<< for eTaskEvent
+    LOG(DEBUG) << "Received event to handle: " << oss.str();
 
     switch (event) {
     case eTaskEvent::SWITCH_CHANNEL_REQUEST: {

@@ -273,7 +273,8 @@ void ChannelSelectionTask::handle_channel_selection_request(ieee1905_1::CmduMess
 {
     const auto mid = cmdu_rx.getMessageId();
 
-    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST, mid=" << std::hex << mid;
+    LOG(DEBUG) << "Received CHANNEL_SELECTION_REQUEST for src_mac " << src_mac
+               << ", mid = " << std::hex << mid;
 
     // Clear previous request, if any.
     m_pending_selection.mid = mid;
@@ -733,7 +734,7 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         beerocks_header
             ->addClass<beerocks_message::cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION>();
     if (!notification) {
-        LOG(ERROR) << "addClass sACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
+        LOG(ERROR) << "addClass cACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION failed";
         return;
     }
 
@@ -748,7 +749,7 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
 
     const auto &sender_iface_name = radio->front.iface_name;
 
-    LOG(TRACE) << "received ACTION_APMANAGER_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
+    LOG(TRACE) << "received ACTION_BACKHAUL_HOSTAP_DFS_CAC_STARTED_NOTIFICATION from "
                << sender_iface_name;
 
     // send inner task message
@@ -776,6 +777,7 @@ void ChannelSelectionTask::handle_vs_cac_started_notification(
         constexpr float CAC_DURATION_FACTOR = 1.2;
         auto cac_remaining_sec =
             uint16_t(notification->params().cac_duration_sec * CAC_DURATION_FACTOR);
+
         db->statuses.zwdfs_cac_remaining_time_sec = cac_remaining_sec;
         m_zwdfs_fsm_timeout =
             std::chrono::steady_clock::now() + std::chrono::seconds(cac_remaining_sec);
