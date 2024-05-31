@@ -88,6 +88,9 @@ ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "ModeEnabled": "
 ubus call "WiFi.AccessPoint.1.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 
+# Enable when hostapd on this target supports it
+# ubus-cli "WiFi.AccessPoint.*.MBOEnable=1"
+
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to
 # switch channels when we ask it to. Channels 1 and 48 were chosen

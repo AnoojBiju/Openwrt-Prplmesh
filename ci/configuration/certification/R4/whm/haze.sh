@@ -92,12 +92,8 @@ ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "ModeEnabled": "
 ubus call "WiFi.AccessPoint.1.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 
-ubus-cli "WiFi.AccessPoint.1.MBOEnable=1"
-ubus-cli "WiFi.AccessPoint.2.MBOEnable=1"
-ubus-cli "WiFi.AccessPoint.3.MBOEnable=1"
-ubus-cli "WiFi.AccessPoint.4.MBOEnable=1"
-ubus-cli "WiFi.AccessPoint.5.MBOEnable=1"
-ubus-cli "WiFi.AccessPoint.6.MBOEnable=1"
+# Enable when hostapd on this target supports it
+# ubus-cli "WiFi.AccessPoint.*.MBOEnable=1"
 
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to
@@ -151,4 +147,3 @@ rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
 dropbear -F -T 10 -p192.168.250.130:22 &
-
