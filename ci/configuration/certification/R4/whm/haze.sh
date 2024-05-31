@@ -151,4 +151,3 @@ rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
 dropbear -F -T 10 -p192.168.250.130:22 &
-
