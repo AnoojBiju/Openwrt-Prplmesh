@@ -1,0 +1,42 @@
+@startuml
+participant "CTT Controller" as Controller
+participant "MAUT" as MAUT
+participant "CTT Agent 1" as Agent1
+participant "CTT Agent 2" as Agent2
+
+== Phase 1: Initialization ==
+
+Controller -> Controller: Trigger (DEV_RESET_DEFAULT)
+note right: Reset of CTT Controller\nWait TIME_INIT
+
+Controller -> Controller: Trigger (DEV_SET_CONFIG, bss_info_x)
+note right: Loading of BSS info using Table 11\nWait TIME_LOAD_BSS
+
+Controller -> MAUT: Trigger (DEV_INITIATE_ON_BOOT_SCAN)
+note right: Initialize MAUT and trigger on-boot scan\nWait TIME_SCAN
+
+== Phase 2: Channel Scan Reporting Policy ==
+
+Controller -> MAUT: Trigger (DEV_SEND_1905, DestALid, WTS_REPLACE_MAUT_ALID, MessageTypeValue, 0x8001)
+note right: Send Channel Scan Reporting Policy to MAUT
+
+MAUT -> Controller: 1905.1 Ack
+note left: Verify that the MAUT sends a 1905 Ack message\nwithin 1 sec of receiving the Reporting Policy message
+
+== Phase 3: Channel Scan Request ==
+
+Controller -> MAUT: Trigger (DEV_SEND_1905, DestALid, WTS_REPLACE_MAUT_ALID, MessageTypeValue, 0x8019)
+note right: Send Channel Scan Request message
+
+MAUT -> Controller: 1905.1 Ack
+note left: Verify that the MAUT sends a 1905 Ack message\nwithin 1 sec of receiving the Channel Scan Request message
+
+MAUT -> MAUT: Retrieve stored scan results from on-boot scan\nWait TIME_RETRIEVE
+
+MAUT -> Controller: Channel Scan Report
+note left: Verify that the MAUT sends a Channel Scan Report\nwith the scan results
+
+Controller -> MAUT: 1905.1 Ack
+note right: Verify that the Controller sends a 1905 Ack message\nwithin 1 sec of receiving the Channel Scan Report
+
+@enduml

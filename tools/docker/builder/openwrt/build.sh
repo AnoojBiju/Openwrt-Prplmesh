@@ -160,19 +160,19 @@ main() {
             ;;
     esac
 
-    legacy_platforms=("turris-omnia" "glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
+    legacy_platforms=("glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
     if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
         dbg "Legacy platform, building on prplOS(-old)"
         OPENWRT_TOOLCHAIN_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
         OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos master (wps fix)"
-        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        dbg "Haze platform, build on prplos master + pWHM 5.34.0"
+        OPENWRT_TOOLCHAIN_VERSION='6782a96935497e71bbce44a2c8fb24c4111b32b0'
+        OPENWRT_VERSION='6782a96935497e71bbce44a2c8fb24c4111b32b0'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos-v3.0.1"
-        OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-        OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+        dbg "OSP platform, build on prplos UPDK 9.1.50 + pWHM 5.34.0"
+        OPENWRT_TOOLCHAIN_VERSION='6782a96935497e71bbce44a2c8fb24c4111b32b0'
+        OPENWRT_VERSION='6782a96935497e71bbce44a2c8fb24c4111b32b0'
     else
         dbg "Building on prplOS-next"
     fi
@@ -217,9 +217,9 @@ main() {
 VERBOSE=false
 IMAGE_ONLY=false
 OPENWRT_REPOSITORY='https://gitlab.com/prpl-foundation/prplos/prplos.git'
-# prplOS 3.0.1 (after M2.1 merge)
-OPENWRT_TOOLCHAIN_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
-OPENWRT_VERSION='833823239904b80e15dd4286a3891c68055bb0a0'
+# prplOS 3.1
+OPENWRT_TOOLCHAIN_VERSION='5ebc5656219a20bd216992434e1437d5183ff0a1'
+OPENWRT_VERSION='5ebc5656219a20bd216992434e1437d5183ff0a1'
 PRPLMESH_VARIANT="-nl80211"
 DOCKER_TARGET_STAGE="prplmesh-builder"
 SHELL_ONLY=false
