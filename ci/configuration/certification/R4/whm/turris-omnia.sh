@@ -20,23 +20,26 @@ if data_overlay_not_initialized; then
     sleep 2
   done
   logger -t prplmesh -p daemon.info "Data overlay is initialized."
+  sleep 20
 fi
-sleep 20
+
+sh /etc/init.d/tr181-upnp stop || true
+rm -f /etc/rc.d/S*tr181-upnp
 
 # Save the IP settings persistently (PPM-2351):
 sed -ri 's/(dm-save.*) = false/\1 = true/g' /etc/amx/ip-manager/ip-manager.odl
-/etc/init.d/ip-manager restart && sleep 15
+sh /etc/init.d/ip-manager restart && sleep 15
 
 ubus wait_for IP.Interface
 
 # Stop and disable the DHCP clients and servers:
-if ubus call DHCPv4 _list ; then
+if ubus call DHCPv4 _list >/dev/null ; then
   ubus call DHCPv4.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv4.Server _set '{"parameters": { "Enable": False }}'
 else
     echo "DHCPv4 service not active!"
 fi
-if ubus call DHCPv6 _list ; then
+if ubus call DHCPv6 _list >/dev/null ; then
   ubus call DHCPv6.Client.1 _set '{"parameters": { "Enable": False }}'
   ubus call DHCPv6.Server _set '{"parameters": { "Enable": False }}'
 else
@@ -67,9 +70,6 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"
 
 # all pwhm default configuration can be found in /etc/amx/wld/wld_defaults.odl.uc
 
-# Restart the ssh server
-/etc/init.d/ssh-server restart
-
 # Required for config_load:
 . /lib/functions/system.sh
 # Required for config_foreach:
@@ -77,8 +77,8 @@ ubus call "WiFi.Radio" _set '{ "rel_path": ".[OperatingFrequencyBand == \"5GHz\"
 
 # add private vaps to lan to workaround Netmodel missing wlan mib
 # this must be reverted once Netmodel version is integrated
-brctl addif br-lan wlan0 > /dev/null 2>&1 || true
-brctl addif br-lan wlan1 > /dev/null 2>&1 || true
+#brctl addif br-lan wlan0 > /dev/null 2>&1 || true
+#brctl addif br-lan wlan2 > /dev/null 2>&1 || true
 
 # configure private vaps
 ubus call "WiFi.SSID.1" _set '{ "parameters": { "SSID": "prplmesh" } }'
@@ -89,6 +89,9 @@ ubus call "WiFi.AccessPoint.1.Security" _set '{ "parameters": { "ModeEnabled": "
 ubus call "WiFi.AccessPoint.2.Security" _set '{ "parameters": { "ModeEnabled": "WPA2-Personal" } }'
 ubus call "WiFi.AccessPoint.1.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
 ubus call "WiFi.AccessPoint.2.WPS" _set '{ "parameters": { "ConfigMethodsEnabled": "PushButton" } }'
+
+# Enable when hostapd on this target supports it
+# ubus-cli "WiFi.AccessPoint.*.MBOEnable=1"
 
 # Make sure specific channels are configured. If channel is set to 0,
 # ACS will be configured. If ACS is configured hostapd will refuse to
@@ -110,15 +113,15 @@ sleep 10
 # Try to work around PCF-681: if we don't have a connectivity, restart
 # tr181-bridging
 # Check the status of the LAN bridge
-ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && /etc/init.d/tr181-bridging restart && sleep 15)
+ip a |grep "br-lan:" |grep "state UP" >/dev/null || (echo "LAN Bridge DOWN, restarting bridge manager" && sh /etc/init.d/tr181-bridging restart && sleep 15)
 
 # If we still can't ping the UCC, restart the IP manager
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
-ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
+ping -i 1 -c 2 192.168.250.199 || (sh /etc/init.d/ip-manager restart && sleep 15)
 
 # Remove the default lan/wan SSH servers if they exist
-# ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
-# ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"wan\"]" }' || true
+ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"lan\"]" }' || true
+ubus call "SSH.Server" _del '{ "rel_path": ".[Alias == \"wan\"]" }' || true
 
 # Trigger the startup of the SSH server
 # The SSH server on eth0 has some problems starting through the server component
@@ -128,7 +131,7 @@ ping -i 1 -c 2 192.168.250.199 || (/etc/init.d/ip-manager restart && sleep 15)
 # ubus call "SSH.Server" _set '{ "rel_path": ".[Alias == \"control\"].", "parameters": { "Enable": true } }'
 
 # Stop the default ssh server on the lan-bridge
-/etc/init.d/ssh-server stop
+sh /etc/init.d/ssh-server stop || true
 sleep 5
 
 # Add command to start dropbear to rc.local to allow SSH access after reboot
@@ -137,7 +140,7 @@ SERVER_CMD="sleep 20 && dropbear -F -T 10 -p192.168.250.170:22 &"
 if ! grep -q "$SERVER_CMD" "$BOOTSCRIPT"; then { head -n -2 "$BOOTSCRIPT"; echo "$SERVER_CMD"; tail -2 "$BOOTSCRIPT"; } >> btscript.tmp; mv btscript.tmp "$BOOTSCRIPT"; fi
 
 # Stop and disable the firewall:
-/etc/init.d/tr181-firewall stop
+sh /etc/init.d/tr181-firewall stop
 rm -f /etc/rc.d/S22tr181-firewall
 
 # Start an ssh server on the control interfce
