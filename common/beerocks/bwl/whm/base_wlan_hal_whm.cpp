@@ -421,7 +421,7 @@ bool base_wlan_hal_whm::refresh_radio_info()
     }
     auto radio = m_ambiorix_cl.get_object(m_radio_path);
     if (!radio) {
-        LOG(ERROR) << " cannot refresh radio info, radio object missing ";
+        LOG(ERROR) << " cannot refresh radio info, radio object missing " << m_radio_path;
         return false;
     }
     std::string s_val;
