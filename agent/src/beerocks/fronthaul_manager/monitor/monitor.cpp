@@ -1989,6 +1989,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
     } break;
     case Event::Channel_Scan_Triggered: {
+        LOG(DEBUG) << "Monitor | Event::Channel_Scan_Triggered";
         auto notification = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_TRIGGERED_NOTIFICATION>(cmdu_tx);
         if (!notification) {
@@ -2000,6 +2001,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
     } break;
     case Event::Channel_Scan_New_Results_Ready:
     case Event::Channel_Scan_Dump_Result: {
+        LOG(DEBUG) << "Monitor | Event::Channel_Scan_Dump_Result";
         auto notification = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_RESULTS_NOTIFICATION>(cmdu_tx);
         if (!notification) {
@@ -2074,6 +2076,7 @@ bool Monitor::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         send_cmdu(cmdu_tx);
     } break;
     case Event::Channel_Scan_Finished: {
+        LOG(DEBUG) << "Monitor | Event::Channel_Scan_Finished";
         auto notification = message_com::create_vs_message<
             beerocks_message::cACTION_MONITOR_CHANNEL_SCAN_FINISHED_NOTIFICATION>(cmdu_tx);
         if (!notification) {

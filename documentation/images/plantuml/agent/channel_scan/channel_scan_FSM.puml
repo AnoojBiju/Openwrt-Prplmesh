@@ -6,7 +6,7 @@ state Channel_Scan_Task {
 	state "Scan WAIT_FOR_RESULTS_READY" as waitReady
 	state "Scan WAIT_FOR_RESULTS_DUMP" as waitDump
 	state "Scan SCAN_DONE" as scanDone
-	state "Scan SCAN_FAILED" as scanFail
+state "Scan SCAN_FAILED" as scanFail
 
 	preTrigger : Sending ACTION_BACKHAUL_CHANNEL_SCAN_TRIGGER_SCAN_REQUEST \n or \n ACTION_BACKHAUL_CHANNEL_SCAN_DUMP_RESULTS_REQUEST
 
