@@ -37,8 +37,8 @@ using namespace beerocks;
  */
 constexpr int PREFERRED_DWELLTIME_MS                       = 103; // 103 Millisec
 constexpr std::chrono::seconds SCAN_TRIGGERED_WAIT_TIME    = std::chrono::seconds(20);  // 20 Sec
-constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(210); // 3.5 Min
-constexpr std::chrono::seconds SCAN_REQUEST_TIMEOUT_SEC    = std::chrono::seconds(300); // 5 Min
+constexpr std::chrono::seconds SCAN_RESULTS_DUMP_WAIT_TIME = std::chrono::seconds(300); // 5 Min
+constexpr std::chrono::seconds SCAN_REQUEST_TIMEOUT_SEC    = std::chrono::seconds(500); // 8+ Min
 /**
  * To allow for CMDU & TLV fragmentation a proximation of the size we need to keep free in the
  * Channel Scan Report Message building process is needed.
