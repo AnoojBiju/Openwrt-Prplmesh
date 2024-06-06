@@ -1579,6 +1579,7 @@ bool Controller::handle_cmdu_1905_ap_metric_response(const sMacAddr &src_mac,
 {
 
     auto mid = cmdu_rx.getMessageId();
+    LOG(DEBUG) << "************** NEW ONE *************";
     LOG(INFO) << "Received AP_METRICS_RESPONSE_MESSAGE, mid=" << std::dec << int(mid);
 
     bool ret_val = true;
