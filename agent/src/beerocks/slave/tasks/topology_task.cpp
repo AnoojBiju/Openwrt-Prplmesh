@@ -505,9 +505,9 @@ bool TopologyTask::add_device_information_tlv()
 
         // Iterate on front radio iface and then switch to back radio iface
         auto fill_radio_iface_info = [&](ieee1905_1::eMediaType media_type, bool front_iface) {
-            LOG(DEBUG) << "filling " << (front_iface ? "fronthaul" : "backhaul")
-                       << " information on radio="
-                       << (front_iface ? radio->front.iface_name : radio->back.iface_name);
+            LOG(DEBUG) << "adding " << (front_iface ? "fronthaul" : "backhaul ") << " interface "
+                       << (front_iface ? radio->front.iface_name : radio->back.iface_name)
+                       << " to local interface list";
 
             if ((front_iface && radio->front.iface_mac == network_utils::ZERO_MAC) ||
                 (!front_iface && radio->back.iface_mac == network_utils::ZERO_MAC)) {
