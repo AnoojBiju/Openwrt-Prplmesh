@@ -1098,6 +1098,7 @@ bool BackhaulManager::backhaul_fsm_wireless(bool &skip_select)
                 // Update the backhaul interface mac.
                 radio->back.iface_mac =
                     tlvf::mac_from_string(radio_info->sta_wlan_hal->get_wireless_backhaul_mac());
+		LOG(DEBUG) << "**************** BACKHAUL MAC ************* " << radio->back.iface_mac;
 
             } else if (attach_state == bwl::HALState::Failed) {
                 // Delete the HAL instance
