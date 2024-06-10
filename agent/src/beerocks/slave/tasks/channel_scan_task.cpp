@@ -139,7 +139,7 @@ void ChannelScanTask::work()
             if (!is_scan_request_finished(current_scan_request)) {
                 LOG(INFO) << "Wait for other scans to complete";
                 trigger_next_radio_scan(current_scan_request);
-            } else {
+            } else { // There are no scans in progress
                 auto db    = AgentDB::get();
                 auto radio = db->get_radio_by_mac(current_radio_scan->radio_mac);
                 if (!radio) {
@@ -170,12 +170,7 @@ void ChannelScanTask::work()
                         }
                     }
                 }
-                if (m_on_boot_scan_enabled) {
-                    LOG(DEBUG) << "AgentDB is updated with the OnBootScan Results";
-                    m_current_scan_info.is_scan_currently_running = false;
-                } else {
-                    current_scan_request->ready_to_send_report = true;
-                }
+                current_scan_request->ready_to_send_report = true;
             }
             break;
         }
@@ -183,7 +178,7 @@ void ChannelScanTask::work()
             if (!is_scan_request_finished(current_scan_request)) {
                 LOG(INFO) << "Wait for other scans to complete";
                 trigger_next_radio_scan(current_scan_request);
-            } else if (!m_on_boot_scan_enabled) {
+            } else {
                 current_scan_request->ready_to_send_report = true;
             }
             break;
@@ -191,7 +186,7 @@ void ChannelScanTask::work()
         case eState::SCAN_ABORTED: {
             if (!is_scan_request_finished(current_scan_request)) {
                 LOG(INFO) << "Wait for other scans to complete";
-            } else if (!m_on_boot_scan_enabled) {
+            } else {
                 current_scan_request->ready_to_send_report = true;
             }
             break;
@@ -201,14 +196,24 @@ void ChannelScanTask::work()
         }
 
         // Handle finished requests.
-        if (!m_on_boot_scan_enabled && current_scan_request->ready_to_send_report) {
-            // Report was sent back, clear any remaining scan info.
+        if (current_scan_request->ready_to_send_report) {
             m_current_scan_info.radio_scan                = nullptr;
             m_current_scan_info.scan_request              = nullptr;
             m_current_scan_info.is_scan_currently_running = false;
-            if (!send_channel_scan_report_to_controller(current_scan_request)) {
-                LOG(ERROR) << "Failed to send channel scan report!";
-                return;
+
+            if (m_on_boot_scan_enabled) {
+                // On boot scan does not send report
+                current_scan_request->ready_to_send_report = false;
+                LOG(DEBUG) << "m_current_scan_info.is_scan_currently_running = false && "
+                              "ready_to_send_report = false";
+            } else {
+                // Report is being sent back, clear any remaining scan info.
+                LOG(DEBUG) << "m_current_scan_info.is_scan_currently_running = false && "
+                              "ready_to_send_report";
+                if (!send_channel_scan_report_to_controller(current_scan_request)) {
+                    LOG(ERROR) << "Failed to send channel scan report!";
+                    return;
+                }
             }
         }
     } else {
@@ -637,6 +642,7 @@ bool ChannelScanTask::trigger_next_radio_scan(const std::shared_ptr<sScanRequest
     m_current_scan_info.scan_request              = request;
     m_current_scan_info.radio_scan                = next_pending_radio_scan->second;
     m_current_scan_info.is_scan_currently_running = true;
+    LOG(DEBUG) << "m_current_scan_info.is_scan_currently_running = true";
 
     return true;
 }
