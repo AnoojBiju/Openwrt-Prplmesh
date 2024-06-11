@@ -41,7 +41,7 @@ protected:
     virtual void handle_task_end() override;
 
 private:
-    void steer_sta();
+    bool steer_sta();
     void print_steering_info();
 
     /**
