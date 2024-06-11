@@ -285,26 +285,62 @@ int cfg_get_sta_iface(const char iface[BPL_IFNAME_LEN], char sta_iface[BPL_IFNAM
 void cfg_wifi_reset_wps_credentials()
 {
 
-    std::vector<std::string> ambiorix_paths;
+    std::vector<std::string> endpoint_paths, profile_paths;
     AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
 
-    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.", ambiorix_paths);
+    const std::string aux_alias = "reset_aux";
 
-    // clear all EndPoint.ProfileReference objects
-    for (const auto &path : ambiorix_paths) {
-        LOG(DEBUG) << "ProfileReference reset " << path;
+    // create new auxiliary profiles for all EndPoint instances
+    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.", endpoint_paths);
+
+    int profile_id = -1;
+
+    for (const auto &endpoint : endpoint_paths) {
         args.set_type(AMXC_VAR_ID_HTABLE);
-        args.add_child("ProfileReference", "");
-        m_ambiorix_cl.update_object(path, args);
+        args.add_child("Alias", aux_alias);
+        m_ambiorix_cl.add_instance(endpoint + ".Profile.", args, profile_id);
+        LOG(DEBUG) << "add aux profile " << endpoint;
     }
 
-    ambiorix_paths.clear();
-    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.Profile.*", ambiorix_paths);
+    // enable the auxiliary profiles
+    m_ambiorix_cl.resolve_path_multi(wbapi_utils::search_path_ep_profiles_by_alias(aux_alias),
+                                     profile_paths);
+
+    for (const auto &profile : profile_paths) {
+        args.set_type(AMXC_VAR_ID_HTABLE);
+        args.add_child("Enable", "1");
+        m_ambiorix_cl.update_object(profile, args);
+        LOG(DEBUG) << "enable aux profile " << profile;
+    }
+
+    // set ProfileReference to the auxiliary profile
+    // this should trigger the regeneration of a wpa_supp.cfg with an empty network{} section
+    for (const auto &endpoint : endpoint_paths) {
+        std::string aux_profile;
+        if (!m_ambiorix_cl.resolve_path(endpoint + "Profile.[Alias == '" + aux_alias + "']",
+                                        aux_profile)) {
+            continue;
+        }
+        args.set_type(AMXC_VAR_ID_HTABLE);
+        args.add_child("ProfileReference", aux_profile);
+        m_ambiorix_cl.update_object(endpoint, args);
+        LOG(DEBUG) << "set aux profile " << aux_profile << " as profile reference for " << endpoint;
+    }
+
+    // clear all EndPoint.ProfileReference objects
+    for (const auto &endpoint : endpoint_paths) {
+        LOG(DEBUG) << "ProfileReference reset " << endpoint;
+        args.set_type(AMXC_VAR_ID_HTABLE);
+        args.add_child("ProfileReference", "");
+        m_ambiorix_cl.update_object(endpoint, args);
+    }
+
+    m_ambiorix_cl.resolve_path_multi("WiFi.EndPoint.*.Profile.*", profile_paths);
 
     // remove all profiles
-    for (const auto &path : ambiorix_paths) {
-        LOG(DEBUG) << "remove " << path;
-        m_ambiorix_cl.remove_instance(path, 0); // second argument is ignored
+    for (const auto &profile : profile_paths) {
+        LOG(DEBUG) << "remove profile " << profile;
+        m_ambiorix_cl.remove_instance(profile, 0); // second argument is ignored
     }
     LOG(INFO) << "reset wps credentials";
 }

@@ -274,6 +274,11 @@ std::string wbapi_utils::search_path_ep_profile_by_id(const std::string &ep_ifna
     return search_path_ep_profiles_by_iface(ep_ifname) + std::to_string(profile_id) + ".";
 }
 
+std::string wbapi_utils::search_path_ep_profiles_by_alias(const std::string &profile_alias)
+{
+    return search_path_ep() + "*.Profile.[Alias == '" + profile_alias + "'].";
+}
+
 std::string wbapi_utils::get_path_ap_of_assocDev(const std::string &assocDev_path)
 {
     auto pos = assocDev_path.rfind("AssociatedDevice");
