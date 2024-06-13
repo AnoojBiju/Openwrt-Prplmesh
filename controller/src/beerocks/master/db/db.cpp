@@ -340,12 +340,14 @@ std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent
     return agent;
 }
 
-std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMacAddr &parent_mac)
+std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMacAddr &parent_mac,
+                                                  const sMacAddr &al_mac)
 {
     auto station = m_stations.add(mac);
     if (!station) {
         return {};
     }
+    LOG(TRACE) << "Setting bSta for: " << mac;
     station->set_bSta(true);
 
     // Save stations's parent
@@ -357,6 +359,9 @@ std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMa
         if (parent_switch) {
             station->set_eth_switch(parent_switch);
         }
+    }
+    if (al_mac != beerocks::net::network_utils::ZERO_MAC) {
+        station->al_mac = al_mac;
     }
 
     // TODO: Add instance for Radio.BackhaulSta element from the Data Elements
@@ -5492,10 +5497,26 @@ void db::disable_periodic_link_metrics_requests()
 bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_mac_data_rate,
                                  uint32_t uplink_est_mac_data_rate, uint8_t signal_strength)
 {
+    bool ret_val = true;
     auto station = get_station(sta_mac);
     if (!station) {
         LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
         return false;
+    }
+
+    if (station->is_bSta() && station->al_mac != beerocks::net::network_utils::ZERO_MAC) {
+        //The sta is a backhaul sta and its al_mac is not empty
+        auto agent = m_agents.get(station->al_mac);
+        if (!agent) {
+            LOG(ERROR) << "Cannot get agent from sta_mac: " << sta_mac;
+        } else {
+            std::string multiap_backhaul_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+            //Device.WiFi.DataElements.Network.Device.{i}.MultiAPDevice.Backhaul.Stats
+            ret_val &=
+                m_ambiorix_datamodel->set(multiap_backhaul_path, "SignalStrength", signal_strength);
+            ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_path);
+            LOG(TRACE) << multiap_backhaul_path + ".SignalStrength is updated";
+        }
     }
 
     // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
@@ -5503,7 +5524,6 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
         return true;
     }
 
-    bool ret_val = true;
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "EstMACDataRateDownlink",
                                          downlink_est_mac_data_rate);
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "EstMACDataRateUplink",
@@ -6939,10 +6959,28 @@ bool db::dm_remove_interface_neighbor(const std::string &dm_path)
 bool db::dm_set_sta_extended_link_metrics(
     const sMacAddr &sta_mac, const wfa_map::tlvAssociatedStaExtendedLinkMetrics::sMetrics &metrics)
 {
+    bool ret_val = true;
     auto station = get_station(sta_mac);
     if (!station) {
         LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
         return false;
+    }
+
+    if (station->is_bSta() && station->al_mac != beerocks::net::network_utils::ZERO_MAC) {
+        //The sta is a backhaul sta and its al_mac is not empty.
+        auto agent = m_agents.get(station->al_mac);
+        if (!agent) {
+            LOG(ERROR) << "Cannot get agent from sta_mac: " << sta_mac;
+        } else {
+            std::string multiap_backhaul_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+            //Device.WiFi.DataElements.Network.Device.{i}.MultiAPDevice.Backhaul.Stats.
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LastDataDownlinkRate",
+                                                 metrics.last_data_down_link_rate);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "LastDataUplinkRate",
+                                                 metrics.last_data_up_link_rate);
+            ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_path);
+            LOG(DEBUG) << multiap_backhaul_path << " updated";
+        }
     }
 
     // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
@@ -6950,7 +6988,6 @@ bool db::dm_set_sta_extended_link_metrics(
         return true;
     }
 
-    bool ret_val = true;
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataDownlinkRate",
                                          metrics.last_data_down_link_rate);
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "LastDataUplinkRate",
@@ -6965,10 +7002,36 @@ bool db::dm_set_sta_extended_link_metrics(
 
 bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTrafficStats &stats)
 {
+    bool ret_val = true;
     auto station = get_station(sta_mac);
     if (!station) {
         LOG(ERROR) << "Failed to get station on db with mac: " << sta_mac;
         return false;
+    }
+
+    if (station->is_bSta() && station->al_mac != beerocks::net::network_utils::ZERO_MAC) {
+        //The sta is a backhaul sta and its al_mac is not empty.
+        auto agent = m_agents.get(station->al_mac);
+        if (!agent) {
+            LOG(ERROR) << "Cannot get agent from sta_mac: " << sta_mac;
+        } else {
+            std::string multiap_backhaul_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+            ret_val &=
+                m_ambiorix_datamodel->set(multiap_backhaul_path, "BytesSent", stats.m_byte_sent);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BytesReceived",
+                                                 stats.m_byte_received);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "PacketsSent",
+                                                 stats.m_packets_sent);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "PacketsReceived",
+                                                 stats.m_packets_received);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "ErrorsSent",
+                                                 stats.m_tx_packets_error);
+            ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "ErrorsReceived",
+                                                 stats.m_rx_packets_error);
+            ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_path);
+
+            LOG(DEBUG) << multiap_backhaul_path << " updated";
+        }
     }
 
     // Device.WiFi.DataElements.Network.Device.{i}.Radio.{i}.BSS.{i}.STA.{i}.
@@ -6976,7 +7039,6 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
         return true;
     }
 
-    bool ret_val = true;
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesSent", stats.m_byte_sent);
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "BytesReceived", stats.m_byte_received);
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "PacketsSent", stats.m_packets_sent);
