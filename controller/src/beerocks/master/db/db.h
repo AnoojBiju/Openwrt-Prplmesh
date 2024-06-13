@@ -629,11 +629,13 @@ public:
      *
      * @param mac MAC address of the wireless backhaul station.
      * @param parent_mac MAC address of the parent node in the legacy node structure.
+     * @param al_mac MAC address of the agent where the station is connected.
      * @return the existing Station if it was already there or the newly added Station otherwise.
      */
     std::shared_ptr<Station>
     add_backhaul_station(const sMacAddr &mac,
-                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
+                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC,
+                         const sMacAddr &al_mac     = beerocks::net::network_utils::ZERO_MAC);
     bool add_eth_switch(const sMacAddr &mac,
                         const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
     bool add_radio(const sMacAddr &mac,
