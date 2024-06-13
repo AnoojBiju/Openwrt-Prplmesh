@@ -368,9 +368,9 @@ void son_actions::handle_dead_station(std::string mac, bool reported_by_parent, 
         tasks.push_event(database.get_bml_task_id(), bml_task::CONNECTION_CHANGE, &new_event);
         LOG(DEBUG) << "BML, sending client disconnect CONNECTION_CHANGE for mac " << new_event.mac;
     } else {
-        auto backhaul_bridge = database.get_agent_by_parent(tlvf::mac_from_string(mac));
-        if (backhaul_bridge) {
-            LOG(ERROR) << "backhaul has no bridge under it!";
+        auto backhaul_bridge = database.m_agents.get(station->al_mac);
+        if (!backhaul_bridge) {
+            LOG(ERROR) << "Station: " << mac << "does not have a bridge under it!";
         } else {
             bml_task::connection_change_event new_event;
             new_event.mac = tlvf::mac_to_string(backhaul_bridge->al_mac);
