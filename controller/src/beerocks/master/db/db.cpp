@@ -4635,8 +4635,7 @@ bool db::set_radio_stats_info(const sMacAddr &mac, const beerocks_message::sApSt
     cmd = "echo " + buf.str() + " >> /rdklogs/logs/segfault.txt";
     os_utils::system_call(cmd);
     if (params == nullptr) { // clear stats
-        radio->stats_info = nullptr;
-        radio->stats_info = std::make_shared<Agent::sRadio::s_ap_stats_params>();
+        radio->stats_info.reset();
     } else if (radio->stats_info) {
         buf.str("");
         buf.clear();

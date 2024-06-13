@@ -301,8 +301,27 @@ public:
             uint8_t total_client_rx_load_percent = 0;
             uint16_t stats_delta_ms              = 0;
             std::chrono::steady_clock::time_point timestamp;
+
+            void reset()
+            {
+                active_sta_count             = 0;
+                rx_packets                   = 0;
+                tx_packets                   = 0;
+                rx_bytes                     = 0;
+                tx_bytes                     = 0;
+                errors_sent                  = 0;
+                errors_received              = 0;
+                retrans_count                = 0;
+                noise                        = 0;
+                channel_load_percent         = 0;
+                total_client_tx_load_percent = 0;
+                total_client_rx_load_percent = 0;
+                stats_delta_ms               = 0;
+                timestamp                    = std::chrono::steady_clock::now();
+            }
         };
-        std::shared_ptr<s_ap_stats_params> stats_info;
+        std::shared_ptr<s_ap_stats_params> stats_info =
+            std::make_shared<Agent::sRadio::s_ap_stats_params>();
 
         class channel_scan_capabilities {
         public:
