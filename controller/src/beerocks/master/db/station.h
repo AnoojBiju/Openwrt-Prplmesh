@@ -54,6 +54,8 @@ public:
     ~Station();
 
     const sMacAddr mac;
+    //The agent's al_mac where this station belongs to.
+    sMacAddr al_mac;
     std::string parent_mac;
     std::string name;
     uint8_t operating_class = 0;
