@@ -166,13 +166,13 @@ main() {
         OPENWRT_TOOLCHAIN_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
         OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
     elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
-        dbg "Haze platform, build on prplos master + pWHM 5.34.0"
-        OPENWRT_TOOLCHAIN_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
-        OPENWRT_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
+        dbg "Haze platform, build on prplos master + pWHM 6.26.1"
+        OPENWRT_TOOLCHAIN_VERSION='61aeede7ed393c7e1a001d53e8e4f63e0af0e38b'
+        OPENWRT_VERSION='61aeede7ed393c7e1a001d53e8e4f63e0af0e38b'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
-        dbg "OSP platform, build on prplos UPDK 9.1.50 + pWHM 5.34.0"
-        OPENWRT_TOOLCHAIN_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
-        OPENWRT_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
+        dbg "OSP platform, build on prplos UPDK 9.1.60 + pWHM 6.26.1"
+        OPENWRT_TOOLCHAIN_VERSION='61aeede7ed393c7e1a001d53e8e4f63e0af0e38b'
+        OPENWRT_VERSION='61aeede7ed393c7e1a001d53e8e4f63e0af0e38b'
     else
         dbg "Building on prplOS-next"
     fi
