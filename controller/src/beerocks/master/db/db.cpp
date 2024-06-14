@@ -284,6 +284,19 @@ std::shared_ptr<Agent> db::add_gateway(const sMacAddr &mac)
         LOG(ERROR) << "Failed to set Manufacturer OUI";
     }
 
+    /*
+    When we are here it means that a local agent
+    (running in same platform as controller), has
+    joined the controller which means controller
+    is also running. This is effective in field
+    where a GW is running both the controller and agent.
+    */
+
+    m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "EasyMeshControllerOperationMode",
+                              std::string{"Running"});
+    m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "EasyMeshAgentOperationMode",
+                              std::string{"Running"});
+
     return agent;
 }
 
@@ -322,7 +335,7 @@ std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent
     }
 
     m_ambiorix_datamodel->set(agent->dm_path + ".MultiAPDevice", "EasyMeshAgentOperationMode",
-                              std::string{"RUNNING"});
+                              std::string{"Running"});
 
     return agent;
 }
