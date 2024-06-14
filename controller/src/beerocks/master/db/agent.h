@@ -21,6 +21,7 @@
 
 #include <beerocks/tlvf/beerocks_message_common.h>
 
+#include <bcl/beerocks_os_utils.h>
 #include <tlvf/common/sMacAddr.h>
 #include <tlvf/ieee_1905_1/eMediaType.h>
 #include <tlvf/tlvftypes.h>
@@ -302,7 +303,7 @@ public:
             uint16_t stats_delta_ms              = 0;
             std::chrono::steady_clock::time_point timestamp;
 
-            void reset()
+            void clear()
             {
                 active_sta_count             = 0;
                 rx_packets                   = 0;
@@ -318,6 +319,15 @@ public:
                 total_client_rx_load_percent = 0;
                 stats_delta_ms               = 0;
                 timestamp                    = std::chrono::steady_clock::now();
+            }
+            s_ap_stats_params()
+            {
+                std::string cmd;
+                std::ostringstream buf;
+                buf << "s_ap_stats_params = " << this << ", pid = " << getpid();
+                std::cout << buf.str() << std::endl;
+                cmd = "echo " + buf.str() + " >> /rdklogs/logs/segfault.txt";
+                beerocks::os_utils::system_call(cmd);
             }
         };
         std::shared_ptr<s_ap_stats_params> stats_info =

@@ -7,6 +7,7 @@
  */
 
 #include "db.h"
+#include "agent.h"
 
 #include "../tasks/agent_monitoring_task.h"
 #include <bcl/beerocks_utils.h>
@@ -2705,26 +2706,43 @@ beerocks::eApActiveMode db::get_radio_activity_mode(const sMacAddr &mac)
 
 bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, bool is_csa_entry)
 {
+    std::chrono::steady_clock::time_point tp;
     std::shared_ptr<Agent::sRadio> radio = get_radio_by_uid(mac);
 
     if (!radio) {
         LOG(ERROR) << "radio not found.... ";
         return false;
     }
+    //std::cout << "RADAR: b4 radio = " << radio << ", stats = " << radio->stats_info
+    //        << ", pid = " << getpid() << std::endl;
+
     Agent::sRadio::sWifiChannelRadarStats radar_statistics = {
         .channel = channel, .bandwidth = bw, .channel_ext_above_secondary = 0};
+
+    std::cout << "RADAR: b4 if radio = " << radio << ", stats = " << radio->stats_info
+              << ", is_csa = " << is_csa_entry << ", pid = " << getpid() << std::endl;
 
     //CSA enter channel
     if (is_csa_entry) {
         if (radio->Radar_stats.size() == RADAR_STATS_LIST_MAX) {
+            //std::cout << "RADAR: b4 inside if radio = " << radio
+            //        << ", stats = " << radio->stats_info << ", pid = " << getpid() << std::endl;
             radio->Radar_stats.pop_back();
+            std::cout << "RADAR: af inside if radio = " << radio
+                      << ", stats = " << radio->stats_info << ", pid = " << getpid() << std::endl;
         }
         auto now                             = std::chrono::steady_clock::now();
         radar_statistics.csa_enter_timestamp = now;
         radar_statistics.csa_exit_timestamp  = now;
+        //std::cout << "RADAR: b4 push radio = " << radio << ", stats = " << radio->stats_info
+        //        << ", pid = " << getpid() << std::endl;
         radio->Radar_stats.push_front(radar_statistics);
+        //std::cout << "RADAR: af push radio = " << radio << ", stats = " << radio->stats_info
+        //        << ", pid = " << getpid() << std::endl;
         // for_each(begin(n.hostap->Radar_stats) , end(n.hostap->Radar_stats), [&](sWifiChannelRadarStats radar_stat){
         for (const auto &radar_stat : radio->Radar_stats) {
+            //std::cout << "RADAR: inside for radio = " << radio << ", stats = " << radio->stats_info
+            //        << ", pid = " << getpid() << std::endl;
             auto delta_radar = std::chrono::duration_cast<std::chrono::seconds>(
                                    radar_stat.csa_exit_timestamp - radar_stat.csa_enter_timestamp)
                                    .count();
@@ -2736,8 +2754,15 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
         }
         return true;
     }
+
+    std::cout << "RADAR: af if radio = " << radio << ", stats = " << radio->stats_info
+              << ", pid = " << getpid() << std::endl;
+
     //CSA exit channel
     radio->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
+
+    std::cout << "RADAR: af radio = " << radio << ", stats = " << radio->stats_info
+              << ", ext = " << tp << ", pid = " << getpid() << std::endl;
 
     return true;
 }
@@ -4635,7 +4660,7 @@ bool db::set_radio_stats_info(const sMacAddr &mac, const beerocks_message::sApSt
     cmd = "echo " + buf.str() + " >> /rdklogs/logs/segfault.txt";
     os_utils::system_call(cmd);
     if (params == nullptr) { // clear stats
-        radio->stats_info.reset();
+        radio->stats_info->clear();
     } else if (radio->stats_info) {
         buf.str("");
         buf.clear();
