@@ -100,6 +100,16 @@ protected:
                                      "ManufacturerOUI", Matcher<const std::string &>(g_bridge_oui)))
             .WillOnce(Return(true));
 
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_device_path) + ".1.MultiAPDevice",
+                        "EasyMeshControllerOperationMode", Matcher<const std::string &>("Running")))
+            .WillOnce(Return(true));
+
+        EXPECT_CALL(*m_ambiorix,
+                    set(std::string(g_device_path) + ".1.MultiAPDevice",
+                        "EasyMeshAgentOperationMode", Matcher<const std::string &>("Running")))
+            .WillOnce(Return(true));
+
         m_db->set_prplmesh(tlvf::mac_from_string(g_bridge_mac));
         EXPECT_EQ(std::string(g_device_path) + ".1",
                   m_db->get_agent_data_model_path(tlvf::mac_from_string(g_bridge_mac)));
