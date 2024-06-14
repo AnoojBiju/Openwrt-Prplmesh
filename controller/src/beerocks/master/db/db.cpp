@@ -5497,6 +5497,16 @@ bool db::dm_set_sta_link_metrics(const sMacAddr &sta_mac, uint32_t downlink_est_
                                          uplink_est_mac_data_rate);
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "SignalStrength", signal_strength);
 
+    // Fill agent's stats
+    auto agent = m_agents.get(sta_mac);
+    if (agent) {
+        const auto multiap_backhaul_stats_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+        // .Stats object
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "SignalStrength",
+                                             signal_strength);
+        ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_stats_path, "TimeStamp");
+    }
+
     return ret_val;
 }
 
@@ -6947,6 +6957,18 @@ bool db::dm_set_sta_extended_link_metrics(
     ret_val &= m_ambiorix_datamodel->set(station->dm_path, "UtilizationTransmit",
                                          metrics.utilization_transmit);
 
+    // Fill agent's stats
+    auto agent = m_agents.get(sta_mac);
+    if (agent) {
+        const auto multiap_backhaul_stats_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+        // .Stats object
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataDownlinkRate",
+                                             metrics.last_data_down_link_rate);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataUplinkRate",
+                                             metrics.last_data_up_link_rate);
+        ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_stats_path, "TimeStamp");
+    }
+
     return ret_val;
 }
 
@@ -6975,6 +6997,26 @@ bool db::dm_set_sta_traffic_stats(const sMacAddr &sta_mac, sAssociatedStaTraffic
     ret_val &=
         m_ambiorix_datamodel->set(station->dm_path, "ErrorsReceived", stats.m_rx_packets_error);
     ret_val &= m_ambiorix_datamodel->set_current_time(station->dm_path);
+
+    // Fill agent's stats
+    auto agent = m_agents.get(sta_mac);
+    if (agent) {
+        const auto multiap_backhaul_stats_path = agent->dm_path + ".MultiAPDevice.Backhaul.Stats";
+        // .Stats object
+        ret_val &=
+            m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesSent", stats.m_byte_sent);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesReceived",
+                                             stats.m_byte_received);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsSent",
+                                             stats.m_packets_sent);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsReceived",
+                                             stats.m_packets_received);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsSent",
+                                             stats.m_tx_packets_error);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsReceived",
+                                             stats.m_rx_packets_error);
+        ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_stats_path, "TimeStamp");
+    }
 
     return ret_val;
 }
@@ -7472,7 +7514,8 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
         return true;
     }
 
-    const auto multiap_backhaul_path = agent.dm_path + ".MultiAPDevice.Backhaul";
+    const auto multiap_backhaul_path       = agent.dm_path + ".MultiAPDevice.Backhaul";
+    const auto multiap_backhaul_stats_path = multiap_backhaul_path + ".Stats";
 
     // Controller does not have any Backhaul, so leave it as TR-181 states it.
     if (agent.is_gateway) {
@@ -7483,6 +7526,20 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
             m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress", std::string{});
         ret_val &=
             m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulDeviceID", std::string{});
+
+        // Init .Stats object
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesSent", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesReceived", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsSent", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsReceived", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsSent", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsReceived", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LinkUtilization", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "SignalStrength", 0);
+        ret_val &=
+            m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataDownlinkRate", 0);
+        ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataUplinkRate", 0);
+        ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_stats_path, "TimeStamp");
         return ret_val;
     }
 
@@ -7508,6 +7565,18 @@ bool db::dm_set_device_multi_ap_backhaul(const Agent &agent)
                                          agent.backhaul.backhaul_interface);
     ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_path, "BackhaulMACAddress",
                                          agent.backhaul.parent_interface);
+    // Init .Stats object
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesSent", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "BytesReceived", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsSent", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "PacketsReceived", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsSent", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "ErrorsReceived", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LinkUtilization", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "SignalStrength", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataDownlinkRate", 0);
+    ret_val &= m_ambiorix_datamodel->set(multiap_backhaul_stats_path, "LastDataUplinkRate", 0);
+    ret_val &= m_ambiorix_datamodel->set_current_time(multiap_backhaul_stats_path, "TimeStamp");
 
     auto parent_agent = agent.backhaul.parent_agent.lock();
     if (!parent_agent) {
