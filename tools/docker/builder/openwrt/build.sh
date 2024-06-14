@@ -171,8 +171,8 @@ main() {
         OPENWRT_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
     elif [[ "urx_osp" == "$TARGET_DEVICE" ]] ; then
         dbg "OSP platform, build on prplos UPDK 9.1.50 + pWHM 5.34.0"
-        OPENWRT_TOOLCHAIN_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
-        OPENWRT_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
+        OPENWRT_TOOLCHAIN_VERSION='a1821b5a3a6920aa0062116539792a8cbdc85e1e'
+        OPENWRT_VERSION='a1821b5a3a6920aa0062116539792a8cbdc85e1e'
     else
         dbg "Building on prplOS-next"
     fi
