@@ -213,6 +213,10 @@ bool beerocks_ucc_listener::parse_params(const std::vector<std::string> &command
                                          std::unordered_map<std::string, std::string> &params,
                                          std::string &err_string)
 {
+    //to print the vector values
+    for (auto var1 : command_tokens) {
+        LOG(INFO) << "Element : " << var1;
+    }
     // create a copy of all mandatory param names
     std::list<std::string> mandatory_params;
     for (const auto &param_name : params) {
@@ -480,6 +484,10 @@ void beerocks_ucc_listener::handle_wfa_ca_command(int fd, const std::string &com
             reply_ucc(fd, eWfaCaStatus::INVALID, err_string);
             break;
         }
+        //to print the unordered map key and value pairs
+            for (const auto &param_name : params) {
+                LOG(INFO) << "Key:" << param_name.first << ", Value: " << param_name.second;
+            }
         std::string value;
         if (!handle_dev_get_param(params, value)) {
             LOG(ERROR) << "failed to get parameter " << params["parameter"] << "error: " << value;
