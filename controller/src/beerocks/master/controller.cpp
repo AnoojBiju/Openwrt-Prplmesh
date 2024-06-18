@@ -2227,7 +2227,8 @@ bool Controller::handle_cmdu_1905_backhaul_sta_capability_report_message(
     const sMacAddr &src_mac, ieee1905_1::CmduMessageRx &cmdu_rx)
 {
     auto mid = cmdu_rx.getMessageId();
-    LOG(DEBUG) << "Received BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << mid;
+    LOG(DEBUG) << "Received BACKHAUL_STA_CAPABILITY_REPORT_MESSAGE, mid=" << std::hex << mid
+               << " from " << src_mac;
 
     for (auto bh_sta_radio_cap_tlv :
          cmdu_rx.getClassList<wfa_map::tlvBackhaulStaRadioCapabilities>()) {
@@ -2248,9 +2249,14 @@ bool Controller::handle_cmdu_1905_backhaul_sta_capability_report_message(
             radio->backhaul_station_mac = beerocks::net::network_utils::ZERO_MAC;
         }
 
+        auto sta_parent = database.get_sta_parent(tlvf::mac_to_string(radio->backhaul_station_mac));
         LOG(DEBUG) << "Backhaul STA of radio with ruid=" << bh_sta_radio_cap_tlv->ruid()
-                   << " is sta_mac=" << radio->backhaul_station_mac;
+                   << " is sta_mac=" << radio->backhaul_station_mac << " parent_mac=" << sta_parent;
 
+        if (radio->backhaul_station_mac != beerocks::net::network_utils::ZERO_MAC) {
+            database.add_backhaul_station(radio->backhaul_station_mac,
+                                          tlvf::mac_from_string(sta_parent), src_mac);
+        }
         database.dm_set_radio_bh_sta(*radio, radio->backhaul_station_mac);
     }
     return true;
@@ -2437,8 +2443,10 @@ bool Controller::handle_intel_slave_join(
         if (parent_bssid_mac != beerocks::net::network_utils::ZERO_MAC) {
             //add a placeholder
             LOG(DEBUG) << "add a placeholder backhaul_mac = " << backhaul_mac
-                       << ", parent_bssid_mac = " << parent_bssid_mac;
-            database.add_backhaul_station(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac);
+                       << ", parent_bssid_mac = " << parent_bssid_mac
+                       << ", bridge_mac = " << bridge_mac;
+            database.add_backhaul_station(tlvf::mac_from_string(backhaul_mac), parent_bssid_mac,
+                                          bridge_mac);
         } else if (database.get_sta_state(backhaul_mac) != beerocks::STATE_CONNECTED) {
             /* if the backhaul node doesn't exist, or is not already marked as connected,
             * we assume it is connected to the GW's LAN switch
