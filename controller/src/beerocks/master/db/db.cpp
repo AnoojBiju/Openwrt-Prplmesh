@@ -492,8 +492,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
     }
     auto station = m_stations.add(mac);
     auto bss     = get_bss(parent_mac, al_mac);
-    LOG(DEBUG) << "Adding Station node "
-               << " for AL-MAC " << al_mac << " station mac " << mac
+    LOG(DEBUG) << "Adding Station node " << " for AL-MAC " << al_mac << " station mac " << mac
                << " parent mac: " << parent_mac;
 
     if (!bss) {
@@ -2728,6 +2727,9 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
     Agent::sRadio::sWifiChannelRadarStats radar_statistics = {
         .channel = channel, .bandwidth = bw, .channel_ext_above_secondary = 0};
 
+    std::cout << "RADAR: b4 radio = " << radio << ", stats = " << radio->stats_info
+              << ", pid = " << getpid() << std::endl;
+
     //CSA enter channel
     if (is_csa_entry) {
         if (radio->Radar_stats.size() == RADAR_STATS_LIST_MAX) {
@@ -2751,7 +2753,10 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
         return true;
     }
     //CSA exit channel
-    radio->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
+    //radio->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
+
+    std::cout << "RADAR: af radio = " << radio << ", stats = " << radio->stats_info
+              << ", pid = " << getpid() << std::endl;
 
     return true;
 }
@@ -3943,8 +3948,7 @@ bool db::set_sta_stay_on_initial_radio(Station &client, bool stay_on_initial_rad
     LOG(DEBUG) << "stay_on_initial_radio=" << stay_on_initial_radio;
 
     auto is_client_connected = (client.state == STATE_CONNECTED);
-    LOG(DEBUG) << "client "
-               << " state=" << ((is_client_connected) ? "connected" : "disconnected");
+    LOG(DEBUG) << "client " << " state=" << ((is_client_connected) ? "connected" : "disconnected");
 
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
@@ -4404,8 +4408,8 @@ bool db::load_persistent_db_clients()
     LOG_IF(set_error_count, DEBUG) << "Unable to set the nodes with values from persistent db for "
                                    << set_error_count << " clients";
     LOG(DEBUG) << "Filtered: " << threshold_violation_count
-               << " clients due to max DB capacity reached:"
-               << " max-capacity: " << config.clients_persistent_db_max_size;
+               << " clients due to max DB capacity reached:" << " max-capacity: "
+               << config.clients_persistent_db_max_size;
     LOG(DEBUG) << " Added " << sum << " clients successfully";
 
     return true;
