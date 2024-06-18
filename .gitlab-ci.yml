@@ -55,7 +55,6 @@ platform:
   stage: platform
   needs:
     - build-in-docker
-    - build-in-docker-legacy
     - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
@@ -154,7 +153,7 @@ nbapi-docgen:
 
 # Updates gitlab pages with the NBAPI documentation:
 # https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
-# Only run on the master branch, to avoid unneccesary pushes.
+# Only run on the master branch, to avoid unnecessary pushes.
 pages:
   stage: upload
   needs: ["nbapi-docgen"]
@@ -358,10 +357,6 @@ upload-artifacts:
   needs:
     - build-in-docker
     - platform
-    - job: build-for-intel-mips
-      project: $CI_PROJECT_PATH
-      ref: $CI_COMMIT_REF_NAME
-      artifacts: true
     - job: build-for-turris-omnia
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
@@ -369,8 +364,7 @@ upload-artifacts:
     - job: build-for-rdkb-turris-omnia
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
-      artifacts: true
-    - job: build-for-glinet-b1300
+    - job: build-for-haze
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
       artifacts: true

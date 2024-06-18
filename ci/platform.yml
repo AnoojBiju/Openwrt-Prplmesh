@@ -8,9 +8,6 @@
 variables:
   PACKAGE_REGISTRY_BASE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic"
   TURRIS_OMNIA_FULLIMAGE: "openwrt-mvebu-cortexa9-cznic_turris-omnia-sysupgrade.img.gz"
-  GLINET_B1300_FULLIMAGE: "openwrt-ipq40xx-generic-glinet_gl-b1300-squashfs-sysupgrade.bin"
-  AXEPOINT_FULLIMAGE: "AX3000_1600_ETH_11AXUCI-squashfs-fullimage.img"
-  NEC_WX3000HP_FULLIMAGE: "AX3000_1600_ETH_11AXUCI_ASURADA-squashfs-fullimage.img"
   TURRIS_OMNIA_RDKB_FULLIMAGE: "rdkb-generic-broadband-image_turris-omnia.rootfs.tar.gz"
   HAZE_FULLIMAGE: "openwrt-ipq807x-generic-prpl_haze-squashfs-sysupgrade.bin"
   OSP_PACKAGE_ID: 13754300
@@ -24,11 +21,8 @@ stages:
   - test
   - certification-R1-haze
   - certification-R1-turris-omnia
-  - certification-R1-glinet
-  - certification-R1-axepoint
   - certification-R4-haze
   - certification-R4-turris-omnia
-  - certification-R4-axepoint
   - upload
   - release
 
@@ -45,30 +39,10 @@ build-for-rdkb-turris-omnia:
     TARGET_DEVICE: "turris-omnia"
   retry: 2
 
-build-for-turris-omnia-legacy:
-  extends: .build-for-openwrt-legacy
-  variables:
-    TARGET_DEVICE: "turris-omnia"
-
-build-for-glinet-b1300-legacy:
-  extends: .build-for-openwrt-legacy
-  variables:
-    TARGET_DEVICE: "glinet-b1300"
-
-build-for-intel-mips:
-  extends: .build-for-openwrt-legacy
-  variables:
-    TARGET_DEVICE: "intel_mips"
-
 build-for-turris-omnia:
   extends: .build-for-openwrt
   variables:
     TARGET_DEVICE: "turris-omnia"
-
-build-for-glinet-b1300:
-  extends: .build-for-openwrt
-  variables:
-    TARGET_DEVICE: "glinet-b1300"
 
 build-for-haze:
   extends: .build-for-openwrt
@@ -98,7 +72,7 @@ build-for-osp:
     - if [ $? -ne 0 ] ; then echo "Triggering external runner failed" && exit 1; fi
     - downstream_pipeline_url=$(echo "$trigger_details" | jq -e -r -c ".web_url")
     - echo "External builder running at ${downstream_pipeline_url}"
-    - mkdir -p "buildWHM"
+    - mkdir -p "build"
     - |
       # Checks if package file exists in the OSP package and fills the OSP_PACKAGE_FILE_ID var
       OSP_PACKAGE_FILE_ID=0
@@ -147,14 +121,6 @@ test-upgrade-image-on-turris-omnia:
     OPENWRT_IMAGE: "${TURRIS_OMNIA_FULLIMAGE}"
   needs: ["build-for-turris-omnia"]
 
-test-upgrade-image-on-glinet-b1300:
-  extends: .test-upgrade-image
-  variables:
-    TARGET_DEVICE: glinet-b1300
-    TARGET_DEVICE_NAME: glinet-b1300-1
-    OPENWRT_IMAGE: "${GLINET_B1300_FULLIMAGE}"
-  needs: ["build-for-glinet-b1300"]
-
 test-upgrade-image-on-haze:
   extends: .test-upgrade-image
   variables:
@@ -162,14 +128,6 @@ test-upgrade-image-on-haze:
     TARGET_DEVICE_NAME: haze-1
     OPENWRT_IMAGE: "${HAZE_FULLIMAGE}"
   needs: ["build-for-haze"]
-
-test-upgrade-image-on-nec-wx3000hp:
-  extends: .test-upgrade-image-legacy
-  variables:
-    TARGET_DEVICE: nec-wx3000hp
-    TARGET_DEVICE_NAME: nec-wx3000hp-1
-    OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
-  needs: ["build-for-intel-mips"]
 
 test-upgrade-image-on-turris-rdkb:
   extends: .test-upgrade-image
@@ -190,43 +148,12 @@ test-on-turris-omnia:
     OPENWRT_IMAGE: "${TURRIS_OMNIA_FULLIMAGE}"
   needs: ["build-for-turris-omnia"]
 
-test-on-turris-omnia-legacy:
-  extends: .test-on-target-legacy
-  variables:
-    TARGET_DEVICE: turris-omnia
-    TARGET_DEVICE_NAME: turris-omnia-1
-    OPENWRT_IMAGE: "${TURRIS_OMNIA_FULLIMAGE}"
-  needs: ["build-for-turris-omnia-legacy"]
-  rules:
-    - when: manual
-      allow_failure: true
-
-test-on-glinet-b1300:
+boardfarm-on-haze:
   extends: .test-on-target
   variables:
-    TARGET_DEVICE: glinet-b1300
-    TARGET_DEVICE_NAME: glinet-b1300-1
-    OPENWRT_IMAGE: "${GLINET_B1300_FULLIMAGE}"
-  needs: ["build-for-glinet-b1300"]
-  allow_failure: true
-
-test-on-glinet-b1300-legacy:
-  extends: .test-on-target-legacy
-  variables:
-    TARGET_DEVICE: glinet-b1300
-    TARGET_DEVICE_NAME: glinet-b1300-1
-    OPENWRT_IMAGE: "${GLINET_B1300_FULLIMAGE}"
-  needs: ["build-for-glinet-b1300-legacy"]
-  rules:
-    - when: manual
-      allow_failure: true
-
-boardfarm-on-nec-wx3000hp:
-  extends: .test-on-target-legacy
-  variables:
-    TARGET_DEVICE: nec-wx3000hp
-    TARGET_DEVICE_NAME: nec-wx3000hp-1
-    OPENWRT_IMAGE: $NEC_WX3000HP_FULLIMAGE
+    TARGET_DEVICE: haze
+    TARGET_DEVICE_NAME: haze-1
+    OPENWRT_IMAGE: "${HAZE_FULLIMAGE}"
   script:
     - |
       echo "Retrieving the job ID for 'build-in-docker-legacy'."
@@ -244,12 +171,12 @@ boardfarm-on-nec-wx3000hp:
     - ssh "$TARGET_DEVICE_NAME" 'wifi down'
   tags:
     - boardfarm
-    - nec-wx3000hp
+    - haze
   needs:
-    - build-for-intel-mips
+    - build-for-haze
 
-boardfarm-on-nec-wx3000hp-stability:
-  extends: boardfarm-on-nec-wx3000hp
+boardfarm-on-haze-stability:
+  extends: boardfarm-on-haze
   parallel: 10
   rules:
     - if: '$STABILITY_TESTS == "yes"'
@@ -262,14 +189,14 @@ boardfarm-on-turris-omnia-rdkb:
     TARGET_DEVICE_NAME: turris-omnia-2
   script:
     - |
-      echo "Retrieving the job ID for 'build-in-docker-legacy'."
+      echo "Retrieving the job ID for 'build-in-docker'."
       PARENT_PIPELINE_JOBS_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$PARENT_PIPELINE_ID/jobs?per_page=100"
       echo "PARENT_PIPELINE_JOBS_URL: $PARENT_PIPELINE_JOBS_URL"
-      BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker-legacy" ) | .id')
+      BUILD_IN_DOCKER_JOB_ID=$(curl  --retry 3 --location --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$PARENT_PIPELINE_JOBS_URL" | jq -c '.[] | select( .name == "build-in-docker" ) | .id')
       echo "BUILD_IN_DOCKER_JOB_ID: $BUILD_IN_DOCKER_JOB_ID"
       BUILD_IN_DOCKER_DOWNLOAD_URL="$CI_API_V4_URL/projects/$CI_PROJECT_ID/jobs/$BUILD_IN_DOCKER_JOB_ID/artifacts"
       echo "BUILD_IN_DOCKER_DOWNLOAD_URL: $BUILD_IN_DOCKER_DOWNLOAD_URL"
-      echo "Downloading 'build-in-docker-legacy' artifacts."
+      echo "Downloading 'build-in-docker' artifacts."
       curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
       unzip artifacts.zip && rm artifacts.zip
       echo Done
@@ -294,9 +221,7 @@ run-certification-tests-R1-platform-essensium:
   tags:
     - certs-tests-essensium
   needs:
-    - job: build-for-intel-mips
     - job: build-for-turris-omnia
-    - job: build-for-glinet-b1300
     - job: build-for-haze
   rules:
     - if: '$TESTS_TO_RUN_ESSENSIUM !~ /^\$/ && $DEVICE_UNDER_TEST_ESSENSIUM != "prplmesh"'
@@ -316,7 +241,6 @@ run-certification-tests-R2-platform-essensium:
   tags:
     - certs-tests-R2-essensium
   needs:
-    - job: build-for-intel-mips
     - job: build-for-turris-omnia
 
 run-certification-tests-R4-platform-essensium:
@@ -332,7 +256,6 @@ run-certification-tests-R4-platform-essensium:
   tags:
     - certs-tests-R4-essensium
   needs:
-    - job: build-for-intel-mips
     - job: build-for-turris-omnia
     - job: build-for-haze
 
@@ -345,7 +268,6 @@ run-certification-tests-R1-platform-isr:
   tags:
     - certs-tests-isr
   needs:
-    - job: build-for-intel-mips
     - job: build-for-turris-omnia
   rules:
     - if: '$TESTS_TO_RUN_ISR !~ /^\$/ && $DEVICE_UNDER_TEST_ISR != "prplmesh"'
@@ -375,9 +297,8 @@ upload-release-artifacts:
   script:
     - |
       upload_command() {
-        # $3 denotes WHM/legacy version (build folder name)
-        if [ "WHM" == "$3" ]; then TARGET_REGISTRY_FLAG=""; BUILD_FOLDER="buildWHM"; else TARGET_REGISTRY_FLAG="-legacy"; BUILD_FOLDER="build"; fi
-        if [ "NON-WHM" == "$3" ]; then TARGET_REGISTRY_FLAG=""; BUILD_FOLDER="build"; fi
+        TARGET_REGISTRY_FLAG="";
+        BUILD_FOLDER="build";
         # $1 is the target name under 'build/'. It will also be used for the name of the uploaded fullimage.
         export PACKAGE_REGISTRY_URL="${PACKAGE_REGISTRY_BASE_URL}/$1${TARGET_REGISTRY_FLAG}/${CI_COMMIT_TAG}"
         curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "${BUILD_FOLDER}/$1/prplmesh.ipk" "${PACKAGE_REGISTRY_URL}/prplmesh_${CI_COMMIT_TAG}_$1.ipk"
@@ -385,22 +306,13 @@ upload-release-artifacts:
         curl --fail --show-error --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "${BUILD_FOLDER}/$1/$2" "${PACKAGE_REGISTRY_URL}/$CI_COMMIT_TAG-$2"
       }
     - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE" "WHM"
-    - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE" "WHM"
     - upload_command "haze" "$HAZE_FULLIMAGE" "WHM"
-    - upload_command "turris-omnia" "$TURRIS_OMNIA_FULLIMAGE" "LEGACY"
-    - upload_command "glinet-b1300" "$GLINET_B1300_FULLIMAGE" "LEGACY"
-    - upload_command "axepoint" "$AXEPOINT_FULLIMAGE" "LEGACY"
-    - upload_command "nec-wx3000hp" "$NEC_WX3000HP_FULLIMAGE" "LEGACY"
     # need to get correct rdkb fullimage name
     - mv build/turris-omnia-rdk/rdkb-generic-broadband-image_rdkb*.rootfs.tar.gz build/turris-omnia-rdk/$TURRIS_OMNIA_RDKB_FULLIMAGE
     - mv build/turris-omnia-rdk/prplmesh_*.ipk build/turris-omnia-rdk/prplmesh.ipk
-    - upload_command "turris-omnia-rdk" "$TURRIS_OMNIA_RDKB_FULLIMAGE" "NON-WHM"
+    - upload_command "turris-omnia-rdk" "$TURRIS_OMNIA_RDKB_FULLIMAGE" "WHM"
   needs:
     - job: build-for-turris-omnia
-    - job: build-for-glinet-b1300
-    - job: build-for-turris-omnia-legacy
-    - job: build-for-glinet-b1300-legacy
-    - job: build-for-intel-mips
     - job: build-for-rdkb-turris-omnia
     - job: build-for-haze
 
@@ -411,20 +323,10 @@ release:
   script:
     - |
       release-cli create --name "Release $CI_COMMIT_TAG" --description CHANGELOG.md --tag-name $CI_COMMIT_TAG \
-        --assets-link "{\"name\":\"axepoint prplmesh ipk (legacy)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint-legacy/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_axepoint.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"axepoint fullimage (legacy)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/axepoint-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$AXEPOINT_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk (legacy)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300-legacy/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 fullimage (legacy)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"turris-omnia prplmesh ipk (legacy)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-legacy/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"turris-omnia fullimage (legacy)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp prplmesh ipk (legacy)\",\"type\":\"package\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp-legacy/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_nec-wx3000hp.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"nec-wx3000hp fullimage (legacy)\",\"type\":\"image\",\"url\":\"${PACKAGE_REGISTRY_BASE_URL}/nec-wx3000hp-legacy/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$NEC_WX3000HP_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 prplmesh ipk (whm)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_glinet-b1300.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"glinet-b1300 fullimage (whm)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/glinet-b1300/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$GLINET_B1300_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"turris-omnia prplmesh ipk (whm)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"turris-omnia fullimage (whm)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\",\"link_type\":\"image\"}" \
-        --assets-link "{\"name\":\"haze prplmesh ipk (whm)\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/haze/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_haze.ipk\",\"link_type\":\"package\"}" \
-        --assets-link "{\"name\":\"haze fullimage (whm)\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/haze/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$HAZE_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"turris-omnia prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"turris-omnia fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_FULLIMAGE\",\"link_type\":\"image\"}" \
+        --assets-link "{\"name\":\"haze prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/haze/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_haze.ipk\",\"link_type\":\"package\"}" \
+        --assets-link "{\"name\":\"haze fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/haze/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$HAZE_FULLIMAGE\",\"link_type\":\"image\"}" \
         --assets-link "{\"name\":\"turris-omnia-rdk prplmesh ipk\",\"type\":\"package\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/prplmesh_${CI_COMMIT_TAG}_turris-omnia-rdk.ipk\",\"link_type\":\"package\"}" \
         --assets-link "{\"name\":\"turris-omnia-rdk fullimage\",\"type\":\"image\", \"url\":\"${PACKAGE_REGISTRY_BASE_URL}/turris-omnia-rdk/$CI_COMMIT_TAG/$CI_COMMIT_TAG-$TURRIS_OMNIA_RDKB_FULLIMAGE\",\"link_type\":\"image\"}"
 
