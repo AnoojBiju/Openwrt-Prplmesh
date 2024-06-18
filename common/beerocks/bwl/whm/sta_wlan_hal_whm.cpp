@@ -348,7 +348,7 @@ bool sta_wlan_hal_whm::set_profile(Profile &profile)
     int profile_id = find_profile_by_alias(profile.alias);
     if (profile_id <= 0) {
         // Add a new profile
-        profile_id = add_profile();
+        profile_id = add_profile(profile.alias);
         if (profile_id <= 0) {
             LOG(ERROR) << "Failed (" << profile_id
                        << ") adding new profile to interface: " << get_iface_name();
@@ -548,12 +548,13 @@ bool sta_wlan_hal_whm::update_status()
     return true;
 }
 
-int sta_wlan_hal_whm::add_profile()
+int sta_wlan_hal_whm::add_profile(const std::string &alias)
 {
     // Path example: WiFi.EndPoint.[IntfName == 'wlan0'].Profile+
     std::string profiles_path = m_ep_path + "Profile.";
     int profile_id            = -1;
-    AmbiorixVariant obj_data(nullptr, false);
+    AmbiorixVariant obj_data(AMXC_VAR_ID_HTABLE);
+    obj_data.add_child("Alias", alias);
     bool ret = m_ambiorix_cl.add_instance(profiles_path, obj_data, profile_id);
     if (!ret) {
         LOG(ERROR) << "Failed to add profile instance " << get_iface_name();
@@ -591,8 +592,6 @@ bool sta_wlan_hal_whm::set_profile_params(const Profile &profile)
     std::string profile_path = m_ep_path + "Profile." + std::to_string(profile.id) + ".";
     AmbiorixVariant params(AMXC_VAR_ID_HTABLE);
 
-    // Set Alias
-    params.add_child("Alias", profile.alias);
     // Set SSID
     params.add_child("SSID", profile.ssid);
     bool ret = m_ambiorix_cl.update_object(profile_path, params);
