@@ -1,0 +1,62 @@
+@startuml
+participant "CTT Controller" as Controller
+participant "MAUT" as MAUT
+participant "CTT STA" as CTT_STA
+participant "CTT Agent 2" as Agent2
+participant "CTT Agent 3" as Agent3
+
+== Phase 1: Onboarding and Configuration ==
+
+Controller -> Controller: Trigger (DEV_RESET_DEFAULT)
+note right: Reset of CTT Controller
+
+Controller -> Agent3: Onboard CTT Agent 3
+note right: Configure with 2 fronthaul SSIDs\nand 1 backhaul SSID for MAUT
+
+Controller -> MAUT: Onboard MAUT
+note right: Configure with 2 client SSIDs\nand 1 backhaul SSID for Agent 2
+
+Controller -> Agent2: Onboard CTT Agent 2
+note right: Configure with 2 client SSIDs
+
+MAUT -> Controller: AP Capability Response
+note left: Verify Basic Service Prioritization flag\nand MaxNumServicePrioritizationRules
+
+== Phase 2: Traffic Separation Policies ==
+
+Controller -> MAUT: Send Traffic Separation Policies
+note right: 2 VLANs configuration
+
+Controller -> Agent2: Send Traffic Separation Policies
+note right: 2 VLANs configuration
+
+== Phase 3: Service Prioritization Policy ==
+
+Controller -> MAUT: Send Service Prioritization Policy
+note right: Single Service Prioritization TLV\nand DSCP to PCP Mapping Table TLVs
+
+Controller -> Agent2: Send Service Prioritization Policy
+note right: Single Service Prioritization TLV\nand DSCP to PCP Mapping Table TLVs
+
+== Phase 4: Associate CTT STAs ==
+
+CTT_STA -> MAUT: Associate to
+note left: Associate one CTT STA to MAUT
+
+CTT_STA -> Agent2: Associate to
+note left: Associate one CTT STA to Agent 2
+
+== Phase 5: Traffic Classification Verification ==
+
+note right: Verify traffic classification and PCP value setting\nusing sniffer
+
+Controller -> MAUT: Verify DSCP markers classification
+note left: Verify that MAUT correctly carry DSCP from fronthaul\n and apply it the correct 802.1Q C-TAG PCP or UP
+
+Controller -> MAUT: Verify default PCP value setting
+note left: Verify that MAUT correctly mark traffic NOT\n carrying DSCP with default PCP
+
+Controller -> Agent2: Verify correct UP in received traffic 
+note left: Verify that received traffic has correct UP value
+
+@enduml
