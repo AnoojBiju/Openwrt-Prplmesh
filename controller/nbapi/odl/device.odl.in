@@ -97,7 +97,22 @@
             %read-only string ManufacturerOUI;
             %read-only datetime LastContactTime = "2020-08-31T11:22:39Z";
             %read-only string AssocIEEE1905DeviceRef;
-
+            %read-only string EasyMeshControllerOperationMode {
+                default "SupportedNotEnabled";
+                    on action validate call check_enum [
+                        "NotSupported",
+                        "SupportedNotEnabled",
+                        "Running"
+                    ];
+            }
+            %read-only string EasyMeshAgentOperationMode {
+                default "SupportedNotEnabled";
+                    on action validate call check_enum [
+                        "NotSupported",
+                        "SupportedNotEnabled",
+                        "Running"
+                    ];
+            }
             %read-only object Backhaul {
                 %read-only string LinkType {
                     default "None";
