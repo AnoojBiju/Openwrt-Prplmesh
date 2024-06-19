@@ -2755,9 +2755,6 @@ bool db::set_radar_hit_stats(const sMacAddr &mac, uint8_t channel, uint8_t bw, b
         }
         return true;
     }
-    //CSA exit channel
-    radio->Radar_stats.front().csa_exit_timestamp = std::chrono::steady_clock::now();
-
     return true;
 }
 
