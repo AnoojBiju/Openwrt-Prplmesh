@@ -727,7 +727,8 @@ bool BackhaulManager::backhaul_fsm_main(bool &skip_select)
             }
 
             // Mark the connection as WIRED
-            db->backhaul.connection_type     = AgentDB::sBackhaul::eConnectionType::Wired;
+            db->backhaul.connection_type = AgentDB::sBackhaul::eConnectionType::Wired;
+            // This is what we want to change
             db->backhaul.selected_iface_name = db->ethernet.wan.iface_name;
 
         } else {
