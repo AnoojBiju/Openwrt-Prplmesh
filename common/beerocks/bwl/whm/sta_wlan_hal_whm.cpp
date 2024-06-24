@@ -19,6 +19,13 @@ using namespace wbapi;
 namespace bwl {
 namespace whm {
 
+static struct {
+    std::mutex m_mutex;
+    const sta_wlan_hal_whm *owner;
+    std::set<sta_wlan_hal_whm const *> instances;
+    std::vector<int> empty_vector;
+} call_once_impl;
+
 sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t callback,
                                    const bwl::hal_conf_t &hal_conf)
     : base_wlan_hal(bwl::HALType::Station, iface_name, IfaceType::Intel, callback, hal_conf),
@@ -51,7 +58,49 @@ sta_wlan_hal_whm::sta_wlan_hal_whm(const std::string &iface_name, hal_event_cb_t
     subscribe_to_scan_complete_events();
 }
 
-sta_wlan_hal_whm::~sta_wlan_hal_whm() { sta_wlan_hal_whm::detach(); }
+const std::vector<int> &sta_wlan_hal_whm::get_ext_events_fds() const
+{
+
+    std::lock_guard<std::mutex> lock(call_once_impl.m_mutex);
+
+    if (call_once_impl.owner == nullptr) {
+        call_once_impl.owner = this;
+    }
+
+    if (call_once_impl.instances.find(this) == call_once_impl.instances.end()) {
+        call_once_impl.instances.insert(this);
+        LOG(DEBUG) << "add " << this << " to instance list";
+    } else {
+        LOG(DEBUG) << "second call for " << this;
+    }
+
+    if (call_once_impl.owner == this) {
+        LOG(DEBUG) << "first call return good values";
+        return (m_fds_ext_events);
+    } else {
+        LOG(DEBUG) << "return empty vector";
+        return call_once_impl.empty_vector;
+    }
+}
+
+sta_wlan_hal_whm::~sta_wlan_hal_whm()
+{
+    std::lock_guard<std::mutex> lock(call_once_impl.m_mutex);
+
+    if (call_once_impl.owner == this) {
+        LOG(DEBUG) << "reset owner " << this;
+        call_once_impl.owner = nullptr;
+    }
+
+    auto it = call_once_impl.instances.find(this);
+
+    if (it != call_once_impl.instances.end()) {
+        call_once_impl.instances.erase(it);
+    } else {
+        LOG(INFO) << "should not happen";
+    }
+    sta_wlan_hal_whm::detach();
+}
 
 void sta_wlan_hal_whm::subscribe_to_ep_events()
 {

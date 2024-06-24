@@ -569,25 +569,102 @@ bool BackhaulManager::finalize_slaves_connect_state(bool fConnected)
         // will be overriden in the loop below.
         db->backhaul.backhaul_bssid = {};
 
+        for (auto &radio_info : m_radios_info) { // Detach from unused stations first
+            if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
+                radio_info->sta_iface == db->backhaul.selected_iface_name) {
+                continue;
+            } else {
+                clear_radio_handlers(radio_info);
+                if (radio_info->sta_wlan_hal) {
+                    radio_info->sta_wlan_hal.reset();
+                }
+            }
+        }
+
         for (auto &radio_info : m_radios_info) {
             if (db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless &&
                 radio_info->sta_iface == db->backhaul.selected_iface_name) {
                 LOG_IF(!radio_info->sta_wlan_hal, FATAL) << "selected sta_hal is nullptr";
                 db->backhaul.backhaul_bssid =
                     tlvf::mac_from_string(radio_info->sta_wlan_hal->get_bssid());
-            } else { // Detach from unused stations
 
-                if (radio_info->sta_wlan_hal) {
-                    radio_info->sta_wlan_hal.reset();
+                if (!radio_info->sta_wlan_hal->unique_file_descriptors() &&
+                    radio_info->sta_hal_ext_events.empty()) {
+                    // previous iteration destroyed the sta_wlan_hal instances that are unused
+                    // if the FDs were registered with another sta_wlan_hal, re-register now
+
+                    // Internal Events FD is unique and registered during WPA_ATTACH state
+
+                    // External events
+                    int ext_event_fd_max           = -1;
+                    radio_info->sta_hal_ext_events = radio_info->sta_wlan_hal->get_ext_events_fds();
+                    LOG(INFO) << "iacob sta_hal_ext_events " << &(radio_info->sta_hal_ext_events);
+                    if (radio_info->sta_hal_ext_events.empty()) {
+                        LOG(WARNING) << "This instance [" << radio_info->sta_iface
+                                     << "] of sta_wlan_hal should expose FDs";
+                        ext_event_fd_max = 0;
+                    } else {
+                        beerocks::EventLoop::EventHandlers ext_events_handlers{
+                            .name = "sta_hal_ext_events",
+                            .on_read =
+                                [radio_info](int fd, EventLoop &loop) {
+                                    if (!radio_info->sta_wlan_hal->process_ext_events(fd)) {
+                                        LOG(ERROR) << "process_ext_events(" << fd << ") failed!";
+                                        return false;
+                                    }
+                                    return true;
+                                },
+                            .on_write = nullptr,
+                            .on_disconnect =
+                                [radio_info](int fd, EventLoop &loop) {
+                                    LOG(ERROR) << "sta_hal_ext_events disconnected! on fd " << fd;
+                                    auto it = std::find(radio_info->sta_hal_ext_events.begin(),
+                                                        radio_info->sta_hal_ext_events.end(), fd);
+                                    if (it != radio_info->sta_hal_ext_events.end()) {
+                                        *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                                    }
+                                    return false;
+                                },
+                            .on_error =
+                                [radio_info](int fd, EventLoop &loop) {
+                                    LOG(ERROR) << "sta_hal_ext_events error! on fd " << fd;
+                                    auto it = std::find(radio_info->sta_hal_ext_events.begin(),
+                                                        radio_info->sta_hal_ext_events.end(), fd);
+                                    if (it != radio_info->sta_hal_ext_events.end()) {
+                                        *it = beerocks::net::FileDescriptor::invalid_descriptor;
+                                    }
+                                    return false;
+                                },
+                        };
+                        for (auto &ext_event_fd : radio_info->sta_hal_ext_events) {
+                            if (ext_event_fd > 0) {
+                                if (!m_event_loop->register_handlers(ext_event_fd,
+                                                                     ext_events_handlers)) {
+                                    LOG(ERROR)
+                                        << "Unable to register handlers for external event fd "
+                                        << ext_event_fd;
+                                    return false;
+                                } else if (ext_event_fd < 0) {
+                                    ext_event_fd =
+                                        beerocks::net::FileDescriptor::invalid_descriptor;
+                                }
+                                LOG(DEBUG) << "External events queue with fd = " << ext_event_fd;
+                            }
+                            ext_event_fd_max = std::max(ext_event_fd_max, ext_event_fd);
+                        }
+                    }
+                    if (ext_event_fd_max < 0) {
+                        LOG(ERROR)
+                            << "Invalid external event file descriptors: " << ext_event_fd_max;
+                        return false;
+                        // beerocks_agent will not receive ACTION_BACKHAUL_CONNECTED_NOTIFICATION
+                    }
                 }
-
-                clear_radio_handlers(radio_info);
             }
         }
 
         // Send the message
         send_cmdu(m_agent_fd, cmdu_tx);
-
         // Backhaul Disconnected Notification
     } else {
 
