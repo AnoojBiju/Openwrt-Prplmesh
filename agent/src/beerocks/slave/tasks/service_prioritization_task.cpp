@@ -158,6 +158,11 @@ void ServicePrioritizationTask::handle_service_prioritization_request(
 void ServicePrioritizationTask::gather_iface_details(
     std::list<bpl::ServicePrioritizationUtils::sInterfaceTagInfo> *iface_tag_info_list)
 {
+    if (!iface_tag_info_list) {
+        LOG(ERROR) << "iface_tag_info_list is nullptr";
+        return;
+    }
+
     auto db                                                  = AgentDB::get();
     bpl::ServicePrioritizationUtils::sInterfaceTagInfo iface = {};
 
@@ -167,19 +172,46 @@ void ServicePrioritizationTask::gather_iface_details(
     iface_tag_info_list->push_back(iface);
 
     // Update WAN and LAN Ports.
-    if (!db->device_conf.local_gw && !db->ethernet.wan.iface_name.empty()) {
-        iface.iface_name = db->ethernet.wan.iface_name;
-        iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
-        iface_tag_info_list->push_back(iface);
-    }
-    for (const auto &lan_iface_info : db->ethernet.lan) {
-        iface            = {0};
-        iface.iface_name = lan_iface_info.iface_name;
-        iface.tag_info   = bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
-        iface_tag_info_list->push_back(iface);
+    LOG(DEBUG) << "Update WAN and LAN Ports | local_gateway=" << !db->device_conf.local_gw
+               << " | WAN iface name: " << db->ethernet.wan.iface_name
+               << " | LAN count: " << db->ethernet.lan.size();
+    try {
+        // Check for WAN interface and add to list if conditions are met
+        if (!db->device_conf.local_gw) {
+            if (db->ethernet.wan.iface_name.empty()) {
+                LOG(WARNING) << "WAN interface name is empty!";
+            } else {
+                LOG(DEBUG) << "WAN interface name: " << db->ethernet.wan.iface_name;
+                iface.iface_name = db->ethernet.wan.iface_name;
+                iface.tag_info =
+                    bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
+                iface_tag_info_list->push_back(iface);
+            }
+        }
+
+        // Add LAN interfaces to list
+        for (const auto &lan_iface_info : db->ethernet.lan) {
+            if (lan_iface_info.iface_name.empty()) {
+                LOG(WARNING) << "LAN interface name is empty!";
+            } else {
+                iface            = {};
+                iface.iface_name = lan_iface_info.iface_name;
+                iface.tag_info =
+                    bpl::ServicePrioritizationUtils::ePortMode::TAGGED_PORT_PRIMARY_UNTAGGED;
+                iface_tag_info_list->push_back(iface);
+                LOG(DEBUG) << "Added LAN interface: " << lan_iface_info.iface_name;
+            }
+        }
+    } catch (const std::exception &e) {
+        LOG(ERROR) << "Exception caught while updating WAN and LAN ports: " << e.what();
+    } catch (...) {
+        LOG(ERROR) << "Unknown exception caught while updating WAN and LAN ports";
     }
 
     // Wireless Backhaul
+    LOG(DEBUG) << "Wireless Backhaul | local_gateway=" << !db->device_conf.local_gw
+               << " | Selected iface: " << db->backhaul.selected_iface_name
+               << " | Connection type: " << db->backhaul.connection_type;
     if (!db->device_conf.local_gw && !db->backhaul.selected_iface_name.empty() &&
         db->backhaul.connection_type == AgentDB::sBackhaul::eConnectionType::Wireless) {
         iface      = {};
