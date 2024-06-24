@@ -67,6 +67,9 @@ public:
     std::string get_bssid() override;
     std::string get_wireless_backhaul_mac() override;
 
+    const std::vector<int> &get_ext_events_fds() const;
+    bool unique_file_descriptors() const { return false; }
+
 protected:
     // Overload for Monitor events
     bool event_queue_push(sta_wlan_hal::Event event, std::shared_ptr<void> data = {})
