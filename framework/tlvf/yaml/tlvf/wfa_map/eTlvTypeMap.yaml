@@ -103,5 +103,5 @@ eTlvTypeMap:
 
   # Profile 3 starts here
   TLV_AP_WIFI_6_CAPABILITIES: 0xAA
-
+  TLV_MLD_STRUCTURE: 0xE3
   # When adding values, make sure to also update CmduMessageRx::parseNextTlv !
