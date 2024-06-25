@@ -1,0 +1,36 @@
+#
+---
+_namespace: wfa_map
+
+tlvMLDStructure:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_MLD_STRUCTURE
+  length: uint16_t
+  Flags: sFlags
+  Num_Affiliated: uint8_t
+  AffiliatedEntries:
+    _type: list
+    _length: [Num_Affiliated]
+    _items_type: AffiliatedEntry
+	 #enda ipdi panringa
+sFlags:								
+  _type: struct
+  MLDMACAddr: sMacAddr
+  radio_uid: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: 25
+
+AffiliatedEntry:
+  _type: struct
+  Affiliated_MAC_Addr: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: 26
+
+sMacAddr:
+  _type: uint8_t
+  _length: 6
