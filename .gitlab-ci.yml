@@ -33,9 +33,6 @@ include:
     - when: manual
       allow_failure: true
 
-image-build-builder/alpine:
-  extends: .image-build
-
 image-build-builder/ubuntu/bionic:
   extends: .image-build
 
@@ -230,13 +227,6 @@ build-in-docker-legacy:
   extends: .build-in-docker
   variables:
     EXTRA_CMAKE_FLAGS: "-DENABLE_VBSS=ON -DUSE_PRPLMESH_WHM=OFF"
-
-build-in-docker-alpine:
-  extends: .build-in-docker
-  image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  rules:
-    - !reference [.rules-for-expensive-job, rules]
-  needs: ["image-build-builder/alpine"]
 
 build-in-docker-static:
   extends: build-in-docker
