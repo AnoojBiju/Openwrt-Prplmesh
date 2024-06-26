@@ -1,0 +1,28 @@
+#
+---
+_namespace: wfa_map
+
+tlvMLDStructure:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_MLD_STRUCTURE
+  length: uint16_t
+  MLDMACAddr: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [25]
+  Num_Affiliated:
+    _type: uint8_t
+    _length_var: True
+  AffiliatedEntries:
+    _type: cAffiliatedEntry
+    _length: [Num_Affiliated]
+
+cAffiliatedEntry:
+  _type: class
+  radio_bssid: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [25]
