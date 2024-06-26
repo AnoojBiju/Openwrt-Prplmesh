@@ -376,7 +376,8 @@ bool BackhaulManager::send_cmdu_to_broker(ieee1905_1::CmduMessageTx &cmdu_tx,
     if (!iface_name.empty()) {
         iface_index = if_nametoindex(iface_name.c_str());
     }
-
+    LOG(DEBUG) << "dst_mac = " << dst_mac << ", src_mac = " << src_mac
+               << " iface_index = " << iface_index;
     return m_broker_client->send_cmdu(cmdu_tx, dst_mac, src_mac, iface_index);
 }
 

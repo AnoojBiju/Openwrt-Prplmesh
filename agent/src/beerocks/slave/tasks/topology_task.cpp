@@ -288,7 +288,8 @@ void TopologyTask::handle_topology_query(ieee1905_1::CmduMessageRx &cmdu_rx,
             wfa_map::tlvProfile2MultiApProfile::eMultiApProfile::MULTIAP_PROFILE_1;
     }
 
-    LOG(DEBUG) << "Sending topology response message, mid=" << std::hex << mid;
+    LOG(DEBUG) << "Sending topology response message, mid=" << std::hex << mid
+               << " src_mac = " << src_mac << ", dst_mac = " << db->bridge.mac;
     m_btl_ctx.send_cmdu_to_broker(m_cmdu_tx, src_mac, db->bridge.mac);
 }
 
