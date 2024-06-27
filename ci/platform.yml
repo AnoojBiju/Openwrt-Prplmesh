@@ -60,7 +60,7 @@ build-for-osp:
     - |
       trigger_details=$(curl -X POST --retry 3 -s -f -F \
       token=${OSP_PIPELINE_TRIGGER_TOKEN_2} \
-      -F ref="prplmesh/UPDK-9.1.50-v3" \
+      -F ref="prplmesh/UPDK-9.1.50-v3-build" \
       -F variables[PRPLMESH_REVISION]="$CI_COMMIT_SHA" \
       -F variables[PARENT_PIPELINE_ID]="$CI_PIPELINE_ID" \
       -F variables[PARENT_PROJECT_ID]="$CI_PROJECT_ID" \
@@ -167,8 +167,9 @@ boardfarm-on-haze:
       curl --location  --header "PRIVATE-TOKEN: $ARTIFACTS_DOWNLOADER_TOKEN" "$BUILD_IN_DOCKER_DOWNLOAD_URL" --output artifacts.zip
       unzip artifacts.zip && rm artifacts.zip
       echo Done
+    - ssh "$TARGET_DEVICE_NAME" 'ubus-cli WiFi.Radio.*.Enable=1' |true
     - ./dctest.py --dut "$TARGET_DEVICE_NAME" --test-suite test_flows_on_prplwrt
-    - ssh "$TARGET_DEVICE_NAME" 'wifi down'
+    - ssh "$TARGET_DEVICE_NAME" 'service prplmesh stop && ubus-cli WiFi.Radio.*.Enable=0'| true
   tags:
     - boardfarm
     - haze

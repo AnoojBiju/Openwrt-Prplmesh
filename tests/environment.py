@@ -983,20 +983,23 @@ class ALEntityPrplWrt(ALEntity):
 
         self.logfilenames = ["{}/beerocks_{}.log".format(self.log_folder, program)]
 
-        radios = nbapi_ubus_command(self, 'network.wireless', 'status')
-        for radio_name, radio in radios.items():
-            for intf in radio['interfaces']:
-                if intf['config']['mode'] == 'ap':
-                    assert 'ifname' in intf, f'ifname not found in {radio_name}'
-                    status_output = self.command('hostapd_cli', '-i', intf['ifname'], 'status')
-                    bss = [line for line in status_output.splitlines()
-                           if line.startswith('bss[0]=')]
-                    assert bss, f'BSS not found in {radio_name}'
-                    assert len(bss) == 1, f'More than one main BSS found in {radio_name}'
-                    main_intf = bss[0].split('=')[1]
-                    RadioHostapd(self, main_intf)
-                    break
-        assert len(self.radios), f'No radios found on {self.name}'
+        RadioHostapd(self, "wlan0")
+        RadioHostapd(self, "wlan1")
+
+        # radios = nbapi_ubus_command(self, 'network.wireless', 'status')
+        # for radio_name, radio in radios.items():
+        #     for intf in radio['interfaces']:
+        #         if intf['config']['mode'] == 'ap':
+        #             assert 'ifname' in intf, f'ifname not found in {radio_name}'
+        #             status_output = self.command('hostapd_cli', '-i', intf['ifname'], 'status')
+        #             bss = [line for line in status_output.splitlines()
+        #                    if line.startswith('bss[0]=')]
+        #             assert bss, f'BSS not found in {radio_name}'
+        #             assert len(bss) == 1, f'More than one main BSS found in {radio_name}'
+        #             main_intf = bss[0].split('=')[1]
+        #             RadioHostapd(self, main_intf)
+        #             break
+        # assert len(self.radios), f'No radios found on {self.name}'
 
     def command(self, *command: str) -> str:
         """Execute `command` in device and return its output."""

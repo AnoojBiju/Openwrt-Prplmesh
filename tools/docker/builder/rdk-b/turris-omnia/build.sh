@@ -34,6 +34,13 @@ rsync -a --exclude-from=/home/rdk/prplMesh_source/.gitignore \
     exit 1
 }
 
+# Disable building with WHM in prplMesh's cmakelists when explicitly called for
+USE_WHM="${USE_WHM:-true}"
+if [[ $USE_WHM == false ]]; then
+    sed -i 's/option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" ON)/option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" OFF)/g' /home/rdk/prplMesh/CMakeLists.txt
+    sed -i 's/option (ENABLE_NBAPI "Build the northbound (high-level) API" ON)/option (ENABLE_NBAPI "Build the northbound (high-level) API" OFF)/g' /home/rdk/prplMesh/CMakeLists.txt
+fi
+
 # Update prplmesh feed to use already check-out source instead of download from git
 cat >> conf/local.conf <<EOF
 

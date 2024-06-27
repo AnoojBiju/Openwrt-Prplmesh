@@ -50,7 +50,7 @@ services:
     agent_2:
         <<: *prplmesh
         container_name: lan2-$RUN_ID
-        entrypoint: ["bash", "-c", "sleep 22; /root/start-prplmesh.sh start-agent"]
+        entrypoint: ["bash", "-c", "sleep 25; /root/start-prplmesh.sh start-agent"]
         volumes:
             - "/lib/modules:/lib/modules:ro"
             - "$ROOT_DIR:${FINAL_ROOT_DIR}"

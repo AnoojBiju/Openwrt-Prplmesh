@@ -18,6 +18,7 @@ usage() {
     echo "      -d|--target-device the device to build for"
     echo "      -c|--cache - directory containing the yocto cache files (sstate, downloads)"
     echo "      -t|--tag - the tag to use for the builder image"
+    echo "      -n| --no-whm - build without WHM (default: WHM included in build)"
     echo "      -h|--help - show this help menu"
     echo "      -v|--verbose - increase the script's verbosity"
     echo " -d is always required."
@@ -49,6 +50,7 @@ build_prplmesh() {
     # Make sure prplmesh is rebuilt
     rm -f "${CACHE_DIR}/"sstate-cache/*/sstate:prplmesh*
     docker run --rm --user "$(id -u):$(id -g)" \
+           -e USE_WHM \
            -v "$scriptdir/${TARGET_DEVICE}:/home/rdk/scripts:ro" \
            -v "${rootdir}:/home/rdk/prplMesh_source:ro" \
            -v "${CACHE_DIR}/downloads:/home/rdk/rdk-b/downloads" \
@@ -78,6 +80,7 @@ main() {
             -h | --help)               usage; exit 0; shift ;;
             -v | --verbose)            VERBOSE=true; shift ;;
             -d | --target-device)      TARGET_DEVICE="$2"; shift ; shift ;;
+            -n | --no-whm)             USE_WHM=false; shift ; shift ;;
             -c | --cache)              CACHE_DIR="$2"; shift ; shift ;;
             -t | --tag)                TAG="$2"; shift ; shift ;;
             -- ) shift; break ;;
@@ -96,7 +99,10 @@ main() {
         exit 1
     fi
 
+    export USE_WHM
+
     dbg "TARGET_DEVICE=$TARGET_DEVICE"
+    dbg "USE_WHM=$USE_WHM"
     dbg "TAG=$TAG"
     dbg "CACHE_DIR=$CACHE_DIR"
 
@@ -113,5 +119,6 @@ main() {
 
 VERBOSE=false
 CACHE_DIR="${rootdir}/rdk"
+USE_WHM=true
 
 main "$@"

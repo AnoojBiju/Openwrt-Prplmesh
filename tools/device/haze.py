@@ -39,10 +39,6 @@ class Haze(GenericPrplOS):
         # Give the ethernet interfaces some time to initialize:
         time.sleep(10)
 
-        # Sets the default device/server IP if not set already
-        shell.sendline("if test ${serverip} != '192.168.250.199'; then set ipaddr 192.168.250.130; set serverip 192.168.250.199; saveenv; fi") # noqa E501
-        shell.expect(self.bootloader_prompt, timeout=10)
-
         shell.sendline(f"tftpboot 0x44000000 {self.image}")
         shell.sendline("")
         shell.expect("Loading: ")

@@ -42,6 +42,9 @@ class ApConfigRenew(PrplMeshBaseTest):
 
         time.sleep(5)
 
+        agent.radios[0].update_vap_list()
+        agent.radios[1].update_vap_list()
+
         ssid_1 = 'Boardfarm-Tests-24G-1'
         radio_0_vap_0 = agent.radios[0].get_vap(ssid_1)
         if not radio_0_vap_0:

@@ -30,7 +30,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.
 option (ENABLE_NBAPI "Build the northbound (high-level) API" ON)
 option (ENABLE_VBSS "Build with Virtual BSS support" ON)
 
-option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" ON)
+option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" OFF)
 
 ## Generic checks and defaults
 
