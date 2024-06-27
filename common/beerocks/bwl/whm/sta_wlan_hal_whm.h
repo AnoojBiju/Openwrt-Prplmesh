@@ -124,7 +124,7 @@ private:
     };
 
     bool set_profile(Profile &profile);
-    int add_profile();
+    int add_profile(const std::string &alias);
     int find_profile_by_alias(const std::string &alias);
     int remove_profile(int profile_id);
     bool set_profile_params(const Profile &profile);
