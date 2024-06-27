@@ -1,0 +1,34 @@
+@startuml
+participant "Controller" as Controller
+participant "son_slave_thread" as son_slave_thread
+participant "ServicePrioritizationTask" as Task
+
+Controller -> son_slave_thread: send SERVICE_PRIORITIZATION_REQUEST_MESSAGE
+son_slave_thread -> Task: send SERVICE_PRIORITIZATION_REQUEST_MESSAGE
+
+alt Handle Service Prioritization Request
+    Task -> Task: handle_service_prioritization_request()
+    Task -> Task: Parse Service Prioritization Rules
+    Task -> Task: Update Service Prioritization Rules in DB
+    Task -> Task: Send ACK to Controller
+    Task -> Controller: ACK Message
+end
+
+alt Apply Active QoS Rule
+    Task -> Task: qos_apply_active_rule()
+    alt DSCP Map
+        Task -> Task: qos_setup_dscp_map()
+    else UP Map
+        Task -> Task: qos_setup_up_map()
+    else Single Value Map
+        Task -> Task: qos_setup_single_value_map()
+    end
+end
+
+alt Error Handling
+    Task -> Task: Prepare Error Response
+    Task -> Controller: ERROR_RESPONSE_MESSAGE
+end
+
+Controller -> son_slave_thread: Receive ACK or Error Response
+@enduml
