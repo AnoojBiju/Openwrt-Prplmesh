@@ -1,18 +1,8 @@
 #include "hmac_wrapper.h"
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#include <openssl/params.h>
-#endif
-
 #include <mapf/common/logger.h>
 
-hmac_wrapper::hmac_wrapper(const uint8_t *key, size_t key_length)
-    :
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-      m_ctx(nullptr, &HMAC_CTX_free)
-#else
-      m_ctx(nullptr, &EVP_MAC_CTX_free)
-#endif
+hmac_wrapper::hmac_wrapper(const uint8_t *key, size_t key_length) : m_ctx(nullptr, &HMAC_CTX_free)
 {
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     HMAC_CTX *raw_ctx = HMAC_CTX_new();
@@ -33,10 +23,7 @@ hmac_wrapper::hmac_wrapper(const uint8_t *key, size_t key_length)
         return;
     }
 #else
-    OSSL_PARAM params[2];
-    params[0] = OSSL_PARAM_construct_utf8_string("digest", (char *)"SHA256", 0);
-    params[1] = OSSL_PARAM_construct_end();
-    if (!EVP_MAC_init(raw_ctx, key, key_length, params)) {
+    if (!EVP_MAC_init(raw_ctx, key, key_length, nullptr)) {
         m_ctx.reset();
         MAPF_ERR("EVP_MAC_init failed");
         return;
