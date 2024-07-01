@@ -60,12 +60,28 @@ struct SVapStats {
     // bool active_client_count_is_above_th=false;
     // int active_client_count_prev=0;
     // int active_client_count_curr=0;
-    uint64_t tx_ucast_bytes;
-    uint64_t rx_ucast_bytes;
-    uint64_t tx_mcast_bytes;
-    uint64_t rx_mcast_bytes;
-    uint64_t tx_bcast_bytes;
-    uint64_t rx_bcast_bytes;
+    uint32_t tx_ucast_bytes;
+    uint32_t rx_ucast_bytes;
+    uint32_t tx_mcast_bytes;
+    uint32_t rx_mcast_bytes;
+    uint32_t tx_bcast_bytes;
+    uint32_t rx_bcast_bytes;
+};
+
+struct sVapExtendedStats {
+    uint32_t txInUnicastHd;
+    uint32_t txInMulticastHd;
+    uint32_t txInBroadcastHd;
+    uint32_t txInUnicastNumOfBytes;
+    uint32_t txInMulticastNumOfBytes;
+    uint32_t txInBroadcastNumOfBytes;
+    uint32_t rxOutUnicastHd;
+    uint32_t rxOutMulticastHd;
+    uint32_t rxOutBroadcastHd;
+    uint32_t rxOutUnicastNumOfBytes;
+    uint32_t rxOutMulticastNumOfBytes;
+    uint32_t rxOutBroadcastNumOfBytes;
+    uint32_t agerCount;
 };
 
 struct SStaStats {

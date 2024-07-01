@@ -1735,6 +1735,16 @@ bool Controller::handle_tlv_ap_extended_metrics(std::shared_ptr<Agent> agent,
     for (auto ap_extended_metric_tlv : cmdu_rx.getClassList<wfa_map::tlvApExtendedMetrics>()) {
 
         // Recalculate counters according to Agent Byte Units.
+        LOG(DEBUG) << "Received AP Ext Metrics for: " << ap_extended_metric_tlv->bssid();
+        LOG(DEBUG) << "agent->byte_counter_units: " << agent->byte_counter_units;
+        LOG(DEBUG) << "UnicastBytesSent: " << ap_extended_metric_tlv->unicast_bytes_sent();
+        LOG(DEBUG) << "UnicastBytesReceived: " << ap_extended_metric_tlv->unicast_bytes_received();
+        LOG(DEBUG) << "MulticastBytesSent: " << ap_extended_metric_tlv->multicast_bytes_sent();
+        LOG(DEBUG) << "MulticastBytesReceived: "
+                   << ap_extended_metric_tlv->multicast_bytes_received();
+        LOG(DEBUG) << "BroadcastBytesReceived: " << ap_extended_metric_tlv->broadcast_bytes_sent();
+        LOG(DEBUG) << "BroadcastBytesReceived: "
+                   << ap_extended_metric_tlv->broadcast_bytes_received();
         ret_val &= database.set_vap_stats_info(
             ap_extended_metric_tlv->bssid(),
             database.recalculate_attr_to_byte_units(agent->byte_counter_units,

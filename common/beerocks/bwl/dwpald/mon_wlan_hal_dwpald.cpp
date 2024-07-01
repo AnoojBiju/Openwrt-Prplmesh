@@ -775,18 +775,21 @@ bool mon_wlan_hal_dwpal::update_radio_stats(SRadioStats &radio_stats)
 
 bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVapStats &vap_stats)
 {
-    char *reply = nullptr;
-
+    char *reply     = nullptr;
     std::string cmd = "GET_VAP_MEASUREMENTS " + vap_iface_name;
-
+    int res         = 0;
+    sVapExtendedStats vap_ext_stats;
+    size_t stats_size = sizeof(sVapExtendedStats);
     LOG(DEBUG) << cmd;
     if (!dwpal_send_cmd(cmd, &reply)) {
         LOG(ERROR) << __func__ << " failed";
         return false;
     }
 
-    size_t numOfValidArgs[7] = {0}, replyLen = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
+    size_t numOfValidArgs[7] = {0};
+    size_t replyLen          = strnlen(reply, HOSTAPD_TO_DWPAL_MSG_LENGTH);
     uint64_t BytesSent = 0, BytesReceived = 0, PacketsSent = 0, PacketsReceived = 0;
+
     FieldsToParse fieldsToParse[] = {
         {(void *)&BytesSent, &numOfValidArgs[0], DWPAL_LONG_LONG_INT_PARAM, "BytesSent=", 0},
         {(void *)&BytesReceived, &numOfValidArgs[1], DWPAL_LONG_LONG_INT_PARAM,
@@ -798,7 +801,7 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
         {(void *)&vap_stats.errors_sent, &numOfValidArgs[5], DWPAL_INT_PARAM, "ErrorsSent=", 0},
         {(void *)&vap_stats.errors_received, &numOfValidArgs[6], DWPAL_INT_PARAM,
          "ErrorsReceived=", 0},
-        /* Must be at the end */
+        // Must be at the end
         {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
 
     if (dwpal_string_to_struct_parse(reply, replyLen, fieldsToParse, sizeof(SVapStats)) ==
@@ -807,20 +810,9 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
         return false;
     }
 
-    /* TEMP: Traces... */
-    // LOG(DEBUG) << "GET_VAP_MEASUREMENTS reply= \n" << reply;
-    // LOG(DEBUG) << "numOfValidArgs[0]= " << numOfValidArgs[0] << " BytesSent= " << BytesSent;
-    // LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " BytesReceived= " << BytesReceived;
-    // LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " PacketsSent= " << PacketsSent;
-    // LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3] << " PacketsReceived= " << PacketsReceived;
-    // LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4] << " RetransCount= " << vap_stats.retrans_count;
-    // LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5] << " ErrorsSent= " << vap_stats.errors_sent;
-    // LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6] << " ErrorsReceived= " << vap_stats.errors_received;
-    /* End of TEMP: Traces... */
-
-    for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+    for (size_t i = 0; i < sizeof(numOfValidArgs) / sizeof(size_t); i++) {
         if (numOfValidArgs[i] == 0) {
-            LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+            LOG(ERROR) << "Failed reading parsed parameter " << i << " ==> Abort";
             return false;
         }
     }
@@ -830,11 +822,32 @@ bool mon_wlan_hal_dwpal::update_vap_stats(const std::string &vap_iface_name, SVa
     calc_curr_traffic(PacketsSent, vap_stats.tx_packets_cnt, vap_stats.tx_packets);
     calc_curr_traffic(PacketsReceived, vap_stats.rx_packets_cnt, vap_stats.rx_packets);
 
-    // TODO: Handle timeouts/deltas externally!
-    // auto now = std::chrono::steady_clock::now();
-    // auto time_span = std::chrono::duration_cast<std::chrono::milliseconds>(now - vap_stats->last_update_time);
-    // vap_stats->delta_ms = float(time_span.count());
-    // vap_stats->last_update_time = now;
+    auto ret =
+        dwpald_drv_get((char *)vap_iface_name.c_str(), LTQ_NL80211_VENDOR_SUBCMD_GET_WLAN_HOST_IF,
+                       &res, NULL, 0, &vap_ext_stats, &stats_size);
+    LOG(DEBUG) << "ret: " << ret << " res: " << res << " stats_size: " << stats_size;
+    if ((ret != DWPALD_SUCCESS) || (res < 0)) {
+        LOG(ERROR) << __func__ << " LTQ_NL80211_VENDOR_SUBCMD_GET_WLAN_HOST_IF failed!";
+        return false;
+    }
+    if (stats_size != sizeof(sVapExtendedStats)) {
+        LOG(ERROR) << __func__ << "Wrong data size";
+        return false;
+    }
+
+    LOG(DEBUG) << "UnicastBytesSent: " << vap_ext_stats.rxOutUnicastNumOfBytes;
+    LOG(DEBUG) << "UnicastBytesReceived: " << vap_ext_stats.txInUnicastNumOfBytes;
+    LOG(DEBUG) << "MulticastBytesSent: " << vap_ext_stats.rxOutMulticastNumOfBytes;
+    LOG(DEBUG) << "MulticastBytesReceived: " << vap_ext_stats.txInMulticastNumOfBytes;
+    LOG(DEBUG) << "BroadcastBytesSent: " << vap_ext_stats.rxOutBroadcastNumOfBytes;
+    LOG(DEBUG) << "BroadcastBytesReceived: " << vap_ext_stats.txInBroadcastNumOfBytes;
+
+    vap_stats.tx_ucast_bytes = vap_ext_stats.txInUnicastNumOfBytes;
+    vap_stats.tx_mcast_bytes = vap_ext_stats.txInMulticastNumOfBytes;
+    vap_stats.tx_bcast_bytes = vap_ext_stats.txInBroadcastNumOfBytes;
+    vap_stats.rx_ucast_bytes = vap_ext_stats.rxOutUnicastNumOfBytes;
+    vap_stats.rx_mcast_bytes = vap_ext_stats.rxOutMulticastNumOfBytes;
+    vap_stats.rx_bcast_bytes = vap_ext_stats.rxOutBroadcastNumOfBytes;
 
     return true;
 }

@@ -4784,12 +4784,17 @@ bool db::set_vap_stats_info(const sMacAddr &bssid, uint64_t uc_tx_bytes, uint64_
     }
 
     bool ret_val = true;
-
+    LOG(DEBUG) << "UnicastBytesSent: " << uc_tx_bytes;
+    LOG(DEBUG) << "UnicastBytesReceived: " << uc_rx_bytes;
+    LOG(DEBUG) << "MulticastBytesSent: " << mc_tx_bytes;
+    LOG(DEBUG) << "MulticastBytesReceived: " << mc_rx_bytes;
+    LOG(DEBUG) << "MulticastBytesReceived: " << mc_rx_bytes;
+    LOG(DEBUG) << "BroadcastBytesReceived: " << bc_rx_bytes;
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesSent", uc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "UnicastBytesReceived", uc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesSent", mc_tx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesReceived", mc_rx_bytes);
-    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesSent", bc_tx_bytes);
+    ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "MulticastBytesReceived", mc_rx_bytes);
     ret_val &= m_ambiorix_datamodel->set(bss->dm_path, "BroadcastBytesReceived", bc_rx_bytes);
 
     m_ambiorix_datamodel->set_current_time(bss->dm_path);
@@ -7233,13 +7238,14 @@ void db::update_master_settings_from_config()
 uint64_t db::recalculate_attr_to_byte_units(
     wfa_map::tlvProfile2ApCapability::eByteCounterUnits byte_counter_units, uint64_t bytes)
 {
+
     if (byte_counter_units == wfa_map::tlvProfile2ApCapability::eByteCounterUnits::KIBIBYTES) {
         bytes = bytes * 1024;
     } else if (byte_counter_units ==
                wfa_map::tlvProfile2ApCapability::eByteCounterUnits::MEBIBYTES) {
         bytes = bytes * 1024 * 1024;
     }
-
+    LOG(DEBUG) << "bytes: " << bytes;
     return bytes;
 }
 

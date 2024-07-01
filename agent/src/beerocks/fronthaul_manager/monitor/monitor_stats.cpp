@@ -499,9 +499,15 @@ bool monitor_stats::add_ap_extended_metrics(ieee1905_1::CmduMessageTx &cmdu_tx,
         LOG(ERROR) << "Couldn't addClass tlvApExtendedMetrics";
         return false;
     }
-
-    ap_extended_metrics_tlv->bssid()                    = tlvf::mac_from_string(vap_node.get_mac());
-    const auto &stats                                   = vap_node.get_stats().hal_stats;
+    LOG(DEBUG) << __func__;
+    ap_extended_metrics_tlv->bssid() = tlvf::mac_from_string(vap_node.get_mac());
+    const auto &stats                = vap_node.get_stats().hal_stats;
+    LOG(DEBUG) << "Tx Ucast bytes: " << stats.tx_ucast_bytes;
+    LOG(DEBUG) << "Tx Mcast bytes: " << stats.tx_mcast_bytes;
+    LOG(DEBUG) << "Tx Bcast bytes: " << stats.tx_bcast_bytes;
+    LOG(DEBUG) << "Rx Ucast bytes: " << stats.rx_ucast_bytes;
+    LOG(DEBUG) << "Rx Mcast bytes: " << stats.rx_mcast_bytes;
+    LOG(DEBUG) << "Rx Bcast bytes: " << stats.rx_bcast_bytes;
     ap_extended_metrics_tlv->unicast_bytes_sent()       = stats.tx_ucast_bytes;
     ap_extended_metrics_tlv->unicast_bytes_received()   = stats.rx_ucast_bytes;
     ap_extended_metrics_tlv->multicast_bytes_sent()     = stats.tx_mcast_bytes;
