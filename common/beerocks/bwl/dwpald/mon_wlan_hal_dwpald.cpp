@@ -1939,8 +1939,9 @@ static int drv_evt_callback(struct nl_msg *msg)
     return 0;
 }
 
-bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
+enum mon_wlan_hal_dwpal::attach_result mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
+    dwpald_ret dret;
     auto iface_ids = beerocks::utils::get_ids_from_iface_string(ifname);
 
     static dwpald_hostap_event hostap_radio_event_handlers[] = {
@@ -1961,29 +1962,31 @@ bool mon_wlan_hal_dwpal::dwpald_attach(char *ifname)
         which is called from ap_wlan_hal.
     */
     if (iface_ids.vap_id == beerocks::IFACE_RADIO_ID) {
-        if (dwpald_hostap_attach_with_id(
-                ifname, sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event),
-                hostap_radio_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID) != DWPALD_SUCCESS) {
+        dret = dwpald_hostap_attach_with_id(
+            ifname, sizeof(hostap_radio_event_handlers) / sizeof(dwpald_hostap_event),
+            hostap_radio_event_handlers, 0, MONITOR_DWPALD_ATTACH_ID);
+
+        if (dret != DWPALD_SUCCESS && dret != DPWALD_DWPAL_IFACE_IS_DOWN) {
             LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
-            return false;
+            return ATTACH_ERROR;
         }
-        if (dwpald_nl_drv_attach_with_id(0, NULL, drv_evt_callback, MONITOR_DWPALD_ATTACH_ID) !=
+	if (dwpald_nl_drv_attach_with_id(0, NULL, drv_evt_callback, MONITOR_DWPALD_ATTACH_ID) !=
             DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for nl";
-            return false;
+            return ATTACH_ERROR;
         }
     } else {
         /*
         hostapd's VAP related events come from a radio interface,
         and contain VAP information
         */
-        if (dwpald_hostap_attach_with_id(ifname, 0, {}, 0, MONITOR_DWPALD_ATTACH_ID) !=
-            DWPALD_SUCCESS) {
+	dret = dwpald_hostap_attach(ifname, 0, {}, 0);
+        if (dret != DWPALD_SUCCESS && dret != DPWALD_DWPAL_IFACE_IS_DOWN) {
             LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
-            return false;
+            return ATTACH_ERROR;
         }
     }
-    return true;
+    return (dret == DPWALD_DWPAL_IFACE_IS_DOWN) ? ATTACH_IF_NOT_UP : ATTACH_SUCCESS;
 }
 
 bool mon_wlan_hal_dwpal::set_available_estimated_service_parameters(

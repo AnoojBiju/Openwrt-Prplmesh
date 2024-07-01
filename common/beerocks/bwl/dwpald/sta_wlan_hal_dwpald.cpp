@@ -664,8 +664,9 @@ static int hap_evt_callback(char *ifname, char *op_code, char *buffer, size_t le
 
 #define HAP_EVENT(event) (char *)event, sizeof(event) - 1, hap_evt_callback
 
-bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
+enum sta_wlan_hal_dwpal::attach_result sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
 {
+    dwpald_ret dret;
     static dwpald_hostap_event supplicant_event_handlers[] = {
         {HAP_EVENT("CTRL-EVENT-CONNECTED")},      {HAP_EVENT("CTRL-EVENT-DISCONNECTED")},
         {HAP_EVENT("CTRL-EVENT-TERMINATING")},    {HAP_EVENT("CTRL-EVENT-SCAN-RESULTS")},
@@ -673,27 +674,34 @@ bool sta_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("INTERFACE_CONNECTED_OK")},    {HAP_EVENT("INTERFACE_RECONNECTED_OK")},
         {HAP_EVENT("INTERFACE_DISCONNECTED")}};
 
-    if (dwpald_connect("sta_wlan_hal") != DWPALD_SUCCESS) {
-        LOG(ERROR) << "Failed to connect to dwpald";
-        // Don't return, as backhaul process can try to connect for all sta interface ( per radio )
-    } else {
-        if (dwpald_start_listener() != DWPALD_SUCCESS) {
-            LOG(ERROR) << "Failed to start listener thread in dwpald";
-            return false;
+    if (!dwpald_connected()) {
+        // connect to dwpal only once - must be run from the main thread
+        if (dwpald_connect("ap_wlan_hal") != DWPALD_SUCCESS) {
+            LOG(ERROR) << "Failed to connect to dwpald";
+            return ATTACH_ERROR;
         }
-
+        // start listener only once
+        if (dwpald_start_listener() != DWPALD_SUCCESS) {
+            dwpald_disconnect();
+            LOG(ERROR) << "Failed to start listener thread in dwpald";
+            return ATTACH_ERROR;
+        }
+        // attach kernel events only once!
         if (dwpald_nl_drv_attach(0, NULL, NULL) != DWPALD_SUCCESS) {
             LOG(ERROR) << "Failed to attach to dwpald for nl";
-            return false;
+            return ATTACH_ERROR;
         }
     }
-    if (dwpald_hostap_attach(ifname,
-                             sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
-                             supplicant_event_handlers, 0) != DWPALD_SUCCESS) {
+    dret = dwpald_hostap_attach(ifname,
+                                sizeof(supplicant_event_handlers) / sizeof(dwpald_hostap_event),
+                                supplicant_event_handlers, 0);
+
+    if (dret != DWPALD_SUCCESS && dret != DPWALD_DWPAL_IFACE_IS_DOWN) {
         LOG(ERROR) << "Failed to attach to dwpald for interface " << ifname;
-        return false;
+        return ATTACH_ERROR;
     }
-    return true;
+
+    return (dret == DPWALD_DWPAL_IFACE_IS_DOWN) ? ATTACH_IF_NOT_UP : ATTACH_SUCCESS;
 }
 
 bool sta_wlan_hal_dwpal::process_dwpal_nl_event(struct nl_msg *msg, void *arg)

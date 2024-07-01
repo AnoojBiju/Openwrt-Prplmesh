@@ -142,19 +142,19 @@ bool base_wlan_hal_dwpal::fsm_setup()
             [&](TTransition &transition, const void *args) -> bool {
                 // Open and attach a control interface to wpa_supplicant/hostapd.
                 // Check if not exist before
-                bool attached = false;
+                enum attach_result attached = ATTACH_ERROR;
                 if (m_dwpal_event_pfd[0] == 0) {
                     attached = attach_dwpald_interface(beerocks::IFACE_RADIO_ID);
                 } else {
                     //Already attached
-                    attached = true;
+                    attached = ATTACH_SUCCESS;
                 }
 
                 // detach if wlan (hostapd/supplicant) was not attached
-                if (attached) {
+                if (attached != ATTACH_ERROR) { // ATTACH_IF_NOT_UP is not ERROR!!!
                     if (get_type() != HALType::Station) {
-                        // Interface state is true as interface is attached
-                        conn_state[get_iface_name().c_str()] = true;
+                        // Interface state is true as interface is attached AND intreface is UP
+                        conn_state[get_iface_name().c_str()] = (attached == ATTACH_SUCCESS);
                         return (transition.change_destination(dwpal_fsm_state::GetRadioInfo));
                     }
                     return true;
@@ -293,8 +293,10 @@ bool base_wlan_hal_dwpal::fsm_setup()
                 }
 
                 uint attached = 0;
+		enum attach_result attach = ATTACH_ERROR;
                 for (auto &vap : m_radio_info.available_vaps) {
-                    if (attach_dwpald_interface(vap.first)) {
+		    attach = attach_dwpald_interface(vap.first);
+                    if (attach != ATTACH_ERROR) {
                         attached++;
                     }
                 }
@@ -554,15 +556,16 @@ bool base_wlan_hal_dwpal::dwpal_send_cmd(const std::string &cmd, char **reply, i
     return true;
 }
 
-bool base_wlan_hal_dwpal::attach_dwpald_interface(int vap_id)
+enum base_wlan_hal_dwpal::attach_result base_wlan_hal_dwpal::attach_dwpald_interface(int vap_id)
 {
     const std::string ifname =
         beerocks::utils::get_iface_string_from_iface_vap_ids(m_radio_info.iface_name, vap_id);
-    if (dwpald_attach((char *)ifname.c_str()) == false) {
+    enum attach_result res = dwpald_attach((char *)ifname.c_str());
+    if (res == ATTACH_ERROR) {
         LOG(ERROR) << "Failed to attach to dwpald";
-        return false;
+        return res;
     }
-    return true;
+    return res;
 }
 
 bool base_wlan_hal_dwpal::process_nl_events()

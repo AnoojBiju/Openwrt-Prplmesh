@@ -139,7 +139,7 @@ public:
 
     // Protected methods:
 protected:
-    virtual bool dwpald_attach(char *ifname) override;
+    virtual enum attach_result dwpald_attach(char *ifname) override;
 
     // Overload for AP events
     bool event_queue_push(ap_wlan_hal::Event event, std::shared_ptr<void> data = {})

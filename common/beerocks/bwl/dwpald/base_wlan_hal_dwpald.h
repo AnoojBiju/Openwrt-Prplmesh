@@ -112,7 +112,8 @@ protected:
     base_wlan_hal_dwpal(HALType type, const std::string &iface_name, hal_event_cb_t callback,
                         const hal_conf_t &hal_conf = {});
 
-    virtual bool dwpald_attach(char *ifname) = 0;
+    enum attach_result { ATTACH_SUCCESS, ATTACH_ERROR, ATTACH_IF_NOT_UP };
+    virtual enum attach_result dwpald_attach(char *ifname) = 0;
 
     bool set(const std::string &param, const std::string &value,
              int vap_id = beerocks::IFACE_RADIO_ID);
@@ -128,7 +129,7 @@ protected:
                         int vap_id = beerocks::IFACE_RADIO_ID);
 
     bool dwpal_send_cmd(const std::string &cmd, int vap_id = beerocks::IFACE_RADIO_ID);
-    bool attach_dwpald_interface(int vap_id);
+    enum attach_result attach_dwpald_interface(int vap_id);
 
     /**
      * @brief handle set vendor data cmd to netlink

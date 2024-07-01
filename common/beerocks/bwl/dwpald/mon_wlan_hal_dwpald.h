@@ -87,7 +87,7 @@ public:
     bool sta_unassoc_rssi_measurement(std::unordered_map<std::string, uint8_t> &new_list) final;
     // Protected methods:
 protected:
-    virtual bool dwpald_attach(char *ifname) override;
+    virtual enum attach_result dwpald_attach(char *ifname) override;
 
     // Overload for Monitor events
     bool event_queue_push(mon_wlan_hal::Event event, std::shared_ptr<void> data = {})
