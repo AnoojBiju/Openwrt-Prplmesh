@@ -477,8 +477,8 @@ int test_all()
      */
     uint8_t key1[192];
     uint8_t key2[192];
-    size_t key1_length = sizeof(key1);
-    size_t key2_length = sizeof(key2);
+    unsigned key1_length = sizeof(key1);
+    unsigned key2_length = sizeof(key2);
     std::fill(key1, key1 + key1_length, 1);
     std::fill(key2, key2 + key2_length, 2);
     mapf::encryption::diffie_hellman m1;

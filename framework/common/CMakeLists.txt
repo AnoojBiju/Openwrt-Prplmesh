@@ -9,10 +9,12 @@ file(COPY "${CMAKE_CURRENT_BINARY_DIR}/framework_logging.conf" DESTINATION "${CM
 # mapfcommon sources
 set(sources logger.cpp encryption.cpp utils.cpp)
 
-# We use OpenSSL >=3.0.0 for data encryption
-find_package(OpenSSL 3.0 QUIET)
+# We use OpenSSL 1.1.x for Encryption
+find_package(OpenSSL 1.1 QUIET)
 if(NOT OpenSSL_FOUND)
-	find_package(OpenSSL 1.1 REQUIRED)
+	# Try older versions and use compatability layer
+	find_package(OpenSSL 1.0 REQUIRED)
+	set(sources "${sources};openssl_compat.c")
 endif()
 
 # Create a single common library

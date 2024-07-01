@@ -66,11 +66,20 @@
  *  DAMAGE.
  */
 
-#include <arpa/inet.h>
-#include <cstddef>
 #include <mapf/common/encryption.h>
 #include <mapf/common/err.h>
 #include <mapf/common/logger.h>
+
+#include <arpa/inet.h>
+#include <openssl/bn.h>
+#include <openssl/dh.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+
+// OpenSSL 1.1.0 compatability layer (for platforms with older version)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L // OpenSSL < 1.1.0
+#include "openssl_compat.h"
+#endif
 
 namespace mapf {
 namespace encryption {
@@ -82,33 +91,12 @@ static bool generate_random_bytestream(uint8_t *buf, unsigned len)
     return urandom.good();
 }
 
-/**
-  Diffie-Hellman group 5, see RFC3523
-*/
-const uint8_t diffie_hellman::dh1536_p[] = {
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2, 0x21, 0x68, 0xC2, 0x34,
-    0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1, 0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67, 0xCC, 0x74,
-    0x02, 0x0B, 0xBE, 0xA6, 0x3B, 0x13, 0x9B, 0x22, 0x51, 0x4A, 0x08, 0x79, 0x8E, 0x34, 0x04, 0xDD,
-    0xEF, 0x95, 0x19, 0xB3, 0xCD, 0x3A, 0x43, 0x1B, 0x30, 0x2B, 0x0A, 0x6D, 0xF2, 0x5F, 0x14, 0x37,
-    0x4F, 0xE1, 0x35, 0x6D, 0x6D, 0x51, 0xC2, 0x45, 0xE4, 0x85, 0xB5, 0x76, 0x62, 0x5E, 0x7E, 0xC6,
-    0xF4, 0x4C, 0x42, 0xE9, 0xA6, 0x37, 0xED, 0x6B, 0x0B, 0xFF, 0x5C, 0xB6, 0xF4, 0x06, 0xB7, 0xED,
-    0xEE, 0x38, 0x6B, 0xFB, 0x5A, 0x89, 0x9F, 0xA5, 0xAE, 0x9F, 0x24, 0x11, 0x7C, 0x4B, 0x1F, 0xE6,
-    0x49, 0x28, 0x66, 0x51, 0xEC, 0xE4, 0x5B, 0x3D, 0xC2, 0x00, 0x7C, 0xB8, 0xA1, 0x63, 0xBF, 0x05,
-    0x98, 0xDA, 0x48, 0x36, 0x1C, 0x55, 0xD3, 0x9A, 0x69, 0x16, 0x3F, 0xA8, 0xFD, 0x24, 0xCF, 0x5F,
-    0x83, 0x65, 0x5D, 0x23, 0xDC, 0xA3, 0xAD, 0x96, 0x1C, 0x62, 0xF3, 0x56, 0x20, 0x85, 0x52, 0xBB,
-    0x9E, 0xD5, 0x29, 0x07, 0x70, 0x96, 0x96, 0x6D, 0x67, 0x0C, 0x35, 0x4E, 0x4A, 0xBC, 0x98, 0x04,
-    0xF1, 0x74, 0x6C, 0x08, 0xCA, 0x23, 0x73, 0x27, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-};
-
-const uint8_t diffie_hellman::dh1536_g[] = {0x02};
-
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
 diffie_hellman::diffie_hellman() : m_dh(nullptr), m_pubkey(nullptr)
 {
     MAPF_DBG("Generating DH keypair");
 
     m_dh = DH_new();
-    if (!m_dh) {
+    if (m_dh == nullptr) {
         MAPF_ERR("Failed to allocate DH");
         return;
     }
@@ -117,6 +105,26 @@ diffie_hellman::diffie_hellman() : m_dh(nullptr), m_pubkey(nullptr)
         MAPF_ERR("Failed to generate nonce");
         return;
     }
+
+    /**
+      * Diffie-Hellman group 5, see RFC3523
+      */
+    static const uint8_t dh1536_p[] = {
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2, 0x21, 0x68, 0xC2,
+        0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1, 0x29, 0x02, 0x4E, 0x08, 0x8A, 0x67,
+        0xCC, 0x74, 0x02, 0x0B, 0xBE, 0xA6, 0x3B, 0x13, 0x9B, 0x22, 0x51, 0x4A, 0x08, 0x79, 0x8E,
+        0x34, 0x04, 0xDD, 0xEF, 0x95, 0x19, 0xB3, 0xCD, 0x3A, 0x43, 0x1B, 0x30, 0x2B, 0x0A, 0x6D,
+        0xF2, 0x5F, 0x14, 0x37, 0x4F, 0xE1, 0x35, 0x6D, 0x6D, 0x51, 0xC2, 0x45, 0xE4, 0x85, 0xB5,
+        0x76, 0x62, 0x5E, 0x7E, 0xC6, 0xF4, 0x4C, 0x42, 0xE9, 0xA6, 0x37, 0xED, 0x6B, 0x0B, 0xFF,
+        0x5C, 0xB6, 0xF4, 0x06, 0xB7, 0xED, 0xEE, 0x38, 0x6B, 0xFB, 0x5A, 0x89, 0x9F, 0xA5, 0xAE,
+        0x9F, 0x24, 0x11, 0x7C, 0x4B, 0x1F, 0xE6, 0x49, 0x28, 0x66, 0x51, 0xEC, 0xE4, 0x5B, 0x3D,
+        0xC2, 0x00, 0x7C, 0xB8, 0xA1, 0x63, 0xBF, 0x05, 0x98, 0xDA, 0x48, 0x36, 0x1C, 0x55, 0xD3,
+        0x9A, 0x69, 0x16, 0x3F, 0xA8, 0xFD, 0x24, 0xCF, 0x5F, 0x83, 0x65, 0x5D, 0x23, 0xDC, 0xA3,
+        0xAD, 0x96, 0x1C, 0x62, 0xF3, 0x56, 0x20, 0x85, 0x52, 0xBB, 0x9E, 0xD5, 0x29, 0x07, 0x70,
+        0x96, 0x96, 0x6D, 0x67, 0x0C, 0x35, 0x4E, 0x4A, 0xBC, 0x98, 0x04, 0xF1, 0x74, 0x6C, 0x08,
+        0xCA, 0x23, 0x73, 0x27, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    };
+    static const uint8_t dh1536_g[] = {0x02};
 
     // Convert binary to BIGNUM format
     if (0 == DH_set0_pqg(m_dh, BN_bin2bn(dh1536_p, sizeof(dh1536_p), nullptr), NULL,
@@ -145,8 +153,8 @@ diffie_hellman::~diffie_hellman()
     DH_free(m_dh);
 }
 
-bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t *remote_pubkey,
-                                 size_t remote_pubkey_length) const
+bool diffie_hellman::compute_key(uint8_t *key, unsigned &key_length, const uint8_t *remote_pubkey,
+                                 unsigned remote_pubkey_length) const
 {
     if (!m_pubkey) {
         return false;
@@ -155,7 +163,7 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
     MAPF_DBG("Computing DH shared key");
 
     BIGNUM *pub_key = BN_bin2bn(remote_pubkey, remote_pubkey_length, NULL);
-    if (!pub_key) {
+    if (pub_key == nullptr) {
         MAPF_ERR("Failed to set DH remote_pub_key");
         return 0;
     }
@@ -173,121 +181,9 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
         MAPF_ERR("Failed to compute DH shared key");
         return false;
     }
-    key_length = (size_t)ret;
+    key_length = (unsigned)ret;
     return true;
 }
-#else
-diffie_hellman::diffie_hellman() : m_evp(nullptr), m_pubkey(nullptr)
-{
-    MAPF_DBG("Generating EVP keypair");
-
-    std::unique_ptr<BIGNUM, decltype(&BN_free)> p(BN_bin2bn(dh1536_p, sizeof(dh1536_p), nullptr),
-                                                  &BN_free);
-    std::unique_ptr<BIGNUM, decltype(&BN_free)> g(BN_bin2bn(dh1536_g, sizeof(dh1536_g), nullptr),
-                                                  &BN_free);
-
-    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx(
-        EVP_PKEY_CTX_new_id(EVP_PKEY_DH, nullptr), &EVP_PKEY_CTX_free);
-    if (!pctx) {
-        MAPF_ERR("Failed to allocate parameter generation EVP_PKEY_CTX");
-        return;
-    }
-
-    if (EVP_PKEY_paramgen_init(pctx.get()) != 1) {
-        MAPF_ERR("Failed to initialize parameter generation");
-        return;
-    }
-
-    std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> params(EVP_PKEY_new(), &EVP_PKEY_free);
-    int ret_p = EVP_PKEY_set_bn_param(params.get(), "p", p.get());
-    int ret_g = EVP_PKEY_set_bn_param(params.get(), "g", g.get());
-
-    if (ret_p != 1 || ret_g != 1) {
-        MAPF_ERR("Failed to set custom DH parameters");
-        return;
-    }
-
-    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> kctx(
-        EVP_PKEY_CTX_new(params.get(), nullptr), &EVP_PKEY_CTX_free);
-    if (!kctx) {
-        MAPF_ERR("Failed to allocate key generation EVP_PKEY_CTX");
-        return;
-    }
-
-    if (EVP_PKEY_keygen_init(kctx.get()) != 1) {
-        MAPF_ERR("Failed to initialize key generation");
-        return;
-    }
-
-    if (EVP_PKEY_keygen(kctx.get(), &m_evp) != 1) {
-        MAPF_ERR("Failed to generate DH key pair");
-        return;
-    }
-
-    BIGNUM *pub_key = nullptr;
-    if (EVP_PKEY_get_bn_param(m_evp, "pub", &pub_key) != 1) {
-        MAPF_ERR("Failed to get the public key");
-        return;
-    }
-
-    m_pubkey_length = BN_num_bytes(pub_key);
-    m_pubkey        = new uint8_t[m_pubkey_length];
-    BN_bn2bin(pub_key, m_pubkey);
-    BN_free(pub_key);
-
-    if (RAND_bytes(m_nonce, sizeof(m_nonce)) != 1) {
-        MAPF_ERR("Failed to generate nonce");
-    }
-}
-
-diffie_hellman::~diffie_hellman()
-{
-    delete[] m_pubkey;
-    if (m_evp != nullptr) {
-        EVP_PKEY_free(m_evp);
-    }
-}
-
-bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t *remote_pubkey,
-                                 size_t remote_pubkey_length) const
-{
-    if (!m_pubkey) {
-        return false;
-    }
-
-    MAPF_DBG("Computing DH shared key");
-
-    std::unique_ptr<BIGNUM, decltype(&BN_clear_free)> pub_key(
-        BN_bin2bn(remote_pubkey, remote_pubkey_length, nullptr), &BN_clear_free);
-    if (!pub_key) {
-        MAPF_ERR("Failed to set DH remote_pub_key");
-        return false;
-    }
-
-    // Compute the shared secret and save it in the output buffer
-    if (key_length < (size_t)EVP_PKEY_size(m_evp)) {
-        MAPF_ERR("Output buffer for DH shared key too small: " << key_length << " < "
-                                                               << EVP_PKEY_size(m_evp));
-        return false;
-    }
-
-    std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> ctx(
-        EVP_PKEY_CTX_new(m_evp, nullptr), &EVP_PKEY_CTX_free);
-    if (!ctx) {
-        MAPF_ERR("EVP_PKEY_CTX_new failed");
-        return false;
-    }
-
-    int ret = EVP_PKEY_derive(ctx.get(), key, &key_length);
-    if (ret < 0) {
-        MAPF_ERR("Failed to compute DH shared key");
-        return false;
-    }
-
-    key_length = static_cast<size_t>(ret);
-    return true;
-}
-#endif
 
 bool create_iv(uint8_t *iv, unsigned iv_length)
 {
@@ -307,7 +203,7 @@ sha256::~sha256() { EVP_MD_CTX_free(m_ctx); }
 
 bool sha256::update(const uint8_t *message, size_t message_length)
 {
-    if (!m_ctx) {
+    if (m_ctx == nullptr) {
         return false;
     }
     return EVP_DigestUpdate(m_ctx, message, message_length);
@@ -315,60 +211,58 @@ bool sha256::update(const uint8_t *message, size_t message_length)
 
 bool sha256::digest(uint8_t *digest)
 {
-    if (!m_ctx) {
+    if (m_ctx == nullptr) {
         return false;
     }
     unsigned int digest_length = 32;
     return EVP_DigestFinal(m_ctx, digest, &digest_length);
 }
 
-class Evp {
+class hmac {
 public:
-    Evp(const uint8_t *key, size_t key_length)
-    {
-        m_ctx = EVP_MD_CTX_new();
-        if (!m_ctx) {
-            MAPF_ERR("EVP_MD_CTX_new failed");
-        }
+    hmac(const uint8_t *key, unsigned key_length);
+    ~hmac();
 
-        const EVP_MD *md = EVP_sha256();
-        if (EVP_DigestInit_ex(m_ctx, md, nullptr) != 1) {
-            EVP_MD_CTX_free(m_ctx);
-            MAPF_ERR("EVP_DigestInit_ex failed");
-        }
-
-        if (EVP_DigestUpdate(m_ctx, key, key_length) != 1) {
-            EVP_MD_CTX_free(m_ctx);
-            MAPF_ERR("EVP_DigestUpdate failed");
-        }
-    }
-
-    ~Evp() { EVP_MD_CTX_free(m_ctx); }
-
-    bool update(const uint8_t *message, size_t message_length)
-    {
-        if (EVP_DigestUpdate(m_ctx, message, message_length) != 1) {
-            return false;
-        }
-        return true;
-    }
+    bool update(const uint8_t *message, size_t message_length);
 
     /**
-     * @brief Calculate and return the evp digest
+     * @brief Calculate and return the hmac digest
      * @param[out] digest Output buffer, must be 32 bytes
      * @return
      */
-    bool digest(uint8_t *digest)
-    {
-        if (EVP_DigestFinal_ex(m_ctx, digest, nullptr) != 1) {
-            return false;
-        }
-        return true;
-    }
+    bool digest(uint8_t *digest);
 
 private:
-    EVP_MD_CTX *m_ctx;
+    HMAC_CTX *m_ctx;
 };
+
+hmac::hmac(const uint8_t *key, unsigned key_length) : m_ctx(HMAC_CTX_new())
+{
+    if (!HMAC_Init_ex(m_ctx, key, key_length, EVP_sha256(), NULL)) {
+        MAPF_ERR("Failed to create hmac");
+        HMAC_CTX_free(m_ctx);
+        m_ctx = nullptr;
+    }
+}
+
+hmac::~hmac() { HMAC_CTX_free(m_ctx); }
+
+bool hmac::update(const uint8_t *message, size_t message_length)
+{
+    if (m_ctx == nullptr) {
+        return false;
+    }
+    return HMAC_Update(m_ctx, message, message_length);
+}
+
+bool hmac::digest(uint8_t *digest)
+{
+    if (m_ctx == nullptr) {
+        return false;
+    }
+    unsigned int digest_length = 32;
+    return HMAC_Final(m_ctx, digest, &digest_length);
+}
 
 bool aes_encrypt(const uint8_t *key, const uint8_t *iv, uint8_t *plaintext, int plen,
                  uint8_t *ciphertext, int &clen)
@@ -486,11 +380,11 @@ void copy_pubkey(const diffie_hellman &dh, uint8_t *dest)
 }
 
 void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
-                        size_t remote_pubkey_length, const uint8_t *m1_nonce, const uint8_t *mac,
+                        unsigned remote_pubkey_length, const uint8_t *m1_nonce, const uint8_t *mac,
                         const uint8_t *m2_nonce, uint8_t *authkey, uint8_t *keywrapkey)
 {
     uint8_t shared_secret[192];
-    size_t shared_secret_length = sizeof(shared_secret);
+    unsigned shared_secret_length = sizeof(shared_secret);
 
     dh.compute_key(shared_secret, shared_secret_length, remote_pubkey, remote_pubkey_length);
     // Zero pad the remaining part
@@ -502,13 +396,13 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
     uint8_t key[32];
     sha.digest(key);
 
-    Evp evp(key, sizeof(key));
-    evp.update(m1_nonce, 16);
-    evp.update(mac, 6);
-    evp.update(m2_nonce, 16);
+    hmac hmac_kdk(key, sizeof(key));
+    hmac_kdk.update(m1_nonce, 16);
+    hmac_kdk.update(mac, 6);
+    hmac_kdk.update(m2_nonce, 16);
 
     uint8_t kdk[32];
-    evp.digest(kdk);
+    hmac_kdk.digest(kdk);
 
     // Finally, take "kdk" and using a function provided in the "Wi-Fi
     // simple configuration" standard, obtain THREE KEYS that we will use
@@ -536,13 +430,14 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
     for (unsigned iter = 1; iter < sizeof(keys) / 32; iter++) {
         uint32_t kdf_iter = htonl(iter);
 
-        Evp evp_iter(kdk, sizeof(kdk));
-        evp_iter.update(reinterpret_cast<const uint8_t *>(&kdf_iter), sizeof(kdf_iter));
-        evp_iter.update(reinterpret_cast<const uint8_t *>(personalization_string.data()),
-                        personalization_string.length());
-        evp_iter.update(reinterpret_cast<const uint8_t *>(&kdf_key_length), sizeof(kdf_key_length));
+        hmac hmac_iter(kdk, sizeof(kdk));
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(&kdf_iter), sizeof(kdf_iter));
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(personalization_string.data()),
+                         personalization_string.length());
+        hmac_iter.update(reinterpret_cast<const uint8_t *>(&kdf_key_length),
+                         sizeof(kdf_key_length));
         static_assert(sizeof(keys.buf[1]) == 32, "Correct size");
-        evp_iter.digest(keys.buf[iter - 1]);
+        hmac_iter.digest(keys.buf[iter - 1]);
     }
     std::copy(keys.keys.authkey, keys.keys.authkey + sizeof(keys.keys.authkey), authkey);
     std::copy(keys.keys.keywrapkey, keys.keys.keywrapkey + sizeof(keys.keys.keywrapkey),
@@ -551,13 +446,13 @@ void wps_calculate_keys(const diffie_hellman &dh, const uint8_t *remote_pubkey,
 
 bool kwa_compute(const uint8_t *authkey, uint8_t *data, uint32_t data_len, uint8_t *kwa)
 {
-    uint8_t evp_[32];
-    Evp evp_kwa(authkey, 32);
-    if (!evp_kwa.update(data, data_len))
+    uint8_t hmac_[32];
+    hmac hmac_kwa(authkey, 32);
+    if (!hmac_kwa.update(data, data_len))
         return false;
-    if (!evp_kwa.digest(evp_))
+    if (!hmac_kwa.digest(hmac_))
         return false;
-    std::copy_n(evp_, 8, kwa);
+    std::copy_n(hmac_, 8, kwa);
     return true;
 }
 
