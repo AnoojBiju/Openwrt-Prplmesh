@@ -53,6 +53,7 @@
 #include <tlvf/wfa_map/tlvAssociatedClients.h>
 #include <tlvf/wfa_map/tlvAssociatedStaExtendedLinkMetrics.h>
 #include <tlvf/wfa_map/tlvAssociatedStaLinkMetrics.h>
+#include <tlvf/wfa_map/tlvAssociatedStaMldConfigurationReport.h>
 #include <tlvf/wfa_map/tlvAssociatedStaTrafficStats.h>
 #include <tlvf/wfa_map/tlvAssociatedWiFi6StaStatusReport.h>
 #include <tlvf/wfa_map/tlvBackhaulBssConfiguration.h>
@@ -568,6 +569,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvSpatialReuseRequest>();
     }
     case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT): {
+        return msg.addClass<wfa_map::tlvSpatialReuseReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT): {
         return msg.addClass<wfa_map::tlvSpatialReuseReport>();
     }
     }
