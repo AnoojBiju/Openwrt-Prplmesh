@@ -668,6 +668,8 @@ bool db::set_radio_channel_scan_capabilites(
        << std::endl;
 
     auto operating_classes_list_length = radio_capabilities.operating_classes_list_length();
+    auto &operating_classes = radio.scan_capabilities.operating_classes;
+    operating_classes.clear();
 
     for (uint8_t oc_idx = 0; oc_idx < operating_classes_list_length; oc_idx++) {
         auto operating_class_tuple = radio_capabilities.operating_classes_list(oc_idx);
@@ -689,8 +691,6 @@ bool db::set_radio_channel_scan_capabilites(
             ss << "}";
         }
 
-        auto &operating_classes = radio.scan_capabilities.operating_classes;
-        operating_classes.clear();
         for (int ch_idx = 0; ch_idx < channel_list_length; ch_idx++) {
             auto channel = operating_class_struct.channel_list(ch_idx);
             if (!channel) {
