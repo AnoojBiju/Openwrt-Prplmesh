@@ -275,6 +275,11 @@ static int readNlSock(int fd, char *msg, uint32_t seq, uint32_t pid)
 
     for (;;) {
 
+        if (nl_msg_len >= NL_BUFSIZE) {
+            LOG(ERROR) << "Error: nl_msg_len exceeds or equals NL_BUFSIZE";
+            return -1;
+        }
+
         // Read Netlink message
         auto ret = recv(fd, msg, NL_BUFSIZE - nl_msg_len, 0);
 
