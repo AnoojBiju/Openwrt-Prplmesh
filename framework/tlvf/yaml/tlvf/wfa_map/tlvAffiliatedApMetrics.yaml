@@ -1,0 +1,26 @@
+#
+---
+_namespace: wfa_map
+
+tlvAffiliatedApMetrics:
+ _type: class
+ _is_tlv_class: True
+ type:
+  _type: eTlvTypeMap
+  _value_const: TLV_AFFILIATED_AP_METRICS
+ length: uint16_t
+ bssid: sMacAddr
+ packets_sent: uint32_t
+ packets_received: uint32_t
+ packets_sent_errors: uint32_t
+ unicast_byte_sent: uint32_t
+ unicast_byte_received: uint32_t
+ multicast_byte_sent: uint32_t
+ multicast_byte_received: uint32_t
+ broadcast_byte_sent: uint32_t
+ broadcast_byte_received: uint32_t
+ reserved:
+  _type: uint8_t
+  _length: []
+  _comment: Reserved for future expansion (length inferred from tlvLength field)
+
