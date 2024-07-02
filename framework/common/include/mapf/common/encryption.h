@@ -101,7 +101,7 @@ public:
     static const size_t max_pubkey_length = 192;
 
 private:
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if 0
     /**
     * OpenSSL Diffie-Hellman state structure.
     */
