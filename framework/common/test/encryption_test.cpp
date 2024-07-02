@@ -11,6 +11,8 @@
 
 #include <arpa/inet.h>
 
+#include <stdio.h>
+
 static bool check(int &errors, bool check, const std::string &message)
 {
     if (check) {
@@ -24,6 +26,7 @@ static bool check(int &errors, bool check, const std::string &message)
 
 int main()
 {
+    printf("Starting encryption test (%s - %d)\n", __FILE__, __LINE__);
     mapf::Logger::Instance().LoggerInit("encryption_test");
     int errors = 0;
 
@@ -99,5 +102,6 @@ int main()
               "KWA should be equal");
     }
 
+    printf("Errors: %d\n", errors);
     return errors;
 }
