@@ -623,6 +623,16 @@ public:
               const sMacAddr &parent_mac = beerocks::net::network_utils::ZERO_MAC);
 
     /**
+     * @brief remove IRE node and Agent object.
+     *
+     * Removes an IRE node and an Agent object if they exist.
+     *
+     * @param mac AL MAC of the gateway.
+     * @return True if success otherwise false.
+     */
+    bool remove_agent(const sMacAddr &mac);
+
+    /**
      * @brief add wireless backhaul node and Station object.
      *
      * Adds a wireless backhaul node and a Station object if they don't exist.
@@ -2912,6 +2922,14 @@ private:
      * @return Path of device instance on success or empty string otherwise.
      */
     std::string dm_add_device_element(const sMacAddr &mac);
+
+    /**
+     * @brief Removes instance from the datamodel for the unique MAC
+     *
+     * @param[in] mac Mac address of the device
+     * @return True on success, false otherwise.
+     */
+    bool dm_remove_device_element(const sMacAddr &mac);
 
     /**
      * @brief Add station 'WiFi6Capabilities' data element, set values to its parameters.

@@ -340,6 +340,23 @@ std::shared_ptr<Agent> db::add_agent(const sMacAddr &mac, const sMacAddr &parent
     return agent;
 }
 
+bool db::remove_agent(const sMacAddr &mac)
+{
+    if (mac == network_utils::ZERO_MAC) {
+        LOG(ERROR) << "mac supplied for add_agent is zero_mac";
+        return false;
+    }
+    auto agent = m_agents.get(mac);
+    if (!agent) {
+        LOG(ERROR) << "Failed to get Agent " << mac;
+        return false;
+    }
+
+    m_agents.erase(mac);
+
+    return dm_remove_device_element(mac);
+}
+
 std::shared_ptr<Station> db::add_backhaul_station(const sMacAddr &mac, const sMacAddr &parent_mac,
                                                   const sMacAddr &al_mac)
 {
@@ -1206,18 +1223,15 @@ std::list<sMacAddr> db::get_1905_1_neighbors(const sMacAddr &al_mac)
 {
     std::list<sMacAddr> neighbors_al_macs;
 
-    // According to IEEE 1905.1 a neighbor is defined as a first circle only, so we need to filter
-    // out the childrens from second circle and above.
-    for (const auto &agent : m_agents) {
-        if (get_agent_parent(agent.first) == al_mac) {
-            neighbors_al_macs.push_back(agent.first);
+    auto agent = m_agents.get(al_mac);
+    if (agent) {
+        for (const auto &interface : agent->interfaces) {
+            for (const auto &neighbor : interface.second->m_neighbors) {
+                if (neighbor.second->ieee1905_flag) {
+                    neighbors_al_macs.push_back(neighbor.first);
+                }
+            }
         }
-    }
-
-    // Add the parent bridge as well to the neighbors list
-    auto parent_bridge = get_agent_parent(al_mac);
-    if (parent_bridge != network_utils::ZERO_MAC) {
-        neighbors_al_macs.push_back(parent_bridge);
     }
 
     return neighbors_al_macs;
@@ -6237,6 +6251,23 @@ std::string db::dm_add_device_element(const sMacAddr &mac)
     }
 
     return device_path;
+}
+
+bool db::dm_remove_device_element(const sMacAddr &mac)
+{
+    auto index = m_ambiorix_datamodel->get_instance_index(
+        CONTROLLER_ROOT_DM ".Network.Device.[ID == '%s'].", tlvf::mac_to_string(mac));
+    if (!index) {
+        LOG(ERROR) << "Failed to get Network.Device index for mac: " << mac;
+        return false;
+    }
+
+    if (!m_ambiorix_datamodel->remove_instance(CONTROLLER_ROOT_DM ".Network.Device", index)) {
+        LOG(ERROR) << "Failed to remove Network.Device." << index << " instance.";
+        return false;
+    }
+
+    return true;
 }
 
 bool db::add_current_op_class(const sMacAddr &radio_mac, uint8_t op_class, uint8_t op_channel,
