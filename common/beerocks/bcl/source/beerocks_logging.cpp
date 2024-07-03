@@ -227,7 +227,9 @@ void log_levels::parse_string(const std::string &str)
                 // ignore invalid tokens
             }
         }
-        token_start = token_end + 1;
+        if (token_end != std::string::npos) {
+            token_start = token_end + 1;
+        }
     } while (token_end != std::string::npos);
 }
 
