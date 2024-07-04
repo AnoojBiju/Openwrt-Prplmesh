@@ -1564,52 +1564,44 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
     }
 
     // Command example:
-    // ebtables -t <table> -{A (Append)|D (Delete)} <Chain> [-p <protocol>]
-    // [-J <jump target {ACCEPT|DROP|CONTINUE|RETURN}>] [-i <iface>]
-    // If "-p 802_1q":
-    //      [--vlan-id <vid>] [--vlan-encap <protocol>]
-
-    // Using like this:
-    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-id <vid>
-    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-encap 802_1Q
+    // tc filter add dev <iface> protocol 802.1Q parent ffff: \
+    // flower vlan_id <vid> action drop
+    // tc filter del dev <iface> protocol 802.1Q parent ffff: \
+    // flower vlan_id <vid> action drop
 
     std::string cmd;
-    cmd.reserve(150);
-
-    cmd.append("ebtables -t nat ");
 
     // Before adding rule, remove existing rules.
-    std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
+    std::string vlan_filter_entry_cmd = "tc filter show dev " + bss_iface + " parent ffff:";
     std::string vlan_filter_entry_cmd_output =
         os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
     auto lines = string_utils::str_split(vlan_filter_entry_cmd_output, '\n');
     for (const auto &line : lines) {
-        std::string cmd_delete_old;
-        cmd_delete_old.reserve(150);
-        cmd_delete_old.append(cmd).append("-D PREROUTING ").append(line);
-        os_utils::system_call(cmd_delete_old);
+        if (line.find("flower") != std::string::npos) {
+            std::string cmd_delete_old = "tc filter del dev " + bss_iface + " parent ffff: " + line;
+            os_utils::system_call(cmd_delete_old);
+        }
     }
 
-    // If function called for removeing, the removal of rules finished above.
+    // If function called for removing, the removal of rules finished above.
     if (!set) {
         return true;
     }
 
     // Append rule.
-    cmd.append("-A ");
+    cmd = "tc filter add dev " + bss_iface + " protocol 802.1Q parent ffff: flower ";
 
-    cmd.append("PREROUTING -p 802_1Q -j DROP -i ").append(bss_iface);
     auto cmd_base_len = cmd.length();
 
     if (vid != 0) {
         // Filter packets carrying the VLAN tag of the interface.
-        cmd.append(" --vlan-id ").append(std::to_string(vid));
+        cmd.append("vlan_id ").append(std::to_string(vid)).append(" action drop");
         os_utils::system_call(cmd);
         cmd.erase(cmd_base_len);
     }
 
     // Filter double-tagged packets that are encapsulated with an S-Tag.
-    cmd.append(" --vlan-encap 802_1Q");
+    cmd.append("vlan_ethtype 802.1Q action drop");
     os_utils::system_call(cmd);
     return true;
 }
