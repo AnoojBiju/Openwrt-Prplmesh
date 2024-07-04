@@ -1,0 +1,60 @@
+#
+---
+_namespace: wfa_map
+
+tlvBackhaulSTAMLDConfiguration:
+  _type: class
+  _is_tlv_class: true
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_BACKHAUL_STA_MLD_CONFIGURATION
+  length: uint16_t
+  bSTA_MLD_MAC_Addr_Valid:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  AP_MLD_MAC_Addr_Valid:
+    _type: uint8_t
+    _bit_range: [6, 6]
+  reserved_1:
+    _type: uint8_t
+    _bit_range: [5, 0]
+  bSTA_MLD_MAC_Addr: sMacAddr 
+  AP_MLD_MAC_Addr: sMacAddr
+  STR:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  NSTR:
+    _type: uint8_t
+    _bit_range: [6, 6]
+  EMLSR:
+    _type: uint8_t
+    _bit_range: [5, 5]
+  EMLMR:
+    _type: uint8_t
+    _bit_range: [4, 4]
+  reserved_2:
+    _type: uint8_t
+    _bit_range: [3, 0]
+  reserved_3: 
+    _type: uint8_t
+    _length: [17]
+  Num_AffiliatedAP:
+    _type: uint8_t
+    _length_var: true
+  AffiliatedAPEntries:
+    _type: cAffiliatedAPEntry
+    _length: [Num_AffiliatedAP]
+
+cAffiliatedAPEntry:
+  _type: class
+  Affiliated_AP_MAC_Addr_Valid:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  reserved_4:
+    _type: uint8_t
+    _bit_range: [6, 0]
+  ruid: sMacAddr
+  affiliated_AP_MAC_Addr: sMacAddr
+  reserved_5:
+    _type: uint8_t
+    _length: [19]
