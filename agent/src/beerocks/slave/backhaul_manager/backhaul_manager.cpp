@@ -2996,10 +2996,14 @@ void BackhaulManager::handle_dev_reset_default(
             radio_info->sta_wlan_hal->clear_non_associated_devices();
         }
     }
+    auto db = AgentDB::get();
+    for (const auto &radio : db->get_radios_list()) {
+        LOG(DEBUG) << "Clearing Channel Scan results of " << radio->front.iface_mac;
+        radio->channel_scan_results.clear();
+    }
 
     // Add wired interface to the bridge
     // It will be removed later on (dev_set_config) in case of wireless backhaul connection is needed.
-    auto db            = AgentDB::get();
     auto bridge        = db->bridge.iface_name;
     auto bridge_ifaces = beerocks::net::network_utils::linux_get_iface_list_from_bridge(bridge);
     auto eth_iface     = db->ethernet.wan.iface_name;

@@ -824,7 +824,7 @@ bool mon_wlan_hal_whm::process_scan_complete_event(const std::string &result)
     if (result == "error") {
         LOG(DEBUG) << " received ScanComplete event with Error indication!";
         m_scan_active = false;
-        event_queue_push(Event::Channel_Scan_Finished);
+        event_queue_push(Event::Channel_Scan_Aborted);
         return false;
     }
     if (result == "done" && m_scan_active) {
