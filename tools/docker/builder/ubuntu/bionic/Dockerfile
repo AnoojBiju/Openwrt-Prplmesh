@@ -24,6 +24,7 @@ ARG PACKAGES_FOR_BUILD="\
     python3 \
     python3-yaml \
     wget \
+    software-properties-common \
     "
 
 ARG PACKAGES_FOR_AMBIORIX="\
@@ -78,9 +79,11 @@ RUN apt-get update && apt-get install -y $PACKAGES && \
     # We need a new version of cmake, that can be found in the kitware PPA
     wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - > /usr/share/keyrings/kitware-archive-keyring.gpg && \
     echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ bionic main' >> /etc/apt/sources.list.d/kitware.list && \
+    add-apt-repository -y ppa:5-sergey/openssl3-quic && \
+    printf 'Explanation: Prefer libssl-dev from PPA (openssl3)\nPackage: *\nPin: origin LP-PPA-5-sergey-openssl3-quic\nPin-Priority: 1001' >> /etc/apt/preferences.d/pin-openss3.pref \
     apt-get update && \
     apt-get install -y \
-    liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 && \
+    liburiparser-dev cmake=3.25.2-0kitware1ubuntu18.04.1 openssl libssl-dev && \
     rm -rf /var/lib/apt/lists/* && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
