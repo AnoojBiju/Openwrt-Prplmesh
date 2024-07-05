@@ -88,6 +88,7 @@
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvMic.h>
+#include <tlvf/wfa_map/tlvMldStructure.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
 #include <tlvf/wfa_map/tlvProfile2ApCapability.h>
 #include <tlvf/wfa_map/tlvProfile2ApRadioAdvancedCapabilities.h>
@@ -576,11 +577,14 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     case (wfa_map::eTlvTypeMap::TLV_WIFI_7_AGENT_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvWifi7AgentCapabilities>();
     }
+    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT): {
+        return msg.addClass<wfa_map::tlvAssociatedStaMldConfigurationReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_MLD_STRUCTURE): {
+        return msg.addClass<wfa_map::tlvMldStructure>();
+    }
     case (wfa_map::eTlvTypeMap::TLV_EHT_OPERATIONS): {
         return msg.addClass<wfa_map::tlvEHTOperations>();
-    }
-    case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT): {
-        return msg.addClass<wfa_map::tlvSpatialReuseReport>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
