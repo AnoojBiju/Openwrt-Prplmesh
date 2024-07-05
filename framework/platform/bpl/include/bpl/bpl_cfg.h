@@ -171,7 +171,8 @@ constexpr int DEFAULT_BEST_CHANNEL_RANKING_TH = 0;
 constexpr std::chrono::seconds DEFAULT_LINK_METRICS_REQUEST_INTERVAL_VALUE_SEC{60};
 
 // Default Linux Lan interface names. It needs to be space separated.
-constexpr char DEFAULT_LINUX_LAN_INTERFACE_NAMES[] = "eth0_1 eth0_2 eth0_3 eth0_4";
+constexpr char DEFAULT_LINUX_LAN_INTERFACE_NAMES[] =
+    "eth0_1 eth0_2 eth0_3 eth0_4 lan0 lan1 lan2 lan3";
 
 // Default DHCP tasks process lease information with this interval.
 constexpr std::chrono::seconds DEFAULT_DHCP_MONITOR_INTERVAL_VALUE_SEC{300};
