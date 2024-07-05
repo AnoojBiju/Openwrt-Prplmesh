@@ -126,6 +126,7 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvQoSManagementDescriptor.yaml",
     "tlvf/wfa_map/tlvSpatialReuseRequest.yaml",
     "tlvf/wfa_map/tlvSpatialReuseReport.yaml",
+    "tlvf/wfa_map/tlvMldStructure.yaml",
   }
 
 # Relative to tlvf.py src_path variable
