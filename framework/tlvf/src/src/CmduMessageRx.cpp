@@ -132,7 +132,7 @@
 #include <tlvf/wfa_map/tlvVirtualBssCreation.h>
 #include <tlvf/wfa_map/tlvVirtualBssDestruction.h>
 #include <tlvf/wfa_map/tlvVirtualBssEvent.h>
-#include <tlvf/wfa_map/tlvWiFi7AgentCapabilities.h>
+#include <tlvf/wfa_map/tlvWifi7AgentCapabilities.h>
 
 using namespace ieee1905_1;
 
@@ -572,7 +572,7 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvSpatialReuseReport>();
     }
     case (wfa_map::eTlvTypeMap::TLV_WIFI_7_AGENT_CAPABILITIES): {
-        return msg.addClass<wfa_map::tlvWiFi7AgentCapabilities>();
+        return msg.addClass<wfa_map::tlvWifi7AgentCapabilities>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

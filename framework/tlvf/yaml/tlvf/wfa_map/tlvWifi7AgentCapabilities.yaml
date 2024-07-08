@@ -1,0 +1,118 @@
+#
+---
+_namespace: wfa_map
+
+tlvWifi7AgentCapabilities:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_WIFI_7_AGENT_CAPABILITIES
+  length: uint16_t
+  max_num_mlds:
+    _type: uint8_t
+  flags1: sFlags1
+  flags2: sFlags2
+  reserved:
+    _type: uint8_t
+    _length: [13]
+  num_radio:
+    _type: uint8_t
+    _length_var: True
+  radio_wifi7_capabilities:
+    _type: cRadioWifi7Capabilities
+    _length: [ num_radio ]
+
+sFlags1:
+  _type: struct
+  _bit_field: uint8_t
+  ap_maximum_links:
+    _bit_range: [7,4]
+  bsta_maximum_links:
+    _bit_range: [3,0]
+
+sFlags2:
+  _type: struct
+  _bit_field: uint8_t
+  tid_to_link_mapping_capability:
+    _bit_range: [7,6]
+    _comment: |
+      0: The Agent does not support TID-to-Link mapping
+      1: The Agent supports the mapping of each TID to the same or different link set
+      2: reserved
+      3: The Agent only supports the mapping of all TIDs to the same link set
+  reserved:
+    _bit_range: [5,0]
+
+cRadioWifi7Capabilities:
+  _type: class
+  ruid:
+    _type: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [24]
+  ap_modes_support: sWifi7CapabilitiesSupport
+  bsta_modes_support: sWifi7CapabilitiesSupport
+  ap_wifi7_capabilities:
+    _type: cWifi7Capabilities
+  bsta_wifi7_capabilities:
+    _type: cWifi7Capabilities
+
+sWifi7CapabilitiesSupport:
+  _type: struct
+  _bit_field: uint8_t
+  str_support:
+    _bit_range: [7,7]
+  nstr_support:
+    _bit_range: [6,6]
+  emlsr_support:
+    _bit_range: [5,5]
+  emlmr_support:
+    _bit_range: [4,4]
+  reserved:
+    _bit_range: [3,0]
+
+cWifi7Capabilities:
+  _type: class
+  num_str_records:
+    _type: uint8_t
+    _length_var: True
+  str_config:
+    _type: cRadioConfig
+    _length: [ num_str_records ]
+  num_nstr_records:
+    _type: uint8_t
+    _length_var: True
+  nstr_config:
+    _type: cRadioConfig
+    _length: [ num_nstr_records ]
+  num_emlsr_records:
+    _type: uint8_t
+    _length_var: True
+  emlsr_config:
+    _type: cRadioConfig
+    _length: [ num_emlsr_records ]
+  num_emlmr_records:
+    _type: uint8_t
+    _length_var: True
+  emlmr_config:
+    _type: cRadioConfig
+    _length: [ num_emlmr_records ]
+
+cRadioConfig:
+  _type: class
+  ruid:
+    _type: sMacAddr
+  frequency_separation: 
+    _type: sFrequencySeparation
+
+sFrequencySeparation:
+  _type: struct
+  _bit_field: uint8_t
+  freq_separation:
+    _bit_range: [7,3]
+    _comment: |
+      0: Indicates that no frequency separation information is provided
+      non 0: Indicates that the frequency gap is (Freq_Separation -1) x 80 MHz.
+  reserved:
+      _bit_range: [2,0]
