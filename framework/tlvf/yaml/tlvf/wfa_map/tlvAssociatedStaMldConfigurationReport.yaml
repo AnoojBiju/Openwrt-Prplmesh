@@ -3,44 +3,59 @@
 _namespace: wfa_map
 
 tlvAssociatedStaMldConfigurationReport:
- _type: class
- _is_tlv_class : True
- type:
-  _type: eTlvTypeMap
-  _value_const: TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT
- length: uint16_t
- sta_mld_mac_addr: sMacAddr
- ap_mld_mac_addr: sMacAddr
- flags: sFlags
- reserved:
-  _type: uint8_t
-  _length: [18]
- num_affliated_sta_length:
-  _type: uint8_t
-  _length_var: True
- affliated_sta:
-  _type: cAffliatedsta
-  _length: [num_affliated_sta_length]
- 
-sFlags:
- _type: struct
- _bit_field: uint8_t
- str_mode:
-  _bit_range: [7,7]
- nstr_mode:
-  _bit_range: [6,6]
- emlsr_mode:
-  _bit_range: [5,5]
- emlmr_mode:
-  _bit_range: [4,4]
- reserved:
-  _bit_range: [3,0]
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT
+  length: uint16_t
+  sta_mld_mac_addr:
+    _type: sMacAddr
+  ap_mld_mac_addr:
+    _type: sMacAddr
+  modes: sModes
+  reserved:
+    _type: uint8_t
+    _length: [18]
+  num_affiliated_sta: 
+    _type: uint8_t
+    _length_var: True
+  affiliated_sta: 
+    _type: cAffiliatedSta
+    _length: [ num_affiliated_sta ]
 
-cAffliatedsta:
- _type: class
- bssid: sMacAddr
- affliated_sta_mac_addr: sMacAddr
- reserved:
-  _type: uint8_t
-  _length: [19]
+sModes:
+  _type: struct
+  _bit_field: uint8_t
+  str:
+    _bit_range: [7,7]
+    _comment: |
+      0: disabled
+      1: enabled
+  nstr:
+    _bit_range: [6,6]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlsr:
+    _bit_range: [5,5]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlmr:
+    _bit_range: [4,4]
+    _comment: |
+      0: disabled
+      1: enabled
+  reserved:
+    _bit_range: [3,0]
 
+cAffiliatedSta:
+  _type: class
+  bssid:
+    _type: sMacAddr
+  affiliated_sta_mac_addr:
+    _type: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [19]
