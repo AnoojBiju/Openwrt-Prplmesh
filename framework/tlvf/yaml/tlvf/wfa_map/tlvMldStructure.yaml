@@ -6,24 +6,25 @@ tlvMldStructure:
   _type: class
   _is_tlv_class : True
   type:
-   _type: eTlvTypeMap
-   _value_const: TLV_MLD_STRUCTURE
+    _type: eTlvTypeMap
+    _value_const: TLV_MLD_STRUCTURE
   length: uint16_t
-  mld_mac_addr: sMacAddr
+  mld_mac_addr:
+    _type: sMacAddr
   reserved:
-   _type: uint8_t
-   _length: [25]
-  affliated_mac_length:
-   _type: uint8_t
-   _length_var: True
-  num_affliated:
-   _type: sNumaffliated
-   _length: [ affliated_mac_length ]
+    _type: uint8_t
+    _length: [25]
+  num_affiliated: 
+    _type: uint8_t
+    _length_var: True
+  affiliated: 
+    _type: cAffiliated
+    _length: [ num_affiliated ]
 
-sNumaffliated:
- _type: struct
- affliated_sta_mac: sMacAddr
- reserved:
-  _type: uint8_t
-  _length: [26]
-
+cAffiliated:
+  _type: class
+  affiliated_mac_addr:
+    _type: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [26]

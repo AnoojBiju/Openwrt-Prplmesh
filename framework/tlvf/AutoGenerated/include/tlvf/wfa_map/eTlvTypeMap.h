@@ -327,7 +327,6 @@ public:
         case 0xde:
         case 0xd8:
         case 0xd9:
-        case 0xe2:
         case 0xdf:
         case 0xe2:
         case 0xe3:

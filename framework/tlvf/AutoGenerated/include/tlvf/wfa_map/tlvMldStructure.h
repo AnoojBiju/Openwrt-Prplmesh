@@ -23,9 +23,11 @@
 #include "tlvf/wfa_map/eTlvTypeMap.h"
 #include "tlvf/common/sMacAddr.h"
 #include <tuple>
+#include <vector>
 
 namespace wfa_map {
 
+class cAffiliated;
 
 class tlvMldStructure : public BaseClass
 {
@@ -34,25 +36,15 @@ class tlvMldStructure : public BaseClass
         explicit tlvMldStructure(std::shared_ptr<BaseClass> base, bool parse = false);
         ~tlvMldStructure();
 
-        typedef struct sNumaffliated {
-            sMacAddr affliated_sta_mac;
-            uint8_t reserved[26];
-            void struct_swap(){
-                affliated_sta_mac.struct_swap();
-            }
-            void struct_init(){
-                affliated_sta_mac.struct_init();
-            }
-        } __attribute__((packed)) sNumaffliated;
-        
         const eTlvTypeMap& type();
         const uint16_t& length();
         sMacAddr& mld_mac_addr();
         uint8_t* reserved(size_t idx = 0);
         bool set_reserved(const void* buffer, size_t size);
-        uint8_t& affliated_mac_length();
-        std::tuple<bool, sNumaffliated&> num_affliated(size_t idx);
-        bool alloc_num_affliated(size_t count = 1);
+        uint8_t& num_affiliated();
+        std::tuple<bool, cAffiliated&> affiliated(size_t idx);
+        std::shared_ptr<cAffiliated> create_affiliated();
+        bool add_affiliated(std::shared_ptr<cAffiliated> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -65,9 +57,33 @@ class tlvMldStructure : public BaseClass
         uint8_t* m_reserved = nullptr;
         size_t m_reserved_idx__ = 0;
         int m_lock_order_counter__ = 0;
-        uint8_t* m_affliated_mac_length = nullptr;
-        sNumaffliated* m_num_affliated = nullptr;
-        size_t m_num_affliated_idx__ = 0;
+        uint8_t* m_num_affiliated = nullptr;
+        cAffiliated* m_affiliated = nullptr;
+        size_t m_affiliated_idx__ = 0;
+        std::vector<std::shared_ptr<cAffiliated>> m_affiliated_vector;
+        bool m_lock_allocation__ = false;
+};
+
+class cAffiliated : public BaseClass
+{
+    public:
+        cAffiliated(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cAffiliated(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cAffiliated();
+
+        sMacAddr& affiliated_mac_addr();
+        uint8_t* reserved(size_t idx = 0);
+        bool set_reserved(const void* buffer, size_t size);
+        void class_swap() override;
+        bool finalize() override;
+        static size_t get_initial_size();
+
+    private:
+        bool init();
+        sMacAddr* m_affiliated_mac_addr = nullptr;
+        uint8_t* m_reserved = nullptr;
+        size_t m_reserved_idx__ = 0;
+        int m_lock_order_counter__ = 0;
 };
 
 }; // close namespace: wfa_map
