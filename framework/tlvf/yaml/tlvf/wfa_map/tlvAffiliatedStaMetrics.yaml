@@ -1,0 +1,21 @@
+#
+---
+_namespace: wfa_map
+
+tlvAffiliatedStaMetrics:
+ _type: class
+ _is_tlv_class: True
+ type:
+  _type: eTlvTypeMap
+  _value_const: TLV_AFFILIATED_STA_METRICS
+ length: uint16_t
+ sta_mac_addr: sMacAddr
+ bytes_sent: uint32_t
+ bytes_received: uint32_t
+ packets_sent: uint32_t
+ packets_received: uint32_t
+ packets_sent_errors: uint32_t
+ reserved:
+  _type: uint8_t
+  _comment: Reserved for future expansion (length inferred from tlvLength field)
+
