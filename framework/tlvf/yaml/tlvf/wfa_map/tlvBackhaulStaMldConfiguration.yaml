@@ -1,0 +1,90 @@
+#
+---
+_namespace: wfa_map
+
+tlvBackhaulStaMldConfiguration:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_BACKHAUL_STA_MLD_CONFIGURATION
+  length: uint16_t
+  addr_valid: sAddrValid
+  bsta_mld_mac_addr:
+    _type: sMacAddr
+  ap_mld_mac_addr:
+    _type: sMacAddr
+  modes: sModes
+  reserved:
+    _type: uint8_t
+    _length: [17]
+  num_affiliated_bsta: 
+    _type: uint8_t
+    _length_var: True
+  affiliated_bsta: 
+    _type: cAffiliatedBhSta
+    _length: [ num_affiliated_bsta ]
+
+sAddrValid:
+  _type: struct
+  _bit_field: uint8_t
+  bsta_mld_mac_addr_valid:
+    _bit_range: [7,7]
+    _comment: |
+      0: not valid
+      1: valid
+  ap_mld_mac_addr_valid:
+    _bit_range: [6,6]
+    _comment: |
+      0: not valid
+      1: valid
+  reserved:
+    _bit_range: [5,0]
+
+sModes:
+  _type: struct
+  _bit_field: uint8_t
+  str:
+    _bit_range: [7,7]
+    _comment: |
+      0: disabled
+      1: enabled
+  nstr:
+    _bit_range: [6,6]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlsr:
+    _bit_range: [5,5]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlmr:
+    _bit_range: [4,4]
+    _comment: |
+      0: disabled
+      1: enabled
+  reserved:
+    _bit_range: [3,0]
+
+cAffiliatedBhSta:
+  _type: class
+  affiliated_bsta_mac_addr_valid: sAffiliatedBhStaMacAddrValid
+  ruid:
+    _type: sMacAddr
+  affiliated_bsta_mac_addr:
+    _type: sMacAddr
+  reserved:
+    _type: uint8_t
+    _length: [19]
+
+sAffiliatedBhStaMacAddrValid:
+  _type: struct
+  _bit_field: uint8_t
+  is_valid:
+    _bit_range: [7,7]
+    _comment: |
+      0: not valid
+      1: valid
+  reserved:
+    _bit_range: [6,0]
