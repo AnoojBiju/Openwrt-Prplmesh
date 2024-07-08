@@ -1,0 +1,15 @@
+#
+---
+_namespace: wfa_map
+
+tlvAvailableSpectrumInquiryResponse:
+ _type: class
+ _is_tlv_class: True
+ type:
+  _type: eTlvTypeMap
+  _value_const: TLV_AVAILABLE_SPECTRUM_INQUIRY_RESPONSE
+ length: uint16_t
+ avai_spec_inquiry_response_obj:
+  _type: uint8_t
+  _length: []
+
