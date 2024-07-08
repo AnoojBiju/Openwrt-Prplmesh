@@ -35,6 +35,7 @@
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlv1905EncapEapol.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
+#include <tlvf/wfa_map/tlvAgentApMLDconfiguration.h>
 #include <tlvf/wfa_map/tlvAgentList.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvAnticipatedChannelPreference.h>
@@ -569,6 +570,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT): {
         return msg.addClass<wfa_map::tlvSpatialReuseReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_AGENT_AP_MLD_CONFIGURATION): {
+        return msg.addClass<wfa_map::tlvAgentApMLDconfiguration>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);

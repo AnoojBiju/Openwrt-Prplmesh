@@ -1,0 +1,80 @@
+#
+---
+_namespace: wfa_map
+
+tlvAgentApMLDconfiguration:
+  _type: class
+  _is_tlv_class: true
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_AGENT_AP_MLD_CONFIGURATION
+  length: uint16_t
+  num_APMLD:
+    _type: uint8_t
+    _length_var: true
+  apMLDEntries:
+    _type: cAPMLDEntry
+    _length: [num_APMLD]
+
+cAPMLDEntry:
+  _type: class
+  AP_MLD_MAC_Addr_Valid:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  reserved_1:
+    _type: uint8_t
+    _bit_range: [6, 0]
+  ssid_length:
+    _type: uint8_t
+    _length_var: true
+  ssid:
+    _type: char
+    _length: [ssid_length]
+  AP_MLD_MAC_Addr: sMacAddr
+  STR:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  NSTR:
+    _type: uint8_t
+    _bit_range: [6, 6]
+  EMLSR:
+    _type: uint8_t
+    _bit_range: [5, 5]
+  EMLMR:
+    _type: uint8_t
+    _bit_range: [4, 4]
+  reserved_2:
+    _type: uint8_t
+    _bit_range: [3, 0]
+  reserved_3: 
+    _type: uint8_t
+    _length: [20]
+  num_AffiliatedAP:
+    _type: uint8_t
+    _length_var: true
+  affiliatedAPEntries:
+    _type: cAffiliatedAPEntry
+    _length: [num_AffiliatedAP]
+
+cAffiliatedAPEntry:
+  _type: class
+  affiliated_AP_MAC_Addr_Valid:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  linkid_Valid:
+    _type: uint8_t
+    _bit_range: [6, 6]
+  reserved_2:
+    _type: uint8_t
+    _bit_range: [5, 0]
+  ruid: sMacAddr
+  affiliated_AP_MAC_Addr: sMacAddr
+  linkid:
+    _type: uint8_t
+    _bit_range: [0, 15]
+  reserved_4:
+    _type: uint8_t
+    _bit_range: [16, 255]
+  reserved_5:
+    _type: uint8_t
+    _length: [18]
