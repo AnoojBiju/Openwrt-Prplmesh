@@ -35,7 +35,7 @@
 #include <tlvf/wfa_map/tlv1905EncapDpp.h>
 #include <tlvf/wfa_map/tlv1905EncapEapol.h>
 #include <tlvf/wfa_map/tlv1905LayerSecurityCapability.h>
-#include <tlvf/wfa_map/tlvAgentApMLDconfiguration.h>
+#include <tlvf/wfa_map/tlvAgentApMldConfiguration.h>
 #include <tlvf/wfa_map/tlvAgentList.h>
 #include <tlvf/wfa_map/tlvAkmSuiteCapabilities.h>
 #include <tlvf/wfa_map/tlvAnticipatedChannelPreference.h>
@@ -579,7 +579,7 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
         return msg.addClass<wfa_map::tlvWifi7AgentCapabilities>();
     }
     case (wfa_map::eTlvTypeMap::TLV_AGENT_AP_MLD_CONFIGURATION): {
-        return msg.addClass<wfa_map::tlvAgentApMLDconfiguration>();
+        return msg.addClass<wfa_map::tlvAgentApMldConfiguration>();
     }
     case (wfa_map::eTlvTypeMap::TLV_ASSOCIATED_STA_MLD_CONFIGURATION_REPORT): {
         return msg.addClass<wfa_map::tlvAssociatedStaMldConfigurationReport>();

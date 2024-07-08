@@ -28,22 +28,22 @@
 
 namespace wfa_map {
 
-class cAPMLDEntry;
-class cAffiliatedAPEntry;
+class cApMld;
+class cAffiliatedAp;
 
-class tlvAgentApMLDconfiguration : public BaseClass
+class tlvAgentApMldConfiguration : public BaseClass
 {
     public:
-        tlvAgentApMLDconfiguration(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit tlvAgentApMLDconfiguration(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~tlvAgentApMLDconfiguration();
+        tlvAgentApMldConfiguration(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit tlvAgentApMldConfiguration(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~tlvAgentApMldConfiguration();
 
         const eTlvTypeMap& type();
         const uint16_t& length();
         uint8_t& num_ap_mld();
-        std::tuple<bool, cAPMLDEntry&> ap_mld_entries(size_t idx);
-        std::shared_ptr<cAPMLDEntry> create_ap_mld_entries();
-        bool add_ap_mld_entries(std::shared_ptr<cAPMLDEntry> ptr);
+        std::tuple<bool, cApMld&> ap_mld(size_t idx);
+        std::shared_ptr<cApMld> create_ap_mld();
+        bool add_ap_mld(std::shared_ptr<cApMld> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
@@ -53,26 +53,26 @@ class tlvAgentApMLDconfiguration : public BaseClass
         eTlvTypeMap* m_type = nullptr;
         uint16_t* m_length = nullptr;
         uint8_t* m_num_ap_mld = nullptr;
-        cAPMLDEntry* m_ap_mld_entries = nullptr;
-        size_t m_ap_mld_entries_idx__ = 0;
-        std::vector<std::shared_ptr<cAPMLDEntry>> m_ap_mld_entries_vector;
+        cApMld* m_ap_mld = nullptr;
+        size_t m_ap_mld_idx__ = 0;
+        std::vector<std::shared_ptr<cApMld>> m_ap_mld_vector;
         bool m_lock_allocation__ = false;
         int m_lock_order_counter__ = 0;
 };
 
-class cAPMLDEntry : public BaseClass
+class cApMld : public BaseClass
 {
     public:
-        cAPMLDEntry(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cAPMLDEntry(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cAPMLDEntry();
+        cApMld(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cApMld(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cApMld();
 
-        typedef struct sFlags1 {
+        typedef struct sApMldMacAddrValid {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 7;
-            uint8_t ap_mld_mac_addr_valid : 1;
+            uint8_t is_valid : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
-            uint8_t ap_mld_mac_addr_valid : 1;
+            uint8_t is_valid : 1;
             uint8_t reserved : 7;
             #else
             #error "Bitfield macros are not defined"
@@ -81,9 +81,9 @@ class cAPMLDEntry : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sFlags1;
+        } __attribute__((packed)) sApMldMacAddrValid;
         
-        typedef struct sFlags2 {
+        typedef struct sModes {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 4;
             uint8_t emlmr : 1;
@@ -103,9 +103,9 @@ class cAPMLDEntry : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sFlags2;
+        } __attribute__((packed)) sModes;
         
-        sFlags2& flags();
+        sApMldMacAddrValid& ap_mld_mac_addr_valid();
         uint8_t& ssid_length();
         std::string ssid_str();
         char* ssid(size_t length = 0);
@@ -113,48 +113,50 @@ class cAPMLDEntry : public BaseClass
         bool set_ssid(const char buffer[], size_t size);
         bool alloc_ssid(size_t count = 1);
         sMacAddr& ap_mld_mac_addr();
+        sModes& modes();
         uint8_t* reserved(size_t idx = 0);
         bool set_reserved(const void* buffer, size_t size);
         uint8_t& num_affiliated_ap();
-        std::tuple<bool, cAffiliatedAPEntry&> affiliated_ap_entries(size_t idx);
-        std::shared_ptr<cAffiliatedAPEntry> create_affiliated_ap_entries();
-        bool add_affiliated_ap_entries(std::shared_ptr<cAffiliatedAPEntry> ptr);
+        std::tuple<bool, cAffiliatedAp&> affiliated_ap(size_t idx);
+        std::shared_ptr<cAffiliatedAp> create_affiliated_ap();
+        bool add_affiliated_ap(std::shared_ptr<cAffiliatedAp> ptr);
         void class_swap() override;
         bool finalize() override;
         static size_t get_initial_size();
 
     private:
         bool init();
-        sFlags2* m_flags = nullptr;
+        sApMldMacAddrValid* m_ap_mld_mac_addr_valid = nullptr;
         uint8_t* m_ssid_length = nullptr;
         char* m_ssid = nullptr;
         size_t m_ssid_idx__ = 0;
         int m_lock_order_counter__ = 0;
         sMacAddr* m_ap_mld_mac_addr = nullptr;
+        sModes* m_modes = nullptr;
         uint8_t* m_reserved = nullptr;
         size_t m_reserved_idx__ = 0;
         uint8_t* m_num_affiliated_ap = nullptr;
-        cAffiliatedAPEntry* m_affiliated_ap_entries = nullptr;
-        size_t m_affiliated_ap_entries_idx__ = 0;
-        std::vector<std::shared_ptr<cAffiliatedAPEntry>> m_affiliated_ap_entries_vector;
+        cAffiliatedAp* m_affiliated_ap = nullptr;
+        size_t m_affiliated_ap_idx__ = 0;
+        std::vector<std::shared_ptr<cAffiliatedAp>> m_affiliated_ap_vector;
         bool m_lock_allocation__ = false;
 };
 
-class cAffiliatedAPEntry : public BaseClass
+class cAffiliatedAp : public BaseClass
 {
     public:
-        cAffiliatedAPEntry(uint8_t* buff, size_t buff_len, bool parse = false);
-        explicit cAffiliatedAPEntry(std::shared_ptr<BaseClass> base, bool parse = false);
-        ~cAffiliatedAPEntry();
+        cAffiliatedAp(uint8_t* buff, size_t buff_len, bool parse = false);
+        explicit cAffiliatedAp(std::shared_ptr<BaseClass> base, bool parse = false);
+        ~cAffiliatedAp();
 
-        typedef struct sFlags3 {
+        typedef struct sAffiliatedApFieldsValid {
             #if defined(__LITTLE_ENDIAN_BITFIELD)
             uint8_t reserved : 6;
-            uint8_t link_id_valid : 1;
+            uint8_t linkid_valid : 1;
             uint8_t affiliated_ap_mac_addr_valid : 1;
             #elif defined(__BIG_ENDIAN_BITFIELD)
             uint8_t affiliated_ap_mac_addr_valid : 1;
-            uint8_t link_id_valid : 1;
+            uint8_t linkid_valid : 1;
             uint8_t reserved : 6;
             #else
             #error "Bitfield macros are not defined"
@@ -163,13 +165,12 @@ class cAffiliatedAPEntry : public BaseClass
             }
             void struct_init(){
             }
-        } __attribute__((packed)) sFlags3;
+        } __attribute__((packed)) sAffiliatedApFieldsValid;
         
-        sFlags3& flags();
+        sAffiliatedApFieldsValid& affiliated_ap_fields_valid();
         sMacAddr& ruid();
         sMacAddr& affiliated_ap_mac_addr();
-        //0-15 = Variable, 16-255 = Reserved
-        uint8_t& link_id();
+        uint8_t& linkid();
         uint8_t* reserved(size_t idx = 0);
         bool set_reserved(const void* buffer, size_t size);
         void class_swap() override;
@@ -178,10 +179,10 @@ class cAffiliatedAPEntry : public BaseClass
 
     private:
         bool init();
-        sFlags3* m_flags = nullptr;
+        sAffiliatedApFieldsValid* m_affiliated_ap_fields_valid = nullptr;
         sMacAddr* m_ruid = nullptr;
         sMacAddr* m_affiliated_ap_mac_addr = nullptr;
-        uint8_t* m_link_id = nullptr;
+        uint8_t* m_linkid = nullptr;
         uint8_t* m_reserved = nullptr;
         size_t m_reserved_idx__ = 0;
         int m_lock_order_counter__ = 0;
