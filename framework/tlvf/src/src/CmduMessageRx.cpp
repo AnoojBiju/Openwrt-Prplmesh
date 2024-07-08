@@ -84,6 +84,7 @@
 #include <tlvf/wfa_map/tlvEncryptedPayload.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
+#include <tlvf/wfa_map/tlvMLDStructure.h>
 #include <tlvf/wfa_map/tlvMetricReportingPolicy.h>
 #include <tlvf/wfa_map/tlvMic.h>
 #include <tlvf/wfa_map/tlvOperatingChannelReport.h>
@@ -569,6 +570,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_SPATIAL_REUSE_REPORT): {
         return msg.addClass<wfa_map::tlvSpatialReuseReport>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_MLD_STRUCTURE): {
+        return msg.addClass<wfa_map::tlvMLDStructure>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
