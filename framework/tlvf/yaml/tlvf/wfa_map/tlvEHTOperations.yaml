@@ -1,0 +1,63 @@
+#
+---
+_namespace: wfa_map
+
+tlvEHTOperations:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_EHT_OPERATIONS
+  length: uint16_t
+  reserved: uint32_t
+  num_radio:
+    _type: uint8_t
+    _length_var: True
+  radioEntries:
+    _type: cRadioEntry
+    _length: [num_radio]
+
+cRadioEntry:
+  _type: class
+  ruid: sMacAddr
+  num_BSS:
+    _type: uint8_t
+    _length_var: True
+  bssEntries:
+    _type: cBSSEntry
+    _length: [num_BSS]
+  reserved_2:
+    _type: uint8_t
+    _length: [25]
+
+cBSSEntry:
+  _type: class
+  bssid: sMacAddr
+  EHT_Operation_Information_Valid:
+    _type: uint8_t
+    _bit_range: [7, 7]
+  disabled_Subchannel_Valid:
+    _type: uint8_t
+    _bit_range: [6, 6]
+  EHT_Default_PE_Duration:
+    _type: uint8_t
+    _bit_range: [5]
+  group_Addressed_BU_Indication_Limit:
+    _type: uint8_t
+    _bit_range: [4]
+  group_Addressed_BU_Indication_Exponent:
+    _type: uint8_t
+    _bit_range: [3, 2]
+  reserved:
+    _type: uint8_t
+    _bit_range: [1, 0]
+  basic_EHT_MCS_And_Nss_Set: uint32_t
+  control: uint8_t
+  ccfs0: uint8_t
+  ccfs1: uint8_t
+  disabled_Subchannel_Bitmap:
+    _type: uint16_t
+    _length_var: True
+  reserved_1:
+    _type: uint8_t
+    _length: [16]
