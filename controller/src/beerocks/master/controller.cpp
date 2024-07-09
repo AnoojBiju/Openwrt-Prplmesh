@@ -2311,7 +2311,7 @@ bool Controller::handle_cmdu_1905_failed_connection_message(const sMacAddr &src_
     }
     if (status_code != 0) {
         if (!database.dm_add_failed_connection_event(bssid_tlv->bssid(), sta_mac_tlv->sta_mac(),
-                                                     status_code, reason_code)) {
+                                                     reason_code, status_code)) {
             LOG(ERROR) << "Failed to add FailedConnectionEvent.";
             return false;
         }
