@@ -1,0 +1,71 @@
+---
+_namespace: wfa_map
+
+tlvEHTOperations:
+  _type: class
+  _is_tlv_class: True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_EHT_OPERATIONS
+  length: uint16_t
+  reserved:
+    _type: uint8_t
+    _length: [32]
+  num_radio:
+    _type: uint8_t
+    _length_var: True
+  radio_entries:
+    _type: cRadioEntry
+    _length: [num_radio]
+
+cRadioEntry:
+  _type: class
+  ruid: sMacAddr
+  num_bss:
+    _type: uint8_t
+    _length_var: True
+  bss_entries:
+    _type: cBssEntry
+    _length: [num_bss]
+  reserved:
+    _type: uint8_t
+    _length: [25]
+
+cBssEntry:
+  _type: class
+  bssid: sMacAddr
+  flags: sFlags
+  basic_eht_mcs_and_nss_set:
+    _type: uint8_t
+    _length: [32]
+  control: uint8_t
+  ccfs0: uint8_t
+  ccfs1: uint8_t
+  disabled_subchannel_bitmap:
+    _type: uint16_t
+    _length_var: True
+  reserved:
+    _type: uint8_t
+    _length: [16]
+
+sFlags:
+  _type: struct
+  _bit_field: uint8_t
+  eht_operation_information_valid:
+    _bit_range: [7, 7]
+    _comment: |
+      0: not valid 
+      1: valid 
+  disabled_subchannel_valid:
+    _bit_range: [6, 6]
+    _comment: |
+      0: not valid 
+      1: valid
+  eht_default_pe_duration:
+    _bit_range: [5, 5]
+  group_addressed_bu_indication_limit:
+    _bit_range: [4, 4]
+  group_addressed_bu_indication_exponent:
+    _bit_range: [3, 2]
+  reserved:
+    _bit_range: [1, 0]
