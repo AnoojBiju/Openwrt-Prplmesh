@@ -1328,23 +1328,23 @@ bool network_utils::icmp_send(const std::string &ip, uint16_t id, int count, int
 
 uint16_t network_utils::icmp_checksum(uint16_t *buf, int32_t len)
 {
-    int32_t nleft   = len;
     int32_t sum     = 0;
-    uint16_t *w     = buf;
     uint16_t answer = 0;
 
-    while (nleft > 1) {
-        sum += *w++;
-        nleft -= 2;
+    for (int32_t i = 0; i < len / 2; ++i) {
+        sum += buf[i];
     }
 
-    if (nleft == 1) {
-        *(uint16_t *)(&answer) = *(uint8_t *)w;
-        sum += answer;
+    // Handle the case where there is an odd byte
+    if (len % 2 == 1) {
+        sum += *reinterpret_cast<uint8_t *>(&buf[len / 2]);
     }
 
-    sum = (sum >> 16) + (sum & 0xFFFF);
-    sum += (sum >> 16);
+    // Fold 32-bit sum to 16 bits
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
     answer = ~sum;
     return answer;
 }
