@@ -2,7 +2,8 @@
 ---
 _include: {
   beerocks/tlvf/beerocks_message_common.h,
-  structs/sCacStartedNotificationParams.h
+  structs/sCacStartedNotificationParams.h,
+  tlvf/WSC/WSC_Attributes.h
 }
 _namespace: beerocks_message
 _multi_class: True
@@ -152,6 +153,13 @@ cACTION_BACKHAUL_RECONNECT_COMMAND:
 cACTION_BACKHAUL_HOSTAP_SPATIAL_REUSE_REPORT_NOTIFICATION:
   _type: class
   sr_params: sSpatialReuseParams
+
+cACTION_BACKHAUL_WIFI_CREDENTIALS_UPDATE_REQUEST:
+  _type: class
+  radio_mac:
+    _type: sMacAddr
+  wifi_credentials:
+    _type: WSC::cConfigData
 
 ################################################
 # CHANNEL SCAN REQUESTS/RESPONSES
