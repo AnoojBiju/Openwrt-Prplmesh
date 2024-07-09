@@ -110,6 +110,14 @@ static ap_wlan_hal::Event dwpal_to_bwl_event(const std::string &opcode)
     return ap_wlan_hal::Event::Invalid;
 }
 
+static ap_wlan_hal_dwpal::MxlEvent dwpal_to_bwl_mxl_event(const std::string &opcode)
+{
+    if (opcode == "MXL-ACS-COMPLETED") {
+        return ap_wlan_hal_dwpal::MxlEvent::MXL_ACS_Completed;
+    }
+    return ap_wlan_hal_dwpal::MxlEvent::Invalid;
+}
+
 static uint8_t dwpal_bw_to_beerocks_bw(const uint8_t chan_width)
 {
     // clang-format off
@@ -2421,6 +2429,19 @@ bool ap_wlan_hal_dwpal::set_cce_indication(uint16_t advertise_cce)
     return true;
 }
 
+static ChanSwReason parse_chan_switch_reason(char *text) {
+    ChanSwReason chanSwReason = ChanSwReason::Unknown;
+    auto tmpStr               = std::string(text);
+    if (tmpStr.find("RADAR") != std::string::npos) {
+        chanSwReason = ChanSwReason::Radar;
+    } else if (tmpStr.find("20_COEXISTANCE") != std::string::npos) {
+        chanSwReason = ChanSwReason::CoEx_20;
+    } else if (tmpStr.find("40_COEXISTANCE") != std::string::npos) {
+        chanSwReason = ChanSwReason::CoEx_40;
+    }
+    return chanSwReason;
+}
+
 bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufLen,
                                             const std::string &opcode)
 {
@@ -2429,6 +2450,93 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
     // For key-value parser.
     int64_t tmp_int;
     const char *tmp_str;
+
+    // first, try handling as MXL vendor event
+    auto mxl_event = dwpal_to_bwl_mxl_event(opcode);
+    switch(mxl_event) {
+    case MxlEvent::MXL_ACS_Completed: {
+        LOG(DEBUG) << buffer;
+
+        m_csa_event_filtering_timestamp = std::chrono::steady_clock::now();
+        // ignore MXL-ACS_COMPLETED <iface> SCAN
+        if (is_acs_completed_scan(buffer, bufLen)) {
+            LOG(DEBUG) << "Received ACS_COMPLETED SCAN event, ignoring";
+            return true;
+        }
+
+        char reason[32]               = {0};
+        char VAP[SSID_MAX_SIZE]       = {0};
+        std::string channelStr        = "channel=";
+        size_t numOfValidArgs[8]      = {0};
+        FieldsToParse fieldsToParse[] = {
+            {NULL /*opCode*/, &numOfValidArgs[0], DWPAL_STR_PARAM, NULL, 0},
+            {(void *)VAP, &numOfValidArgs[1], DWPAL_STR_PARAM, NULL, sizeof(VAP)},
+            {(void *)&m_radio_info.channel, &numOfValidArgs[2], DWPAL_INT_PARAM, channelStr.c_str(), 0},
+            {(void *)&m_radio_info.bandwidth, &numOfValidArgs[3], DWPAL_INT_PARAM,
+             "OperatingChannelBandwidt=", 0},
+            {(void *)&m_radio_info.channel_ext_above, &numOfValidArgs[4], DWPAL_INT_PARAM,
+             "ExtensionChannel=", 0},
+            {(void *)&m_radio_info.vht_center_freq, &numOfValidArgs[5], DWPAL_INT_PARAM, "cf1=", 0},
+            {(void *)&m_radio_info.is_dfs_channel, &numOfValidArgs[6], DWPAL_BOOL_PARAM,
+             "dfs_chan=", 0},
+            {(void *)&reason, &numOfValidArgs[7], DWPAL_STR_PARAM, "reason=", sizeof(reason)},
+            /* Must be at the end */
+            {NULL, NULL, DWPAL_NUM_OF_PARSING_TYPES, NULL, 0}};
+
+        if (dwpal_string_to_struct_parse(buffer, bufLen, fieldsToParse, sizeof(m_radio_info)) ==
+            DWPAL_FAILURE) {
+            LOG(ERROR) << "DWPAL parse error ==> Abort";
+            return false;
+        }
+
+        /* TEMP: Traces... */
+        LOG(DEBUG) << "numOfValidArgs[1]= " << numOfValidArgs[1] << " " << VAP;
+        LOG(DEBUG) << "numOfValidArgs[2]= " << numOfValidArgs[2] << " " << channelStr
+                   << m_radio_info.channel;
+        LOG(DEBUG) << "numOfValidArgs[3]= " << numOfValidArgs[3]
+                   << " OperatingChannelBandwidt= " << (int)m_radio_info.bandwidth;
+        LOG(DEBUG) << "numOfValidArgs[4]= " << numOfValidArgs[4]
+                   << " ExtensionChannel= " << (int)m_radio_info.channel_ext_above;
+        LOG(DEBUG) << "numOfValidArgs[5]= " << numOfValidArgs[5]
+                   << " cf1= " << (int)m_radio_info.vht_center_freq;
+        LOG(DEBUG) << "numOfValidArgs[6]= " << numOfValidArgs[6]
+                   << " dfs_chan= " << (int)m_radio_info.is_dfs_channel;
+        LOG(DEBUG) << "numOfValidArgs[7]= " << numOfValidArgs[7] << " reason= " << reason;
+        /* End of TEMP: Traces... */
+
+        for (uint8_t i = 0; i < (sizeof(numOfValidArgs) / sizeof(size_t)); i++) {
+            if (numOfValidArgs[i] == 0) {
+                LOG(ERROR) << "Failed reading parsed parameter " << (int)i << " ==> Abort";
+                return false;
+            }
+        }
+
+        if (beerocks::utils::get_ids_from_iface_string(VAP).vap_id != beerocks::IFACE_RADIO_ID) {
+            LOG(INFO) << "Ignoring ACS/CSA events on non Radio interface";
+            return true;
+        }
+
+        // Channel switch reason
+        m_radio_info.last_csa_sw_reason = parse_chan_switch_reason(reason);
+
+        // Update the radio information structure
+        if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
+            beerocks::eFreqType::FREQ_5G) {
+            m_radio_info.is_5ghz = true;
+        }
+
+        event_queue_push(Event::ACS_Completed); // convert to open-source ACS event
+
+        // TODO: WHY?!
+        LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
+        event_queue_push(Event::CSA_Finished);
+        return true;
+    }
+    case MxlEvent::Invalid:
+    default:
+        break;
+        // not a MXL vendor event, proceed normally
+    }
 
     auto event = dwpal_to_bwl_event(opcode);
 
@@ -2467,24 +2575,16 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
 
     switch (event) {
     case Event::ACS_Completed:
+        break; // ignore, as this event is replaced by MXL vendor event
     case Event::CSA_Finished: {
         LOG(DEBUG) << buffer;
 
-        if (event == Event::CSA_Finished) {
-            if (std::chrono::steady_clock::now() <
-                    (m_csa_event_filtering_timestamp +
-                     std::chrono::milliseconds(CSA_EVENT_FILTERING_TIMEOUT_MS)) &&
-                m_drop_csa) {
-                LOG(DEBUG) << "CSA_Finished - dump event - arrive on csa filtering timeout window";
-                return true;
-            }
-        } else {
-            m_csa_event_filtering_timestamp = std::chrono::steady_clock::now();
-            // ignore ACS_COMPLETED <iface> SCAN
-            if (is_acs_completed_scan(buffer, bufLen)) {
-                LOG(DEBUG) << "Received ACS_COMPLETED SCAN event, ignoring";
-                return true;
-            }
+        if (std::chrono::steady_clock::now() <
+                (m_csa_event_filtering_timestamp +
+                 std::chrono::milliseconds(CSA_EVENT_FILTERING_TIMEOUT_MS)) &&
+            m_drop_csa) {
+            LOG(DEBUG) << "CSA_Finished - dump event - arrive on csa filtering timeout window";
+            return true;
         }
 
         char reason[32]               = {0};
@@ -2541,16 +2641,7 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         }
 
         // Channel switch reason
-        ChanSwReason chanSwReason = ChanSwReason::Unknown;
-        auto tmpStr               = std::string(reason);
-        if (tmpStr.find("RADAR") != std::string::npos) {
-            chanSwReason = ChanSwReason::Radar;
-        } else if (tmpStr.find("20_COEXISTANCE") != std::string::npos) {
-            chanSwReason = ChanSwReason::CoEx_20;
-        } else if (tmpStr.find("40_COEXISTANCE") != std::string::npos) {
-            chanSwReason = ChanSwReason::CoEx_40;
-        }
-        m_radio_info.last_csa_sw_reason = chanSwReason;
+        m_radio_info.last_csa_sw_reason = parse_chan_switch_reason(reason);
 
         // Update the radio information structure
         if (son::wireless_utils::which_freq_type(m_radio_info.vht_center_freq) ==
@@ -2559,12 +2650,6 @@ bool ap_wlan_hal_dwpal::process_dwpal_event(char *ifname, char *buffer, int bufL
         }
 
         event_queue_push(event);
-
-        // TODO: WHY?!
-        if (event == Event::ACS_Completed) {
-            LOG(DEBUG) << "ACS_COMPLETED >>> adding CSA_FINISHED event as well";
-            event_queue_push(Event::CSA_Finished);
-        }
         break;
     }
 
@@ -3557,6 +3642,7 @@ bool ap_wlan_hal_dwpal::dwpald_attach(char *ifname)
         {HAP_EVENT("UNCONNECTED-STA-RSSI")},
         {HAP_EVENT("INTERFACE-DISABLED")},
         {HAP_EVENT("ACS-STARTED")},
+        {HAP_EVENT("MXL-ACS-COMPLETED")},
         {HAP_EVENT("ACS-COMPLETED")},
         {HAP_EVENT("ACS-FAILED")},
         {HAP_EVENT("AP-CSA-FINISHED")},
