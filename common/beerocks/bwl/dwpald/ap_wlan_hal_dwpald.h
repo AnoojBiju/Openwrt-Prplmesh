@@ -24,6 +24,10 @@ class ap_wlan_hal_dwpal : public base_wlan_hal_dwpal, public ap_wlan_hal {
 
     // Public methods
 public:
+    enum class MxlEvent {
+        Invalid = 0,
+        MXL_ACS_Completed,
+    };
     /*!
      * Constructor.
      *
