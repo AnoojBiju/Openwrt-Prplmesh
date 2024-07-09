@@ -104,6 +104,11 @@ enum class eMessageType : uint16_t {
     VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE = 0x8040,
     VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE = 0x8041,
     VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE = 0x8042,
+    EARLY_AP_CAPABILITY_REPORT_MESSAGE = 0x8043,
+    AP_MLD_CONFIGURATION_REQUEST_MESSAGE = 0x8044,
+    AP_MLD_CONFIGURATION_RESPONSE_MESSAGE = 0x8045,
+    BSTA_MLD_CONFIGURATION_REQUEST_MESSAGE = 0x8046,
+    BSTA_MLD_CONFIGURATION_RESPONSE_MESSAGE = 0x8047,
     VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE = 0x8048,
 };
 // Enum AutoPrint generated code snippet begining- DON'T EDIT!
@@ -193,6 +198,11 @@ static const char *eMessageType_str(eMessageType enum_value) {
     case eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE:         return "eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_REQUEST_MESSAGE";
     case eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE:        return "eMessageType::VIRTUAL_BSS_MOVE_PREPARATION_RESPONSE_MESSAGE";
     case eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE:              return "eMessageType::VIRTUAL_BSS_MOVE_CANCEL_REQUEST_MESSAGE";
+    case eMessageType::EARLY_AP_CAPABILITY_REPORT_MESSAGE:                   return "eMessageType::EARLY_AP_CAPABILITY_REPORT_MESSAGE";
+    case eMessageType::AP_MLD_CONFIGURATION_REQUEST_MESSAGE:                 return "eMessageType::AP_MLD_CONFIGURATION_REQUEST_MESSAGE";
+    case eMessageType::AP_MLD_CONFIGURATION_RESPONSE_MESSAGE:                return "eMessageType::AP_MLD_CONFIGURATION_RESPONSE_MESSAGE";
+    case eMessageType::BSTA_MLD_CONFIGURATION_REQUEST_MESSAGE:               return "eMessageType::BSTA_MLD_CONFIGURATION_REQUEST_MESSAGE";
+    case eMessageType::BSTA_MLD_CONFIGURATION_RESPONSE_MESSAGE:              return "eMessageType::BSTA_MLD_CONFIGURATION_RESPONSE_MESSAGE";
     case eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE:             return "eMessageType::VIRTUAL_BSS_MOVE_CANCEL_RESPONSE_MESSAGE";
     }
     static std::string out_str = std::to_string(int(enum_value));
@@ -289,6 +299,11 @@ public:
         case 0x8040:
         case 0x8041:
         case 0x8042:
+        case 0x8043:
+        case 0x8044:
+        case 0x8045:
+        case 0x8046:
+        case 0x8047:
         case 0x8048:
                 ret = true;
                 break;
