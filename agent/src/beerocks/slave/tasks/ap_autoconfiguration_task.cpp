@@ -1787,8 +1787,14 @@ bool ApAutoConfigurationTask::ap_autoconfiguration_wsc_authenticate(
                 WSC::cWscAttrAuthenticator::get_initial_size()];
     auto next = std::copy_n(radio_conf_params.m1_auth_buf, radio_conf_params.m1_auth_buf_len, buf);
     m2.swap(); // swap to get network byte order
-    std::copy_n(m2.getMessageBuff(),
-                m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
+
+    if (m2.getMessageLength() > WSC::cWscAttrAuthenticator::get_initial_size()) {
+        std::copy_n(m2.getMessageBuff(),
+                    m2.getMessageLength() - WSC::cWscAttrAuthenticator::get_initial_size(), next);
+    } else {
+        LOG(ERROR) << "Error: m2.getMessageLength() is less than "
+                      "WSC::cWscAttrAuthenticator::get_initial_size()";
+    }
     m2.swap(); // swap back
 
     uint8_t kwa[WSC::WSC_AUTHENTICATOR_LENGTH];

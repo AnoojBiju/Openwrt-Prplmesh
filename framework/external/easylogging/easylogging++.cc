@@ -461,7 +461,7 @@ void Configurations::Parser::ignoreComments(std::string* line) {
     }
   }
   if ((foundAt = line->find(base::consts::kConfigurationComment)) != std::string::npos) {
-    if (foundAt < quotesEnd) {
+    if (quotesEnd != std::string::npos && foundAt < quotesEnd) {
       foundAt = line->find(base::consts::kConfigurationComment, quotesEnd + 1);
     }
     *line = line->substr(0, foundAt);

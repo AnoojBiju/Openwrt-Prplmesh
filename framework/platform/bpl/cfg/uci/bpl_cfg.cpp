@@ -638,7 +638,11 @@ bool cfg_get_steer_history_persistent_db_max_size(size_t &max_size)
         MAPF_ERR("Failed to read steer-history-persistent-db-max-size parameter");
         return false;
     }
-    max_size = retVal;
+    if (retVal < 0) {
+        MAPF_ERR("Invalid steer-history-persistent-db-max-size value: " << retVal);
+        return false;
+    }
+    max_size = static_cast<size_t>(retVal);
     return true;
 }
 
