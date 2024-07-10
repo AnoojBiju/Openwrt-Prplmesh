@@ -81,6 +81,7 @@
 #include <tlvf/wfa_map/tlvDppChirpValue.h>
 #include <tlvf/wfa_map/tlvDppMessage.h>
 #include <tlvf/wfa_map/tlvDscpMappingTable.h>
+#include <tlvf/wfa_map/tlvEHTOperations.h>
 #include <tlvf/wfa_map/tlvEncryptedPayload.h>
 #include <tlvf/wfa_map/tlvErrorCode.h>
 #include <tlvf/wfa_map/tlvHigherLayerData.h>
@@ -573,6 +574,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_WIFI_7_AGENT_CAPABILITIES): {
         return msg.addClass<wfa_map::tlvWifi7AgentCapabilities>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_EHT_OPERATIONS): {
+        return msg.addClass<wfa_map::tlvEHTOperations>();
     }
     }
     LOG(FATAL) << "Unknown TLV type: " << unsigned(tlv_type);
