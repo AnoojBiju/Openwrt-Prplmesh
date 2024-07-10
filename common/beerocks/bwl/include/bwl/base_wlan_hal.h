@@ -188,7 +188,21 @@ public:
      *
      * The returned file descriptors support select(), poll() and epoll().
      */
-    const std::vector<int> &get_ext_events_fds() const { return (m_fds_ext_events); }
+    virtual const std::vector<int> &get_ext_events_fds() const { return (m_fds_ext_events); }
+
+    /*!
+     * Some implementations of wlan_hal use shared file descriptors.
+     * For example, wlan_whm implementation.
+     * This has the following consquences :
+     * 1. when registering the file descriptors of a set of size >=2 in an event loop,
+     * we have to avoid registering the file descriptors more than once;
+     * the implementations uses a call_once mechanism to expose the list of ext_fds only once
+     * 2. when the full set of instances is destroyed, the FDs vector should and will be removed
+     * 3. when only a subset of instances is destroyed, the remaining instances rely on the FDs
+     * to function properly.
+     * this function is used to isolate the special case of destructing only a subset of instances
+    */
+    virtual bool unique_file_descriptors() const { return true; }
 
     /*!
      * Returns a file descriptor to the internal events queue, or -1 on error.
