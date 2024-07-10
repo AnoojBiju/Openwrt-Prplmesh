@@ -572,7 +572,7 @@ bool ChannelScanTask::is_scan_request_finished(const std::shared_ptr<sScanReques
 
 bool ChannelScanTask::abort_scan_request(const std::shared_ptr<sScanRequest> request)
 {
-    for (auto radio_scan : request->radio_scans) {
+    for (const auto &radio_scan : request->radio_scans) {
         const auto &radio_iface = radio_scan.first;
         LOG(TRACE) << "Request scan abort on " << radio_iface;
 
@@ -765,7 +765,7 @@ bool ChannelScanTask::trigger_radio_scan(const std::string &radio_iface,
 
 bool ChannelScanTask::store_radio_scan_result(const std::shared_ptr<sScanRequest> request,
                                               const sMacAddr &radio_mac,
-                                              beerocks_message::sChannelScanResults results)
+                                              const beerocks_message::sChannelScanResults &results)
 {
     LOG(TRACE) << "Handling scan result from " << radio_mac;
     auto db    = AgentDB::get();
@@ -1467,7 +1467,7 @@ bool ChannelScanTask::send_channel_scan_report_to_controller(
         // Total values will be used to calculate averages
         int total_noise       = 0;
         int total_utilization = 0;
-        for (auto stored_neighbor : results) {
+        for (const auto &stored_neighbor : results) {
             auto tlv_neighbor_ptr = results_tlv->create_neighbors_list();
             if (!tlv_neighbor_ptr) {
                 LOG(ERROR) << "Failed to create neighbor list";
