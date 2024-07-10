@@ -239,7 +239,7 @@ private:
      */
     bool store_radio_scan_result(const std::shared_ptr<sScanRequest> request,
                                  const sMacAddr &radio_mac,
-                                 beerocks_message::sChannelScanResults results);
+                                 const beerocks_message::sChannelScanResults &results);
 
     /* 1905.1 message handlers: */
 
