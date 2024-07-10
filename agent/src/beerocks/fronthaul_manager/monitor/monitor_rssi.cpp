@@ -234,8 +234,10 @@ void monitor_rssi::process()
                         break;
                     }
 
-                    notification->params().result.mac        = tlvf::mac_from_string(sta_mac);
-                    notification->params().rx_rssi           = sta_stats.rx_rssi_curr;
+                    notification->params().result.mac = tlvf::mac_from_string(sta_mac);
+                    notification->params().rx_rssi    = sta_stats.rx_rssi_curr;
+                    LOG(DEBUG) << "current rssi value of client -->monitor_rssi.cpp: "
+                               << sta_stats.rx_rssi_curr;
                     notification->params().rx_snr            = sta_stats.rx_snr_curr;
                     notification->params().rx_packets        = 100; //dummy value
                     notification->params().rx_phy_rate_100kb = sta_stats.rx_phy_rate_100kb_min;

@@ -407,9 +407,9 @@ std::ptrdiff_t network_map::fill_bml_agent_data(db &database, std::shared_ptr<Ag
                 node->data.gw_ire.radio[i].vendor = BML_WLAN_VENDOR_UNKNOWN;
             }
 
-            node->data.gw_ire.radio[i].channel = (radio.second->wifi_channel.is_empty())
-                                                     ? 255
-                                                     : radio.second->wifi_channel.get_channel();
+            node->data.gw_ire.radio[i].channel       = (radio.second->wifi_channel.is_empty())
+                                                           ? 255
+                                                           : radio.second->wifi_channel.get_channel();
             node->data.gw_ire.radio[i].cac_completed = radio.second->cac_completed;
             node->data.gw_ire.radio[i].bw            = radio.second->wifi_channel.get_bandwidth();
             node->data.gw_ire.radio[i].freq_type     = radio.second->wifi_channel.get_freq_type();
@@ -844,7 +844,7 @@ std::ptrdiff_t network_map::fill_bml_station_statistics(db &database, std::share
         return buf_size;
     }
 
-    //prepearing buffer and calc size
+    //preparing buffer and calc size
     auto sta_stats_bulk = (BML_STATS *)tx_buffer;
 
     //fill sta stats
@@ -865,6 +865,7 @@ std::ptrdiff_t network_map::fill_bml_station_statistics(db &database, std::share
 
     // LOG(DEBUG) << "sta_mac=" << n->mac << ", signal_strength=" << int(n->stats_info->rx_rssi);
     sta_stats_bulk->uType.client.signal_strength = pSta->stats_info->rx_rssi;
+    LOG(DEBUG) << "current rssi value -->network_map.cpp: " << pSta->stats_info->rx_rssi;
     sta_stats_bulk->uType.client.last_data_downlink_rate =
         pSta->stats_info->tx_phy_rate_100kb * 100000;
     sta_stats_bulk->uType.client.last_data_uplink_rate =

@@ -701,9 +701,8 @@ void optimal_path_task::work()
                         << std::endl
                         << "   Bandwidth=" << beerocks::utils::convert_bandwidth_to_int(hostap_bw)
                         << "   estimated_phy_rate=" << (hostap_phy_rate / (1024.0 * 1024.0))
-                        << " [Mbps]"
-                        << " weighted_phy_rate=" << (weighted_phy_rate / (1024.0 * 1024.0))
-                        << " [Mbps]");
+                        << " [Mbps]" << " weighted_phy_rate="
+                        << (weighted_phy_rate / (1024.0 * 1024.0)) << " [Mbps]");
             } else {
                 all_hostaps_below_cutoff = false;
 
@@ -794,8 +793,8 @@ void optimal_path_task::work()
         }
 
         if (chosen_hostap.empty() || (chosen_hostap == current_hostap)) {
-            LOG_CLI(DEBUG, "optimal_path_task:"
-                               << " could not find a better path for sta " << sta_mac << std::endl);
+            LOG_CLI(DEBUG, "optimal_path_task:" << " could not find a better path for sta "
+                                                << sta_mac << std::endl);
             database.dm_uint64_param_one_up(station->dm_path + ".MultiAPSTA.SteeringSummaryStats",
                                             "NoCandidateAPFailures");
             database.dm_uint64_param_one_up(
@@ -976,7 +975,7 @@ void optimal_path_task::work()
         // send req to sta hostap //
         auto agent_mac = database.get_radio_parent_agent(tlvf::mac_from_string(current_hostap));
         auto request   = message_com::create_vs_message<
-            beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
+              beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
         if (request == nullptr) {
             LOG(ERROR)
                 << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
@@ -1170,7 +1169,7 @@ void optimal_path_task::work()
             if (hostap_it != hostap_candidates.end()) {
                 // Initial client radio is on the candidate list, force steer the client there.
                 chosen_bssid   = database.get_bss_by_ssid(tlvf::mac_from_string(hostap_it->first),
-                                                        current_hostap_ssid);
+                                                          current_hostap_ssid);
                 state          = SEND_STEER_ACTION;
                 is_force_steer = true;
                 chosen_method.append("Steer client imminently to initial radio " +
@@ -1450,9 +1449,8 @@ void optimal_path_task::work()
                             << "Bandwidth=" << utils::convert_bandwidth_to_int(hostap_params.bw)
                             << std::endl
                             << "    estimated_phy_rate=" << (hostap_phy_rate / (1024.0 * 1024.0))
-                            << " [Mbps]"
-                            << " weighted_phy_rate=" << (weighted_phy_rate / (1024.0 * 1024.0))
-                            << " [Mbps]");
+                            << " [Mbps]" << " weighted_phy_rate="
+                            << (weighted_phy_rate / (1024.0 * 1024.0)) << " [Mbps]");
             } else if (current_ul_params.status ==
                        son::wireless_utils::ESTIMATION_FAILURE_BELOW_RANGE) {
                 TASK_LOG(DEBUG) << "Switch to signal-strength-estimation method";
@@ -1654,7 +1652,7 @@ void optimal_path_task::send_rssi_measurement_request(const sMacAddr &agent_mac,
 {
     auto hostap_mac = database.get_sta_parent(client_mac);
     auto request    = message_com::create_vs_message<
-        beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
+           beerocks_message::cACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST>(cmdu_tx, id);
     if (request == nullptr) {
         LOG(ERROR) << "Failed building ACTION_CONTROL_CLIENT_RX_RSSI_MEASUREMENT_REQUEST message!";
         return;
@@ -1934,6 +1932,7 @@ bool optimal_path_task::all_measurement_succeed(const std::set<std::string> &tem
         TASK_LOG(DEBUG) << "hostap =" << hostap_tmp << " rx_rssi = " << int(rx_rssi)
                         << " rx_packets = " << int(rx_packets)
                         << " all_hostapd_got_packets = " << int(all_hostapd_got_packets);
+        LOG(DEBUG) << "current rssi value of client -->optimal_path_task.cpp: " << int(rx_rssi);
     }
     //if all the hostapd got good result (1 packet and above) from measurement
     if (calculate_measurement_delay_count == 1 && all_hostapd_got_packets) {
@@ -2036,12 +2035,11 @@ bool optimal_path_task::is_delay_match_window(const std::set<std::string> &temp_
         //burst ire will align with with max delay(burst will start with max delay ire meas)
         database.set_measurement_delay(current_hostap, delta_max_sum);
         TASK_LOG(DEBUG) << "current_hostap =" << current_hostap << "  delta_max = " << delta_max
-                        << " = delta_max_sum_delay = "
-                        << "__ " << delta_max_sum << " __";
+                        << " = delta_max_sum_delay = " << "__ " << delta_max_sum << " __";
         //all other ire's will align with max delay ire.
         database.set_measurement_delay(hostap, measurement_delay);
-        TASK_LOG(DEBUG) << "hostap " << hostap << " hostap_measurement_delay = "
-                        << "__ " << int(measurement_delay) << " __";
+        TASK_LOG(DEBUG) << "hostap " << hostap << " hostap_measurement_delay = " << "__ "
+                        << int(measurement_delay) << " __";
     }
 
     if ((actual_max_delay_percent < DEC_WINDOW_LIMIT) && (res == false)) {
@@ -2122,8 +2120,7 @@ void optimal_path_task::print_station_capabilities(
         LOG(WARNING) << "sta_capabilities is nullptr";
         return;
     }
-    TASK_LOG(DEBUG) << "sta_capabilities:"
-                    << " ht_ss=" << int(sta_capabilities->ht_ss)
+    TASK_LOG(DEBUG) << "sta_capabilities:" << " ht_ss=" << int(sta_capabilities->ht_ss)
                     << " ht_mcs=" << int(sta_capabilities->ht_mcs)
                     << " vht_ss=" << int(sta_capabilities->vht_ss)
                     << " vht_mcs=" << int(sta_capabilities->vht_mcs)

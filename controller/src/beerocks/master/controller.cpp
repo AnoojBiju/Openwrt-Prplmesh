@@ -1451,8 +1451,8 @@ bool Controller::handle_cmdu_1905_channel_scan_report(const sMacAddr &src_mac,
                    << "RUID: " << result_tlv->radio_uid() << ", "
                    << "Scan status: " << result_tlv->success() << ", "
                    << "Operating Class: " << result_tlv->operating_class() << ", "
-                   << "Channel: " << result_tlv->channel() << ", "
-                   << " containing " << neighbors_list_length << " neighbors";
+                   << "Channel: " << result_tlv->channel() << ", " << " containing "
+                   << neighbors_list_length << " neighbors";
         /**
          * To correctly store the results of the most current report, we need to know whether to
          * override any existing records.
@@ -3422,7 +3422,7 @@ bool Controller::handle_cmdu_control_message(
             new_event.snr        = notification->params().rx_snr;
             new_event.client_mac = notification->params().result.mac;
             new_event.bssid      = database.get_radio_bss_mac(tlvf::mac_from_string(ap_mac),
-                                                         notification->params().vap_id);
+                                                              notification->params().vap_id);
             m_task_pool.push_event(database.get_pre_association_steering_task_id(),
                                    pre_association_steering_task::eEvents::
                                        STEERING_EVENT_RSSI_MEASUREMENT_SNR_NOTIFICATION,
@@ -3457,6 +3457,7 @@ bool Controller::handle_cmdu_control_message(
                     << client_mac << " (sta) <-> (ap) " << radio_mac << " rx_rssi=" << rx_rssi
                     << " phy_rate_100kb (RX|TX)=" << int(notification->params().rx_phy_rate_100kb)
                     << " | " << int(notification->params().tx_phy_rate_100kb));
+        LOG(DEBUG) << "current rssi value -->controller.cpp: " << rx_rssi;
 
         if (!client->is_bSta() &&
             (database.get_sta_state(client_mac) == beerocks::STATE_CONNECTED) &&
@@ -3879,8 +3880,7 @@ bool Controller::handle_cmdu_control_message(
         break;
     }
     case beerocks_message::ACTION_CONTROL_ARP_QUERY_RESPONSE: {
-        LOG(DEBUG) << "ACTION_CONTROL_ARP_QUERY_RESPONSE from "
-                   << " id=" << beerocks_header->id();
+        LOG(DEBUG) << "ACTION_CONTROL_ARP_QUERY_RESPONSE from " << " id=" << beerocks_header->id();
         auto response =
             beerocks_header->addClass<beerocks_message::cACTION_CONTROL_ARP_QUERY_RESPONSE>();
         if (response == nullptr) {

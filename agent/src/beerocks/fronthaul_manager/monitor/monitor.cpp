@@ -963,6 +963,8 @@ bool Monitor::update_sta_stats(const std::chrono::steady_clock::time_point &time
                     sta_node->set_last_change_time();
                 }
                 sta_stats.rx_rssi_curr = int8_t(rssi_db);
+                LOG(DEBUG) << "current rssi value of client -->monitor.cpp: " << sta_mac
+                           << ", rx_rssi=" << int(rssi_db);
                 //LOG(INFO)  << sta_mac << ", rx_rssi=" << int(rssi_db);
             }
 

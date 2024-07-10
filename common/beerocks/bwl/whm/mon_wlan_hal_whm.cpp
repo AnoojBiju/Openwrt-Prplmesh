@@ -249,6 +249,8 @@ bool mon_wlan_hal_whm::update_stations_stats(const std::string &vap_iface_name,
     if (!m_iso_nl80211_client->get_sta_info(vap_iface_name, sta_mac_address, sta_info)) {
         return true;
     }
+    LOG(DEBUG) << "Pooja signal_avg_dbm: " << sta_info.signal_avg_dbm;
+    LOG(DEBUG) << "Pooja signal_dbm: " << sta_info.signal_dbm;
     sta_stats.tx_bytes          = sta_info.tx_bytes;
     sta_stats.rx_bytes          = sta_info.rx_bytes;
     sta_stats.tx_packets        = sta_info.tx_packets;
@@ -791,9 +793,9 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
         args.add_child("MACAddress", station_to_remove);
         if (!m_ambiorix_cl.call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
-            LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
-                       << " for object " << nasta_monitor_path
-                       << " and  MACAddress: " << station_to_remove << " Failed!!";
+            LOG(ERROR) << " remote function call deleteNonAssociatedDevice" << " for object "
+                       << nasta_monitor_path << " and  MACAddress: " << station_to_remove
+                       << " Failed!!";
             continue;
         } else {
             LOG(TRACE) << "Successfully removed unassociated station with mac: "

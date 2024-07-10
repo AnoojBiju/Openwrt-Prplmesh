@@ -369,7 +369,7 @@ public:
         uint32_t tx_packets         = 0;
         uint32_t tx_retries         = 0;
         uint32_t tx_failed          = 0;
-        uint8_t signal_dbm          = 0;
+        int8_t signal_dbm           = 0;
         uint8_t signal_avg_dbm      = 0;
         uint16_t tx_bitrate_100kbps = 0;
         uint16_t rx_bitrate_100kbps = 0;

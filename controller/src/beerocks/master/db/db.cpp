@@ -497,8 +497,7 @@ std::shared_ptr<Station> db::add_station(const sMacAddr &al_mac, const sMacAddr 
     }
     auto station = m_stations.add(mac);
     auto bss     = get_bss(parent_mac, al_mac);
-    LOG(DEBUG) << "Adding Station node "
-               << " for AL-MAC " << al_mac << " station mac " << mac
+    LOG(DEBUG) << "Adding Station node " << " for AL-MAC " << al_mac << " station mac " << mac
                << " parent mac: " << parent_mac;
 
     if (!bss) {
@@ -3945,8 +3944,7 @@ bool db::set_sta_stay_on_initial_radio(Station &client, bool stay_on_initial_rad
     LOG(DEBUG) << "stay_on_initial_radio=" << stay_on_initial_radio;
 
     auto is_client_connected = (client.state == STATE_CONNECTED);
-    LOG(DEBUG) << "client "
-               << " state=" << ((is_client_connected) ? "connected" : "disconnected");
+    LOG(DEBUG) << "client " << " state=" << ((is_client_connected) ? "connected" : "disconnected");
 
     auto timestamp = std::chrono::system_clock::now();
     if (save_to_persistent_db) {
@@ -4406,8 +4404,8 @@ bool db::load_persistent_db_clients()
     LOG_IF(set_error_count, DEBUG) << "Unable to set the nodes with values from persistent db for "
                                    << set_error_count << " clients";
     LOG(DEBUG) << "Filtered: " << threshold_violation_count
-               << " clients due to max DB capacity reached:"
-               << " max-capacity: " << config.clients_persistent_db_max_size;
+               << " clients due to max DB capacity reached:" << " max-capacity: "
+               << config.clients_persistent_db_max_size;
     LOG(DEBUG) << " Added " << sum << " clients successfully";
 
     return true;
@@ -4967,6 +4965,7 @@ int8_t db::get_sta_load_rx_rssi(const std::string &sta_mac)
         LOG(WARNING) << __FUNCTION__ << " - station " << sta_mac << " does not exist!";
         return -1;
     }
+    LOG(DEBUG) << "current rssi value -->db.cpp: " << pSta->stats_info->rx_rssi;
     return pSta->stats_info->rx_rssi;
 }
 

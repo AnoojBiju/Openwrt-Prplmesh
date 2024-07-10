@@ -2201,9 +2201,11 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
             response->params().rx_phy_rate_100kb = msg->params.rx_phy_rate_100kb;
             response->params().tx_phy_rate_100kb = msg->params.tx_phy_rate_100kb;
             response->params().rx_rssi           = msg->params.rx_rssi;
-            response->params().rx_snr            = msg->params.rx_snr;
-            response->params().rx_packets        = msg->params.rx_packets;
-            response->params().src_module        = msg->params.src_module;
+            LOG(DEBUG) << "current rssi value of client -->backhaul_manager.cpp: "
+                       << msg->params.rx_rssi;
+            response->params().rx_snr     = msg->params.rx_snr;
+            response->params().rx_packets = msg->params.rx_packets;
+            response->params().src_module = msg->params.src_module;
 
             send_cmdu(m_agent_fd, cmdu_tx);
         } else {
