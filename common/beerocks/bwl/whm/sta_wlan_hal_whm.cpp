@@ -807,6 +807,32 @@ bool sta_wlan_hal_whm::process_ep_event(const std::string &interface, const std:
             auto msg = reinterpret_cast<sACTION_BACKHAUL_CONNECTED_NOTIFICATION *>(msg_buff.get());
             LOG_IF(!msg, FATAL) << "Memory allocation failed!";
             memset(msg_buff.get(), 0, sizeof(sACTION_BACKHAUL_CONNECTED_NOTIFICATION));
+            // Parse the event
+            parsed_line_t parsed_obj;
+            int64_t tmp_int;
+
+            parse_event(buffer, parsed_obj);
+
+            // Since prplwrt does not include the changes on the wpa_supplicant which add the Multi-AP
+            // Profile to the association response, do not fail if it does not exist, and put default
+            // value of profile-1.
+            // TODO: When the changes will be ported to prplwrt, need to treat the "Multi-AP Profile"
+            // parameter as mandatory.
+
+            // Multi-AP Profile
+            if (read_param("multi_ap_profile", parsed_obj, tmp_int)) {
+                msg->multi_ap_profile = tmp_int;
+            } else {
+                msg->multi_ap_profile = 1;
+                LOG(ERROR) << "Failed reading 'multi_ap_profile' parameter!";
+            }
+
+            // Multi-AP Primary VLAN ID - Not mandatory
+            if (read_param("multi_ap_primary_vlanid", parsed_obj, tmp_int)) {
+                msg->multi_ap_primary_vlan_id = tmp_int;
+            } else {
+                msg->multi_ap_primary_vlan_id = 0;
+            }
             event_queue_push(Event::Connected, msg_buff);
         } else if (is_connected(old_status)) {
             auto msg_buff =
