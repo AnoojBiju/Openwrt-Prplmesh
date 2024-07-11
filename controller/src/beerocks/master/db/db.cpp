@@ -7830,7 +7830,7 @@ bool db::dm_add_radio_scan_capabilities(const Agent::sRadio &radio)
     auto scan_capability_path = radio.dm_path + ".ScanCapability";
 
     // Clearing ScanCapability data model object and its sub-objects.
-    if (!m_ambiorix_datamodel->remove_all_instances(scan_capability_path)) {
+    if (!m_ambiorix_datamodel->remove_all_instances(scan_capability_path + ".OpClassChannels")) {
         return false;
     }
 
