@@ -10,40 +10,41 @@ set(TLVF_COMMAND ${Python3_EXECUTABLE} ${PythonTlvf} ${TLVF_DIR}/src ${TLVF_DIR}
 set(ENUM_AUTO_PRINT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../external/enumAutoPrint)
 set(ENUM_AUTO_PRINT_COMMAND ${ENUM_AUTO_PRINT_DIR}/enum_auto_print.py)
 
-message("-- Running ${TLVF_COMMAND} --print-dependencies...")
-execute_process(
-    COMMAND ${TLVF_COMMAND} --print-dependencies
-    OUTPUT_VARIABLE TLVF_DEPENDENCIES
-    RESULT_VARIABLE RET
-)
-if(NOT RET EQUAL 0)
-    message(FATAL_ERROR "-- ${TLVF_COMMAND} --print-dependencies failed!")
-endif()
-#message("Dependencies=${TLVF_DEPENDENCIES}")
-message("-- Running ${TLVF_COMMAND} --print-outputs...")
-execute_process(
-    COMMAND ${TLVF_COMMAND} --print-outputs
-    OUTPUT_VARIABLE TLVF_OUTPUTS
-    RESULT_VARIABLE RET
-)
-if(NOT RET EQUAL 0)
-    message(FATAL_ERROR "-- ${TLVF_COMMAND} --print-outputs failed!")
-endif()
-#message("TLVF_OUTPUTS\n${TLVF_OUTPUTS}")
-
 execute_process(COMMAND ${ENUM_AUTO_PRINT_COMMAND})
 if(NOT RET EQUAL 0)
     message(FATAL_ERROR "-- Running enum_auto_print.py failed!")
 endif()
 
-add_custom_command(
-    COMMAND ${TLVF_COMMAND}
-    COMMAND ${ENUM_AUTO_PRINT_COMMAND}
-    DEPENDS ${TLVF_DEPENDENCIES} ${TLVF_DIR}/tlvf.py ${TLVF_DIR}/tlvf_conf.yaml
-    OUTPUT ${TLVF_OUTPUTS}
-    COMMENT "Generating the tlvf files."
-)
+if (REGENERATE_TLVS)
+	message("-- Running ${TLVF_COMMAND} --print-dependencies...")
+	execute_process(
+	    COMMAND ${TLVF_COMMAND} --print-dependencies
+	    OUTPUT_VARIABLE TLVF_DEPENDENCIES
+	    RESULT_VARIABLE RET
+	)
+	if(NOT RET EQUAL 0)
+	    message(FATAL_ERROR "-- ${TLVF_COMMAND} --print-dependencies failed!")
+	endif()
+	#message("Dependencies=${TLVF_DEPENDENCIES}")
+	message("-- Running ${TLVF_COMMAND} --print-outputs...")
+	execute_process(
+	    COMMAND ${TLVF_COMMAND} --print-outputs
+	    OUTPUT_VARIABLE TLVF_OUTPUTS
+	    RESULT_VARIABLE RET
+	)
+	if(NOT RET EQUAL 0)
+	    message(FATAL_ERROR "-- ${TLVF_COMMAND} --print-outputs failed!")
+	endif()
+	#message("TLVF_OUTPUTS\n${TLVF_OUTPUTS}")
 
+	add_custom_command(
+	    COMMAND ${TLVF_COMMAND}
+	    COMMAND ${ENUM_AUTO_PRINT_COMMAND}
+	    DEPENDS ${TLVF_DEPENDENCIES} ${TLVF_DIR}/tlvf.py ${TLVF_DIR}/tlvf_conf.yaml
+	    OUTPUT ${TLVF_OUTPUTS}
+	    COMMENT "Generating the tlvf files."
+	)
+endif()
 file(GLOB_RECURSE TLVF_SOURCES ${TLVF_DIR}/src/src/*.c*)
 add_library(tlvf ${TLVF_OUTPUTS} ${TLVF_SOURCES})
 set_target_properties(tlvf PROPERTIES VERSION ${prplmesh_VERSION} SOVERSION ${prplmesh_VERSION_MAJOR})

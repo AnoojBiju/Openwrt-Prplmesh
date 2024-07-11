@@ -3,7 +3,7 @@ project(bcl VERSION ${prplmesh_VERSION})
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
-find_package(PythonInterp REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_package(nl-3 REQUIRED)
 find_package(nl-route-3 REQUIRED)
 
