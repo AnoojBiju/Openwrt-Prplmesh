@@ -1,0 +1,107 @@
+#
+---
+_namespace: wfa_map
+
+tlvAgentApMldConfiguration:
+  _type: class
+  _is_tlv_class : True
+  type:
+    _type: eTlvTypeMap
+    _value_const: TLV_AGENT_AP_MLD_CONFIGURATION
+  length: uint16_t
+  num_ap_mld: 
+    _type: uint8_t
+    _length_var: True
+  ap_mld: 
+    _type: cApMld
+    _length: [ num_ap_mld ]
+
+cApMld:
+  _type: class
+  ap_mld_mac_addr_valid: sApMldMacAddrValid
+  ssid_length: 
+    _type: uint8_t
+    _length_var: True
+  ssid:
+    _type: char
+    _length: [ ssid_length ]
+  ap_mld_mac_addr:
+    _type: sMacAddr
+  modes: sModes
+  reserved:
+    _type: uint8_t
+    _length: [20]
+  num_affiliated_ap:
+    _type: uint8_t
+    _length_var: True
+  affiliated_ap: 
+    _type: cAffiliatedAp
+    _length: [ num_affiliated_ap ]
+
+sApMldMacAddrValid:
+  _type: struct
+  _bit_field: uint8_t
+  is_valid:
+    _bit_range: [7,7]
+    _comment: |
+      0: not valid
+      1: valid
+  reserved:
+    _bit_range: [6,0]
+
+sModes:
+  _type: struct
+  _bit_field: uint8_t
+  str:
+    _bit_range: [7,7]
+    _comment: |
+      0: disabled
+      1: enabled
+  nstr:
+    _bit_range: [6,6]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlsr:
+    _bit_range: [5,5]
+    _comment: |
+      0: disabled
+      1: enabled
+  emlmr:
+    _bit_range: [4,4]
+    _comment: |
+      0: disabled
+      1: enabled
+  reserved:
+    _bit_range: [3,0]
+
+cAffiliatedAp:
+  _type: class
+  affiliated_ap_fields_valid: sAffiliatedApFieldsValid
+  ruid:
+    _type: sMacAddr
+  affiliated_ap_mac_addr:
+    _type: sMacAddr
+  linkid: uint8_t
+  _comment: |
+    linkid: 0-15 variable
+    linkid: 16-255 reserved
+  reserved:
+    _type: uint8_t
+    _length: [18]
+
+sAffiliatedApFieldsValid:
+  _type: struct
+  _bit_field: uint8_t
+  affiliated_ap_mac_addr_valid:
+    _bit_range: [7,7]
+    _comment: |
+      0: not valid
+      1: valid
+  linkid_valid:
+    _bit_range: [6,6]
+    _comment: |
+      0: not valid
+      1: valid
+  reserved:
+    _bit_range: [5,0]
