@@ -16,10 +16,8 @@
                     }
 
                     object Capabilities {
-                        instance add() {
-                            object OperatingClasses {
-                                instance add() {}
-                            }
+                        object CapableOperatingClassProfile {
+                            instance add() {}
                         }
                     }
 
@@ -47,7 +45,7 @@
 }
 
 %populate {
-    object AssociationEvent {
+    object @CONTROLLER_ROOT_DM@.AssociationEvent {
         object AssociationEventData {
             instance add() {}
         }
@@ -55,7 +53,7 @@
 }
 
 %populate {
-    object DisassociationEvent {
+    object @CONTROLLER_ROOT_DM@.DisassociationEvent {
         object DisassociationEventData {
             instance add() {}
         }

@@ -518,7 +518,7 @@ TEST_F(DbTest, test_set_ap_ht_capabilities)
 TEST_F(DbTest, test_add_hostap_supported_operating_class)
 {
     const std::string operating_classes =
-        std::string(g_radio_path_1) + ".Capabilities.OperatingClasses";
+        std::string(g_radio_path_1) + ".Capabilities.CapableOperatingClassProfile";
     const std::string non_operable = std::string(operating_classes) + ".1.NonOperable";
 
     //device always exists
