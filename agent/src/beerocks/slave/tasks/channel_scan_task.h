@@ -9,12 +9,14 @@
 #ifndef _CHANNEL_SCAN_TASK_H_
 #define _CHANNEL_SCAN_TASK_H_
 
-#include "task.h"
 #include <tlvf/CmduMessageTx.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanRequest.h>
 #include <tlvf/wfa_map/tlvProfile2ChannelScanResult.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <vector>
+
+#include "../agent_db.h"
+#include "task.h"
 
 namespace beerocks {
 
@@ -275,6 +277,49 @@ private:
      */
     std::shared_ptr<StoredResultsVector>
     get_scan_results_for_request(const std::shared_ptr<sScanRequest> request);
+
+    /**
+     * @brief Creates a sChannel vector from the given incoming channel list.
+     * 
+     * @param[in] channel_list The list of channels to process.
+     * @param[in] operating_class The operating class associated with the channels.
+     * @param[in] bw The bandwidth to consider for the channels.
+     * @param[in] db_radio Pointer to the radio database containing supported channels.
+     * 
+     * @return std::vector<sChannel> Vector containing the processed sChannel objects.
+     */
+    std::vector<sChannel> create_channel_vector(const std::vector<uint8_t> &channel_list,
+                                                const uint8_t operating_class,
+                                                const beerocks::eWiFiBandwidth bw,
+                                                AgentDB::sRadio *db_radio);
+
+    /**
+     * @brief Converts a vector of sChannel objects to a formatted string representation.
+     * 
+     * @param[in] channel_vector The vector of sChannel objects to be converted.
+     * 
+     * @return std::string A string representation of the channel numbers in the vector.
+     */
+    std::string format_channel_vector(const std::vector<sChannel> &channel_vector) const;
+
+    /**
+     * @brief Creates a vector of sOperatingClass objects from the previous scans.
+     * 
+     * @return std::vector<sOperatingClass> Vector containing the sOperatingClass objects 
+     *         generated from the previous scans.
+     */
+    std::vector<sOperatingClass> generate_stored_operating_classes() const;
+
+    /**
+     * @brief Creates an sOperatingClass object from the given operating class entry received in the request.
+     * 
+     * @param[in] class_entry The operating class entry received in the request.
+     * @param[in] db_radio Pointer to the radio database containing supported channels.
+     * 
+     * @return sOperatingClass Object containing the operating class number, bandwidth, and the list of channels.
+     */
+    sOperatingClass create_fresh_operating_class(wfa_map::cOperatingClasses &operating_class,
+                                                 AgentDB::sRadio *db_radio);
 };
 
 } // namespace beerocks
