@@ -672,6 +672,16 @@ bool ap_wlan_hal_whm::switch_channel(int chan, beerocks::eWiFiBandwidth bw,
     LOG(TRACE) << " channel: " << chan << ", bw enum: " << bw
                << " bw mhz: " << wbapi_utils::bandwidth_to_string(bw)
                << ", vht_center_frequency: " << vht_center_frequency;
+    /*
+* TODO: Below channel BW override is a temporary solution to overcome sniffer
+* issues in WFA EasyMesh cert testing as mentioned in PPM-2638.
+* Needs to be removed once sniffer issues resolved.
+*/
+    bool certification_mode = get_hal_conf().certification_mode;
+    if (certification_mode) {
+        LOG(INFO) << "In Certification mode, overriding bw to 20MHz";
+        bw = BANDWIDTH_20;
+    }
 
     AmbiorixVariant new_obj(AMXC_VAR_ID_HTABLE);
     bool amx_ret, status = true;
