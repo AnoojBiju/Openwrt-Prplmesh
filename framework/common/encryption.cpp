@@ -104,7 +104,7 @@ const uint8_t diffie_hellman::dh1536_p[] = {
 
 const uint8_t diffie_hellman::dh1536_g[] = {0x02};
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if 0
 diffie_hellman::diffie_hellman() : m_dh(nullptr), m_pubkey(nullptr)
 {
     MAPF_DBG("Generating DH keypair");
@@ -287,6 +287,7 @@ bool diffie_hellman::compute_key(uint8_t *key, size_t &key_length, const uint8_t
     }
 
     key_length = static_cast<size_t>(ret);
+
     return true;
 }
 #endif

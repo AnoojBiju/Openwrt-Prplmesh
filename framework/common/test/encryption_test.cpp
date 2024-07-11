@@ -7,16 +7,34 @@
  */
 
 #include <mapf/common/encryption.h>
-#include <mapf/common/logger.h>
 
 #include <arpa/inet.h>
+
+#include <stdio.h>
+#include <string>
+#include <sstream>
+#include <vector>
+
+enum loglevel { INFO, ERROR };
+
+static void LOG(loglevel level, const std::string &s)
+{
+	if (level == INFO)
+	{
+		printf("[INFO] %s\n", s.c_str());
+	}
+	else if (level == ERROR)
+	{
+		fprintf(stderr, "\033[1;31m[ERROR] %s\033[0m\n", s.c_str());
+	}
+}
 
 static bool check(int &errors, bool check, const std::string &message)
 {
     if (check) {
-        MAPF_INFO(" OK  ") << message;
+        LOG(INFO, " OK  " + message);
     } else {
-        MAPF_ERR("FAIL ") << message;
+        LOG(ERROR, " FAIL " + message);
         errors++;
     }
     return check;
@@ -24,10 +42,9 @@ static bool check(int &errors, bool check, const std::string &message)
 
 int main()
 {
-    mapf::Logger::Instance().LoggerInit("encryption_test");
     int errors = 0;
 
-    MAPF_INFO("Start encryption test");
+    LOG(INFO, "Start encryption test");
     mapf::encryption::diffie_hellman m1;
     mapf::encryption::diffie_hellman m2;
 
@@ -60,7 +77,9 @@ int main()
      */
     std::vector<int> sizes = {15, 16, 17, 815, 816, 817};
     for (auto size : sizes) {
-        LOG(INFO) << "Test encryption with plaintext size " << size;
+		std::stringstream ss("Test encryption with plaintext size ");
+		ss << size;
+        LOG(INFO,  ss.str());
         uint8_t plaintext[size];
         std::fill(plaintext, plaintext + sizeof(plaintext), 1);
         // last 8 bytes are the KWA
