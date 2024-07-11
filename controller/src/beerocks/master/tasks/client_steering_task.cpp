@@ -73,7 +73,11 @@ void client_steering_task::work()
             break;
         }
 
-        steer_sta();
+        if (!steer_sta()) {
+            LOG(ERROR) << "Failed to trigger STA steering, abort task";
+            finish();
+            break;
+        }
 
         m_state = FINALIZE;
         if (m_steer_restricted) {
@@ -192,12 +196,12 @@ void client_steering_task::work()
     }
 }
 
-void client_steering_task::steer_sta()
+bool client_steering_task::steer_sta()
 {
     auto client = m_database.get_station(tlvf::mac_from_string(m_sta_mac));
     if (!client) {
         LOG(ERROR) << "client " << m_sta_mac << " not found";
-        return;
+        return false;
     }
 
     if (!client->is_bSta()) {
@@ -210,14 +214,14 @@ void client_steering_task::steer_sta()
     if (target_radio_mac.empty()) {
         LOG(ERROR) << "parent radio for target-bssid=" << m_target_bssid
                    << " not found, exiting steering task";
-        return;
+        return false;
     }
 
     auto target_agent = m_database.get_agent_by_bssid(tlvf::mac_from_string(m_target_bssid));
     if (!target_agent || tlvf::mac_to_string(target_agent->al_mac).empty()) {
         LOG(ERROR) << "Parent agent for bssid= " << m_target_bssid
                    << " not found, exiting steering task";
-        return;
+        return false;
     }
 
     dm_update_multi_ap_steering_params(m_database.get_node_11v_capability(*client));
@@ -244,20 +248,20 @@ void client_steering_task::steer_sta()
             m_cmdu_tx.create(0, ieee1905_1::eMessageType::BACKHAUL_STEERING_REQUEST_MESSAGE);
         if (!roam_request) {
             LOG(ERROR) << "Failed building BACKHAUL_STEERING_REQUEST_MESSAGE!";
-            return;
+            return false;
         }
 
         auto bh_steer_req_tlv = m_cmdu_tx.addClass<wfa_map::tlvBackhaulSteeringRequest>();
         if (!bh_steer_req_tlv) {
             LOG(ERROR) << "Failed building addClass<wfa_map::tlvSteeringRequest!";
-            return;
+            return false;
         }
 
         std::shared_ptr<Agent::sRadio> target_radio =
             m_database.get_radio_by_bssid(tlvf::mac_from_string(m_target_bssid));
         if (!target_radio) {
             LOG(ERROR) << "No radio found hosting BSS " << m_target_bssid;
-            return;
+            return false;
         }
         auto wifi_channel = m_database.get_radio_wifi_channel(target_radio->radio_uid);
         if (wifi_channel.is_empty()) {
@@ -282,7 +286,7 @@ void client_steering_task::steer_sta()
         m_tasks.push_event(m_database.get_bml_task_id(), bml_task::BH_ROAM_REQ_EVENT_AVAILABLE,
                            &bh_roam_event);
 
-        return;
+        return true;
     }
 
     auto hostaps                   = m_database.get_active_radios();
@@ -346,14 +350,14 @@ void client_steering_task::steer_sta()
     // Send STEERING request
     if (!m_cmdu_tx.create(0, ieee1905_1::eMessageType::CLIENT_STEERING_REQUEST_MESSAGE)) {
         LOG(ERROR) << "cmdu creation of type CLIENT_STEERING_REQUEST_MESSAGE, has failed";
-        return;
+        return false;
     }
 
     auto steering_request_tlv = m_cmdu_tx.addClass<wfa_map::tlvSteeringRequest>();
 
     if (!steering_request_tlv) {
         LOG(ERROR) << "addClass wfa_map::tlvSteeringRequest failed";
-        return;
+        return false;
     }
 
     steering_request_tlv->request_flags().request_mode =
@@ -400,6 +404,7 @@ void client_steering_task::steer_sta()
     bss_tm_event.disassoc_imminent = m_disassoc_imminent;
     m_tasks.push_event(m_database.get_bml_task_id(), bml_task::BSS_TM_REQ_EVENT_AVAILABLE,
                        &bss_tm_event);
+    return true;
 }
 
 void client_steering_task::print_steering_info()
