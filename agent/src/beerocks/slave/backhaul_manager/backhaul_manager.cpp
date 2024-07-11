@@ -1998,7 +1998,9 @@ bool BackhaulManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t even
         // This event may come as a result of enabling the backhaul, but also as a result
         // of steering. *Only* in case it was the result of steering, we need to send a steering
         // response.
-        if (m_backhaul_steering_bssid == bssid) {
+        if ((m_backhaul_steering_bssid != beerocks::net::network_utils::ZERO_MAC) &&
+            (m_backhaul_steering_bssid == bssid)) {
+
             m_backhaul_steering_bssid = beerocks::net::network_utils::ZERO_MAC;
             m_timer_manager->remove_timer(m_backhaul_steering_timer);
 
