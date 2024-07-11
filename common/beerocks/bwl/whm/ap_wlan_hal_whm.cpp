@@ -248,11 +248,6 @@ bool ap_wlan_hal_whm::sta_allow(const sMacAddr &mac, const sMacAddr &bssid)
         return false;
     }
 
-    if (mode.empty() || mode == "Off") {
-        LOG(TRACE) << "MACFiltering mode is off, sta allowed";
-        return true;
-    }
-
     // check if the sta is included in accesslist entries
     std::string entry_path =
         wbapi_utils::search_path_mac_filtering_entry_by_mac(ifname, tlvf::mac_to_string(mac));
@@ -301,11 +296,6 @@ bool ap_wlan_hal_whm::sta_deny(const sMacAddr &mac, const sMacAddr &bssid)
     if (!m_ambiorix_cl.get_param(mode, mac_filter_path, "Mode")) {
         LOG(ERROR) << "failed to get MACFiltering object";
         return false;
-    }
-
-    if (mode.empty() || mode == "Off") {
-        LOG(TRACE) << "MACFiltering mode is off, sta allowed";
-        return true;
     }
 
     // check if the sta is included in accesslist entries
