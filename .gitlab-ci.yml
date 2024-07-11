@@ -33,9 +33,6 @@ include:
     - when: manual
       allow_failure: true
 
-image-build-builder/alpine:
-  extends: .image-build
-
 image-build-builder/ubuntu/bionic:
   extends: .image-build
 
@@ -55,7 +52,6 @@ platform:
   stage: platform
   needs:
     - build-in-docker
-    - build-in-docker-legacy
     - image-build-boardfarm-ci
   rules:
     - if: $CI_MERGE_REQUEST_LABELS =~ /.*test-upgrade-image.*/
@@ -154,7 +150,7 @@ nbapi-docgen:
 
 # Updates gitlab pages with the NBAPI documentation:
 # https://prpl-foundation.gitlab.io/prplmesh/prplMesh/
-# Only run on the master branch, to avoid unneccesary pushes.
+# Only run on the master branch, to avoid unnecessary pushes.
 pages:
   stage: upload
   needs: ["nbapi-docgen"]
@@ -225,19 +221,12 @@ pytest:
 build-in-docker:
   extends: .build-in-docker
   variables:
-    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DUSE_PRPLMESH_WHM=ON"
+    EXTRA_CMAKE_FLAGS: ""
 
 build-in-docker-legacy:
   extends: .build-in-docker
   variables:
-    EXTRA_CMAKE_FLAGS: "-DENABLE_NBAPI=ON -DENABLE_VBSS=ON"
-
-build-in-docker-alpine:
-  extends: .build-in-docker
-  image: $CI_REGISTRY_IMAGE/prplmesh-builder-alpine:$CI_PIPELINE_ID
-  rules:
-    - !reference [.rules-for-expensive-job, rules]
-  needs: ["image-build-builder/alpine"]
+    EXTRA_CMAKE_FLAGS: "-DENABLE_VBSS=ON -DUSE_PRPLMESH_WHM=OFF"
 
 build-in-docker-static:
   extends: build-in-docker
@@ -358,10 +347,6 @@ upload-artifacts:
   needs:
     - build-in-docker
     - platform
-    - job: build-for-intel-mips
-      project: $CI_PROJECT_PATH
-      ref: $CI_COMMIT_REF_NAME
-      artifacts: true
     - job: build-for-turris-omnia
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
@@ -369,8 +354,7 @@ upload-artifacts:
     - job: build-for-rdkb-turris-omnia
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
-      artifacts: true
-    - job: build-for-glinet-b1300
+    - job: build-for-haze
       project: $CI_PROJECT_PATH
       ref: $CI_COMMIT_REF_NAME
       artifacts: true

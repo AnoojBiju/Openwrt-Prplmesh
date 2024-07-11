@@ -85,12 +85,6 @@ build_prplmesh() {
     docker cp "${container_name}:/home/openwrt/openwrt/artifacts/" "$build_dir"
     mv "$build_dir/artifacts/"* "$build_dir"
     rm -r "$build_dir/artifacts/"
-    if [ "$TARGET_SYSTEM" = "intel_mips" ] ; then
-        #TODO: remove once PPM-1121 is done
-        for device in axepoint nec-wx3000hp ; do
-            ln -s intel_mips "$build_dir/../$device"
-        done
-    fi
 }
 
 main() {
@@ -108,7 +102,7 @@ main() {
 
     eval set -- "$OPTS"
 
-    SUPPORTED_TARGETS="turris-omnia glinet-b1300 axepoint nec-wx3000hp intel_mips haze urx_osp"
+    SUPPORTED_TARGETS="turris-omnia haze urx_osp"
 
     while true; do
         case "$1" in
@@ -138,12 +132,6 @@ main() {
         turris-omnia)
             TARGET_SYSTEM=mvebu
             ;;
-        glinet-b1300)
-            TARGET_SYSTEM=ipq40xx
-            ;;
-        axepoint|intel_mips|nec-wx3000hp)
-            TARGET_SYSTEM=intel_mips
-            ;;
         haze)
             TARGET_SYSTEM=ipq807x
             ;;
@@ -160,12 +148,7 @@ main() {
             ;;
     esac
 
-    legacy_platforms=("glinet-b1300" "axepoint" "intel_mips" "nec-wx3000hp")
-    if [[ " ${legacy_platforms[*]} " =~ " $TARGET_DEVICE " ]] ; then
-        dbg "Legacy platform, building on prplOS(-old)"
-        OPENWRT_TOOLCHAIN_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
-        OPENWRT_VERSION='21169344e223c5e02e8afedc3cc5648acd42f6cc'
-    elif [[ "haze" == "$TARGET_DEVICE" ]] ; then
+    if [[ "haze" == "$TARGET_DEVICE" ]] ; then
         dbg "Haze platform, build on prplos master + pWHM 5.34.0"
         OPENWRT_TOOLCHAIN_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
         OPENWRT_VERSION='538cd93744bc16f4b826143d959b548cf572df4a'
@@ -201,11 +184,7 @@ main() {
     export WHM_ENABLE
     export PRPLMESH_VARIANT
 
-    if [ -n "$WHM_ENABLE" ] ; then
-        build_directory="$rootdir/buildWHM"
-    else
-        build_directory="$rootdir/build"
-    fi
+    build_directory="$rootdir/build"
 
     build_image "$build_directory/$TARGET_DEVICE"
     [ $IMAGE_ONLY = true ] && exit $?

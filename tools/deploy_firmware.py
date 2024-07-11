@@ -17,19 +17,13 @@ from device.configuration import configure_device
 from device.get_device import device_from_name
 
 
-def replace_build_dir(build_directory):
-    reversed_dir = build_directory[::-1]
-    replaced_dir = reversed_dir.replace("/build/"[::-1], "/buildWHM/"[::-1], 1)
-    return replaced_dir[::-1]
-
-
 def main():
     parser = argparse.ArgumentParser(prog=sys.argv[0],
                                      description="""Update a prplOS device, either through u-boot
                                      or using sysupgrade, depending on the target device.""")
     parser.add_argument('-d', '--device',
-                        help="""Device to upgrade. Currently supported targets are: nec-wx3000hp
-                        glinet-b1300 turris-omnia axepoint haze urx_osp""", required=True)
+                        help="""Device to upgrade. Currently supported targets are:
+                        turris-omnia haze urx_osp""", required=True)
     parser.add_argument(
         '-t',
         '--target-name',
@@ -61,10 +55,6 @@ def main():
     args = parser.parse_args()
 
     dev = device_from_name(args.device, args.target_name, args.image)
-
-    # Replaces the last occurence of /build/ with /buildWHM/ in the devices's artifacts dir
-    if args.whm:
-        dev.artifacts_dir = replace_build_dir(dev.artifacts_dir)
 
     def do_upgrade(dev):
         try:

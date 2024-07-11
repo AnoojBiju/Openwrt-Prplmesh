@@ -20,41 +20,6 @@ def NOTICE(string):
     print_color('%s' % (string), 'white')
 
 
-class owrtcfg(object):
-    def __init__(self, path):
-        self.path = path
-        self.dotconfig = '{}/.config'.format(path)
-        self.cfg = {
-            'CONFIG_BUILD_SUFFIX': None,
-            'CONFIG_TARGET_NAME': 'mips_mips32_uClibc-0.9.33.2',
-            'CONFIG_TOOLCHAIN_ROOT':
-            '{}/staging_dir/toolchain-mips_mips32_gcc-4.8-linaro_uClibc-0.9.33.2'.format(path),
-            'CONFIG_TOOLCHAIN_PREFIX': 'mips-openwrt-linux-uclibc-',
-            'CONFIG_TARGET_lantiq_xrx500_easy350_anywan_axepoint': None
-        }
-
-    def __get_entry_value(self, lines, name):
-        key = name + '='
-        return next((s.split('=')[1].replace('\"', '').replace('\n', '')
-                     for s in lines if key in s), None)
-
-    def parse(self):
-        lines = None
-        with open(os.path.realpath(self.dotconfig), "r") as c:
-            lines = c.readlines()
-        for key in self.cfg:
-            value = self.__get_entry_value(lines, key)
-            if value:
-                self.cfg[key] = value
-            if not self.cfg[key]:
-                logger.error("Failed to parse {} from {}".format(key, self.dotconfig))
-
-        return self.cfg
-
-    def __str__(self):
-        return "path={}\nvalues={}".format(self.path, self.cfg)
-
-
 class chdlabv3(object):
     def __init__(self, board, setup=None, user=None):
         from chdlab.commands.config import CHDLAB_config
@@ -362,12 +327,6 @@ class mapcfg(object):
             toolchain_prefix = '{}/x86_64-linux/usr/bin/i686-rdk-linux/i686-rdk-linux-'.format(
                 toolchain_path)
             build_name = 'puma7-atom'
-        elif self.args.target == 'ugw':
-            cfg = owrtcfg(toolchain_path).parse()
-            toolchain_prefix = '{}/bin/{}'.format(cfg['CONFIG_TOOLCHAIN_ROOT'],
-                                                  cfg['CONFIG_TOOLCHAIN_PREFIX'])
-            build_name = 'target-{}_{}'.format(cfg['CONFIG_TARGET_NAME'],
-                                               cfg['CONFIG_BUILD_SUFFIX'])
         else:
             raise Exception("Invalid target {}".format(self.args.target))
 

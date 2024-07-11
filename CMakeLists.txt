@@ -27,10 +27,10 @@ option (BUILD_AGENT "Build EasyMesh agent" ON)
 option (BUILD_CONTROLLER "Build EasyMesh controller" ON)
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
-option (ENABLE_NBAPI "Build the northbound (high-level) API" OFF)
+option (ENABLE_NBAPI "Build the northbound (high-level) API" ON)
 option (ENABLE_VBSS "Build with Virtual BSS support" ON)
 
-option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" OFF)
+option(USE_PRPLMESH_WHM "Use prplMesh Wireless Hardware Manager" ON)
 
 ## Generic checks and defaults
 
