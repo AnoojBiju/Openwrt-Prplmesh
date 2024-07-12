@@ -9,6 +9,7 @@ namespace gate {
 bool load(std::shared_ptr<beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_REQUEST> lhs,
           const ieee1905_1::CmduMessageRx &rhs)
 {
+    LOG(DEBUG) << "translate ieee1905 to vs message for BEACON_METRICS_QUERY";
     // escape I
     if (!lhs) {
         LOG(ERROR) << "can't fill empty pointer. lhs is nullptr. returning";
@@ -29,7 +30,9 @@ bool load(std::shared_ptr<beerocks_message::cACTION_MONITOR_CLIENT_BEACON_11K_RE
     lhs_params.channel = beacon_metrics_query->channel_number();
 
     lhs_params.measurement_mode = beerocks::MEASURE_MODE_ACTIVE;
-    lhs_params.duration         = beerocks::BEACON_MEASURE_DEFAULT_ACTIVE_DURATION;
+    LOG(DEBUG) << "measurement_mode: " << int(lhs_params.measurement_mode);
+
+    lhs_params.duration = beerocks::BEACON_MEASURE_DEFAULT_ACTIVE_DURATION;
 
     lhs_params.expected_reports_count = 1;
 

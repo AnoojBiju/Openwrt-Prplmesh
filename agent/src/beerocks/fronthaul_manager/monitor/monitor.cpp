@@ -1454,6 +1454,7 @@ void Monitor::handle_cmdu_vs_message(ieee1905_1::CmduMessageRx &cmdu_rx)
         bwl::SBeaconRequest11k bwl_request;
 
         bwl_request.measurement_mode = request->params().measurement_mode;
+        LOG(DEBUG) << "measurement_mode before sending=" << int(bwl_request.measurement_mode);
         bwl_request.channel          = request->params().channel;
         bwl_request.op_class         = request->params().op_class;
         bwl_request.repeats          = request->params().repeats;

@@ -423,7 +423,8 @@ void LinkMetricsCollectionTask::handle_beacon_metrics_query(ieee1905_1::CmduMess
         LOG(ERROR) << "failed translating 1905 message to vs message";
         return;
     }
-
+    LOG(DEBUG) << "measurement_mode after translating: "
+               << int(request_out->params().measurement_mode);
     // Forward only to the desired destination
     auto monitor_fd = m_btl_ctx.get_monitor_fd(radio->front.iface_name);
     m_btl_ctx.send_cmdu(monitor_fd, m_cmdu_tx);
