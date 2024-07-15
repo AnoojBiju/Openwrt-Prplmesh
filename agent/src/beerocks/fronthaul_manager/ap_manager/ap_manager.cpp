@@ -913,7 +913,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 0,
                 .mac     = virtual_bss_creation_tlv->client_mac(),
                 .key     = {virtual_bss_creation_tlv->ptk(),
-                        virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->ptk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = pw_key_seq,
 
                 // TODO: PPM-2368: We need to know the pairwise cipher. For now, use CCMP
@@ -937,7 +937,7 @@ void ApManager::handle_virtual_bss_request(ieee1905_1::CmduMessageRx &cmdu_rx)
                 .key_idx = 1,
                 .mac     = beerocks::net::network_utils::ZERO_MAC,
                 .key     = {virtual_bss_creation_tlv->gtk(),
-                        virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
+                            virtual_bss_creation_tlv->gtk() + virtual_bss_creation_tlv->key_length()},
                 .key_seq = group_key_seq,
 
                 // TODO: PPM-2368: We need to know the groupwise cipher. For now, use CCMP
@@ -1209,8 +1209,7 @@ void ApManager::handle_cmdu(ieee1905_1::CmduMessageRx &cmdu_rx)
 
         // If it is not the radio of the BH, then channel, bandwidth and center channel paramenters
         // will be all set to 0.
-        LOG(DEBUG) << "Setting AP channel: "
-                   << ", channel=" << int(notification->channel())
+        LOG(DEBUG) << "Setting AP channel: " << ", channel=" << int(notification->channel())
                    << ", bandwidth=" << notification->bandwidth()
                    << ", center_channel=" << int(notification->center_channel());
 
@@ -2577,8 +2576,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
         auto msg =
             static_cast<bwl::sACTION_APMANAGER_HOSTAP_DFS_CHANNEL_AVAILABLE_NOTIFICATION *>(data);
-        LOG(INFO) << "DFS_EVENT_NOP_FINISHED "
-                  << " channel = " << int(msg->params.channel) << " bw = "
+        LOG(INFO) << "DFS_EVENT_NOP_FINISHED " << " channel = " << int(msg->params.channel)
+                  << " bw = "
                   << beerocks::utils::convert_bandwidth_to_int(
                          (beerocks::eWiFiBandwidth)msg->params.bandwidth)
                   << " vht_center_frequency = " << int(msg->params.vht_center_frequency);
@@ -2698,6 +2697,10 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         case bwl::eManagementFrameType::ANQP_REQUEST: {
             tunnelled_proto_type =
                 wfa_map::tlvTunnelledProtocolType::eTunnelledProtocolType::ANQP_REQUEST;
+        } break;
+        case bwl::eManagementFrameType::RADIO_MEASUREMENT_REPORT: {
+            LOG(DEBUG) << "Received RADIO_MEASUREMENT_REPORT";
+
         } break;
         default: {
             LOG(DEBUG) << "Unsupported 802.11 management frame: " << std::hex

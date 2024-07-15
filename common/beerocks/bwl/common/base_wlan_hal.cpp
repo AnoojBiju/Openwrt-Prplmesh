@@ -139,7 +139,7 @@ base_wlan_hal::create_mgmt_frame_notification(const char *mgmt_frame_hex)
             mgmt_frame->type = eManagementFrameType::ANQP_REQUEST;
         } else if (action_category == eActionCategory::RADIO_MEASUREMENT &&
                    action_code == eActionCode::RADIO_MEASUREMENT_REPORT) {
-            mgmt_frame->type = eManagementFrameType::XXXXXX;
+            mgmt_frame->type = eManagementFrameType::RADIO_MEASUREMENT_REPORT;
         } else {
             LOG(DEBUG) << "Received unhandled management action frame (category: "
                        << int(action_category) << ", code: " << int(action_code) << "). Ignoring.";

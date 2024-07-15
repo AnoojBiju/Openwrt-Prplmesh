@@ -307,7 +307,7 @@ bool mon_wlan_hal_whm::sta_beacon_11k_request(const std::string &vap_iface_name,
     args.add_child("class", uint8_t(req.op_class));
     args.add_child("channel", uint8_t(req.channel));
     args.add_child("ssid", std::string((const char *)req.ssid));
-    args.add_child("mode", 1);
+    args.add_child("mode", int(req.measurement_mode));
 
     if (req.use_optional_ap_ch_report) {
         std::stringstream optionalElements;
@@ -792,9 +792,9 @@ bool mon_wlan_hal_whm::sta_unassoc_rssi_measurement(
         AmbiorixVariant args(AMXC_VAR_ID_HTABLE);
         args.add_child("MACAddress", station_to_remove);
         if (!m_ambiorix_cl.call(nasta_monitor_path, "deleteNonAssociatedDevice", args, result)) {
-            LOG(ERROR) << " remote function call deleteNonAssociatedDevice"
-                       << " for object " << nasta_monitor_path
-                       << " and  MACAddress: " << station_to_remove << " Failed!!";
+            LOG(ERROR) << " remote function call deleteNonAssociatedDevice" << " for object "
+                       << nasta_monitor_path << " and  MACAddress: " << station_to_remove
+                       << " Failed!!";
             continue;
         } else {
             LOG(TRACE) << "Successfully removed unassociated station with mac: "
