@@ -2700,6 +2700,7 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         } break;
         case bwl::eManagementFrameType::RADIO_MEASUREMENT_REPORT: {
             LOG(DEBUG) << "Received RADIO_MEASUREMENT_REPORT";
+            return true;
 
         } break;
         default: {
