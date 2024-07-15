@@ -130,6 +130,7 @@ include_yaml_path: {
     "tlvf/wfa_map/tlvAssociatedStaMldConfigurationReport.yaml",
     "tlvf/wfa_map/tlvMldStructure.yaml",
     "tlvf/wfa_map/tlvEHTOperations.yaml",
+    "tlvf/wfa_map/tlvAffiliatedStaMetrics.yaml",
   }
 
 # Relative to tlvf.py src_path variable
