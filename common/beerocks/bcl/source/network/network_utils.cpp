@@ -1562,60 +1562,37 @@ bool network_utils::set_vlan_packet_filter(bool set, const std::string &bss_ifac
         return false;
     }
 
-    // VID
     if (vid > MAX_VLAN_ID) {
         LOG(ERROR) << "Skip invalid VID: " << vid;
         return false;
     }
 
-    // Command example:
-    // ebtables -t <table> -{A (Append)|D (Delete)} <Chain> [-p <protocol>]
-    // [-J <jump target {ACCEPT|DROP|CONTINUE|RETURN}>] [-i <iface>]
-    // If "-p 802_1q":
-    //      [--vlan-id <vid>] [--vlan-encap <protocol>]
-
-    // Using like this:
-    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-id <vid>
-    // ebtables -t nat -{A|D} PREROUTING -p 802_1Q -j DROP -i <iface> --vlan-encap 802_1Q
-
     std::string cmd;
     cmd.reserve(150);
 
-    cmd.append("ebtables -t nat ");
+    // Delete existing tc filters
+    std::string tc_delete_cmd = "tc filter del dev " + bss_iface + " parent ffff: u32";
+    os_utils::system_call(tc_delete_cmd);
 
-    // Before adding rule, remove existing rules.
-    std::string vlan_filter_entry_cmd = cmd + "-L PREROUTING | grep " + bss_iface;
-    std::string vlan_filter_entry_cmd_output =
-        os_utils::system_call_with_output(vlan_filter_entry_cmd, true);
-    auto lines = string_utils::str_split(vlan_filter_entry_cmd_output, '\n');
-    for (const auto &line : lines) {
-        std::string cmd_delete_old;
-        cmd_delete_old.reserve(150);
-        cmd_delete_old.append(cmd).append("-D PREROUTING ").append(line);
-        os_utils::system_call(cmd_delete_old);
-    }
-
-    // If function called for removeing, the removal of rules finished above.
     if (!set) {
         return true;
     }
 
-    // Append rule.
-    cmd.append("-A ");
-
-    cmd.append("PREROUTING -p 802_1Q -j DROP -i ").append(bss_iface);
-    auto cmd_base_len = cmd.length();
-
-    if (vid != 0) {
-        // Filter packets carrying the VLAN tag of the interface.
-        cmd.append(" --vlan-id ").append(std::to_string(vid));
-        os_utils::system_call(cmd);
-        cmd.erase(cmd_base_len);
-    }
-
-    // Filter double-tagged packets that are encapsulated with an S-Tag.
-    cmd.append(" --vlan-encap 802_1Q");
+    // Ingress - Set priority for VLAN tagged packets
+    cmd = "tc filter add dev " + bss_iface +
+          " parent ffff: protocol 802.1Q u32 match u8 0 0 action skbedit priority 0";
     os_utils::system_call(cmd);
+
+    // Ingress - Set priority for all packets
+    cmd = "tc filter add dev " + bss_iface +
+          " parent ffff: protocol all u32 match u8 0 0 action skbedit priority 0";
+    os_utils::system_call(cmd);
+
+    // Ingress - Set priority for IPv4 packets
+    cmd = "tc filter add dev " + bss_iface +
+          " parent ffff: protocol ip u32 match ip protocol 0 0xff action skbedit priority 0";
+    os_utils::system_call(cmd);
+
     return true;
 }
 
