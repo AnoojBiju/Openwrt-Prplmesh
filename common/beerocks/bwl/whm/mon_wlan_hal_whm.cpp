@@ -652,18 +652,18 @@ bool mon_wlan_hal_whm::process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVar
         if (parse_beacon_request_status(parsed_obj, resp)) {
             // Add the message to the queue
             event_queue_push(event, resp_buff);
+        }
 
-            // Allocate response object
-            auto resp_buff2 = ALLOC_SMART_BUFFER(sizeof(SBeaconResponse11k));
-            auto resp2      = reinterpret_cast<SBeaconResponse11k *>(resp_buff.get());
-            LOG_IF(!resp2, FATAL) << "Memory allocation failed!";
+        // Allocate response object
+        auto resp_buff2 = ALLOC_SMART_BUFFER(sizeof(SBeaconResponse11k));
+        auto resp2      = reinterpret_cast<SBeaconResponse11k *>(resp_buff2.get());
+        LOG_IF(!resp2, FATAL) << "Memory allocation failed!";
 
-            // Initialize the message
-            memset(resp_buff.get(), 0, sizeof(SBeaconResponse11k));
+        // Initialize the message
+        memset(resp_buff2.get(), 0, sizeof(SBeaconResponse11k));
 
-            if (parse_beacon_measurement_response(parsed_obj, resp2)) {
-                event_queue_push(event, resp_buff2);
-            }
+        if (parse_beacon_measurement_response(parsed_obj, resp2)) {
+            event_queue_push(event, resp_buff2);
         }
 
     } break;
