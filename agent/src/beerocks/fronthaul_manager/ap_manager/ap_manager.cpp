@@ -2700,6 +2700,8 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             // Print the mgmt_frame->data
             LOG(DEBUG) << "data: " << mgmt_frame->data;
             LOG(DEBUG) << "Sending ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE";
+
+            send_cmdu(cmdu_tx);
             return true;
         }
 
