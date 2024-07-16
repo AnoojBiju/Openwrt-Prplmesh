@@ -1,0 +1,12 @@
+%populate {
+    object @CONTROLLER_ROOT_DM@.Configuration {
+        parameter StatisticsPollingRateSec = 200;
+        
+    }
+    object @CONTROLLER_ROOT_DM@.Network.Device {
+        instance add() {
+            object Radio {
+            }
+        }
+    }
+}

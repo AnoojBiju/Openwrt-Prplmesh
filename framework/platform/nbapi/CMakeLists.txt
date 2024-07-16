@@ -12,11 +12,9 @@ message("${BoldWhite}Preparing ${BoldGreen}${PROJECT_NAME}${BoldWhite} for the $
 # Set the base path for the current module
 set(MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
+
 # Common Sources
 set(nbapi_sources ${MODULE_PATH}/ambiorix_dummy.cpp)
-if (ENABLE_NBAPI)
-    list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
-endif()
 
 # Add several imports from tlfv for sMacAddr support
 set(TLVF_PATH ${CMAKE_CURRENT_LIST_DIR}/../../tlvf)
@@ -31,7 +29,9 @@ if (ENABLE_NBAPI)
     find_package(amxd REQUIRED)
     find_package(amxp REQUIRED)
     find_package(amxo REQUIRED)
-    list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo)
+    find_package(libamxrt REQUIRED)
+    list(APPEND nbapi_sources ${MODULE_PATH}/ambiorix_impl.cpp)
+    list(APPEND NBAPI_LIBS amxb amxc amxd amxp amxo libamxrt)
 endif()
 
 # Build the library
@@ -41,7 +41,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${prplmesh_VERSION} SOV
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-z,defs")
 
 if (ENABLE_NBAPI)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp bcl)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${NBAPI_LIBS} mapfcommon elpp bcl event)
 else ()
     target_link_libraries(${PROJECT_NAME} PRIVATE mapfcommon elpp bcl)
 endif()
