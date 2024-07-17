@@ -71,7 +71,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
             ${MODULE_PATH}/db/uci/*.c*
             ${MODULE_PATH}/dhcp/uci/*.c*
             ${MODULE_PATH}/cfg/vendor/*.c*
-            ${MODULE_PATH}/service_prioritization/osp_mxl/service_prio_utils_osp_mxl.cpp
+            ${MODULE_PATH}/service_prioritization/tc/service_prio_utils_tc.cpp
         )
 
         # UGW specific libraries
@@ -96,7 +96,7 @@ if (TARGET_PLATFORM STREQUAL "openwrt")
           ${MODULE_PATH}/cfg/vendor/*.c*
           ${MODULE_PATH}/common/uci/*.c*
           ${MODULE_PATH}/board/system_ubus/*.c*
-          ${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
+          ${MODULE_PATH}/service_prioritization/tc/service_prio_utils_tc.cpp
         )
 
         find_package(ubus REQUIRED)
@@ -120,7 +120,7 @@ elseif (TARGET_PLATFORM STREQUAL "rdkb")
     file(GLOB_RECURSE bpl_platform_sources 
         ${MODULE_PATH}/*/uci/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
-	${MODULE_PATH}/service_prioritization/cgr_mxl/service_prio_utils_cgr_mxl.cpp
+	${MODULE_PATH}/service_prioritization/tc/service_prio_utils_tc.cpp
     )
 
     # RDKB specific libraries
@@ -146,7 +146,7 @@ elseif (TARGET_PLATFORM STREQUAL "linux")
     file(GLOB_RECURSE bpl_platform_sources 
         ${MODULE_PATH}/*/linux/*.c*
         ${MODULE_PATH}/cfg/vendor/*.c*
-	${MODULE_PATH}/service_prioritization/dummy/service_prio_utils_dummy.cpp
+	${MODULE_PATH}/service_prioritization/tc/service_prio_utils_tc.cpp
     )
 
     add_definitions(-DPLATFORM_DB_PATH_TEMP="${TMP_PATH}/prplmesh_platform_db")
