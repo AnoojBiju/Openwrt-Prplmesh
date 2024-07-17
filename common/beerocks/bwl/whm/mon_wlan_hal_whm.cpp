@@ -662,9 +662,7 @@ bool mon_wlan_hal_whm::process_wpa_ctrl_event(const beerocks::wbapi::AmbiorixVar
         // Initialize the message
         memset(resp_buff2.get(), 0, sizeof(SBeaconResponse11k));
 
-        if (parse_beacon_measurement_response(parsed_obj, resp2)) {
-            event_queue_push(event, resp_buff2);
-        }
+        event_queue_push(event, resp_buff2);
 
     } break;
     case Event::RRM_Beacon_Response: {
