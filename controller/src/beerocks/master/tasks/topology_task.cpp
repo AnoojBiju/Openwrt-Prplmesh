@@ -550,32 +550,40 @@ void topology_task::handle_dead_neighbors(const sMacAddr &src_mac, const sMacAdd
 
         std::shared_ptr<Agent> neighbor = database.get_agent(neighbor_al_mac_on_db);
         if (!neighbor) {
+            LOG(ERROR) << "Failed to get neighbor instance";
             continue;
         }
         std::shared_ptr<Station> neighbor_bh_sta = database.get_station(neighbor->parent_mac);
         if (!neighbor_bh_sta) {
+            LOG(ERROR) << "Failed to get neighbor station instance";
             continue;
         }
-        if (!neighbor_bh_sta->get_bss()) {
-            continue;
-        }
-        std::shared_ptr<Agent> neighbor_parent_agent =
-            database.get_agent_by_radio_uid(neighbor_bh_sta->get_bss()->radio.radio_uid);
-        if (!neighbor_parent_agent) {
-            continue;
-        }
-        // It is possible that re-routing took place, and the node is now a neighbour of some
-        // other node. To filter such cases, compare the current al_mac of the neighbor to the
-        // al_mac of the reporter. If they are not equal then it means than the neighbor is
-        // currently under another node.
-        if (neighbor_parent_agent->al_mac != src_mac) {
-            continue;
+
+        if (neighbor_bh_sta->get_bss()) {
+            std::shared_ptr<Agent> neighbor_parent_agent =
+                database.get_agent_by_radio_uid(neighbor_bh_sta->get_bss()->radio.radio_uid);
+            if (!neighbor_parent_agent) {
+                LOG(ERROR) << "Failed to get neighbor parent agent instance";
+                continue;
+            }
+            // It is possible that re-routing took place, and the node is now a neighbour of some
+            // other node. To filter such cases, compare the current al_mac of the neighbor to the
+            // al_mac of the reporter. If they are not equal then it means than the neighbor is
+            // currently under another node.
+            if (neighbor_parent_agent->al_mac != src_mac) {
+                LOG(ERROR)
+                    << "The neighbor's parent's al_mac is not equal to the reporter's al_mac";
+                continue;
+            }
+        } else {
+            LOG(INFO) << "Wired connection";
         }
 
         LOG(DEBUG) << "known neighbor al_mac  " << neighbor_al_mac_on_db
                    << " is not reported on 1905 Neighbor Device TLV, removing the al_mac node";
         son_actions::handle_dead_station(tlvf::mac_to_string(neighbor->parent_mac), true, database,
                                          tasks);
+        database.remove_agent(neighbor->al_mac);
     }
 }
 
