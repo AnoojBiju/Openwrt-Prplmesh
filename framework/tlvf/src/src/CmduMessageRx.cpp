@@ -123,6 +123,7 @@
 #include <tlvf/wfa_map/tlvSteeringPolicy.h>
 #include <tlvf/wfa_map/tlvSteeringRequest.h>
 #include <tlvf/wfa_map/tlvSupportedService.h>
+#include <tlvf/wfa_map/tlvTidToLinkMappingPolicy.h>
 #include <tlvf/wfa_map/tlvTimestamp.h>
 #include <tlvf/wfa_map/tlvTransmitPowerLimit.h>
 #include <tlvf/wfa_map/tlvTriggerChannelSwitchAnnouncement.h>
@@ -582,6 +583,9 @@ std::shared_ptr<BaseClass> CmduMessageRx::parseNextTlv(wfa_map::eTlvTypeMap tlv_
     }
     case (wfa_map::eTlvTypeMap::TLV_MLD_STRUCTURE): {
         return msg.addClass<wfa_map::tlvMldStructure>();
+    }
+    case (wfa_map::eTlvTypeMap::TLV_TID_TO_LINK_MAPPING_POLICY): {
+        return msg.addClass<wfa_map::tlvTidToLinkMappingPolicy>();
     }
     case (wfa_map::eTlvTypeMap::TLV_EHT_OPERATIONS): {
         return msg.addClass<wfa_map::tlvEHTOperations>();
