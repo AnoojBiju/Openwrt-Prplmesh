@@ -2697,6 +2697,12 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
 
             tlvBeaconMetricsResponse->associated_sta_mac() = mgmt_frame->mac;
 
+            // Strip first 3 bytes of data from management frame to get the measurement report list
+            mgmt_frame->data.erase(mgmt_frame->data.begin(), mgmt_frame->data.begin() + 3);
+
+            tlvBeaconMetricsResponse->set_measurement_report_list(&mgmt_frame->data,
+                                                                  sizeof(mgmt_frame->data));
+
             // Print the mgmt_frame->data
             LOG(DEBUG) << "data: " << mgmt_frame->data;
             LOG(DEBUG) << "Sending ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE";
