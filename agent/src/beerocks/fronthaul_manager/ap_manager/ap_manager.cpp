@@ -2677,9 +2677,10 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
         auto mgmt_frame = static_cast<bwl::sMGMT_FRAME_NOTIFICATION *>(data);
 
         // Since we don`t need to tunnel the radio measurement report action frame
-        // according to section 10.3.3 easymesh sprcification, handle it here
+        // according to section 10.3.3 easymesh specification, handle it here
         if (mgmt_frame->type == bwl::eManagementFrameType::RADIO_MEASUREMENT_REPORT) {
             LOG(DEBUG) << "Received RADIO_MEASUREMENT_REPORT from " << mgmt_frame->mac;
+
             // Create ACTION_MONITOR_CLIENT_BEACON_11K_RESPONSE message
             auto cmdu_tx_header =
                 cmdu_tx.create(0, ieee1905_1::eMessageType::BEACON_METRICS_RESPONSE_MESSAGE);
@@ -2700,8 +2701,11 @@ bool ApManager::hal_event_handler(bwl::base_wlan_hal::hal_event_ptr_t event_ptr)
             // Strip first 3 bytes of data from management frame to get the measurement report list
             mgmt_frame->data.erase(mgmt_frame->data.begin(), mgmt_frame->data.begin() + 3);
 
-            tlvBeaconMetricsResponse->set_measurement_report_list(&mgmt_frame->data,
-                                                                  sizeof(mgmt_frame->data));
+            if (!tlvBeaconMetricsResponse->set_measurement_report_list(&mgmt_frame->data,
+                                                                       sizeof(mgmt_frame->data))) {
+                LOG(DEBUG) << "set_measurement_report_list failed!";
+                return false;
+            }
 
             // Print the mgmt_frame->data
             LOG(DEBUG) << "data: " << mgmt_frame->data;
