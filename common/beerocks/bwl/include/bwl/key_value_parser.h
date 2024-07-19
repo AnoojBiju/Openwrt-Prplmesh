@@ -12,6 +12,7 @@
 #include <list>
 #include <string>
 #include <unordered_map>
+#include <cstdint>
 
 namespace bwl {
 
