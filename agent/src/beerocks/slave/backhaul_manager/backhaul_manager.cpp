@@ -1534,7 +1534,7 @@ bool BackhaulManager::handle_slave_backhaul_message(int fd, ieee1905_1::CmduMess
     case beerocks_message::ACTION_BACKHAUL_REGISTER_REQUEST: {
 
         m_agent_fd      = fd;
-        auto agent_name = std::move(std::string("agent"));
+        auto agent_name = std::string("agent");
         LOG(DEBUG) << "Assigning FD (" << fd << ") to " << agent_name;
         m_cmdu_server->set_client_name(fd, agent_name);
 
