@@ -10,7 +10,7 @@
 #define BCL_NETWORK_NETLINK_EVENT_LISTENER_H_
 
 #include <linux/netlink.h>
-
+#include <cstdint>
 #include <functional>
 #include <unordered_map>
 
