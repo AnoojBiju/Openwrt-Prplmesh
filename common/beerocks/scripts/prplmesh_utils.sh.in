@@ -326,15 +326,28 @@ status_function() {
         done
         exit 1
     else
+        # Fall if the controller process is not found in controller mode
+        dbg "PRPLMESH_MODE: $PRPLMESH_MODE"
+        case $PRPLMESH_MODE in
+            *"c"* | *"C"*)
+                err "controller process not found"
+                exit 1
+                ;;
+            "a" | "A")
+                dbg "detect MultiAP Agent mode"
+                ;;
+            *)  err "unknown mode"; ;;
+        esac
+
         echo "executing operational test using grep on log files"
-        # check for operational status
+        # Check for operational status
         LOGS_PATH=@BEEROCKS_LOG_FILES_PATH@
 
         error=0
         report "Main agent operational" main_agent_operational $LOGS_PATH
         # For each existing slave log file, check if they are OPERATIONAL:
         main_agent_log="$LOGS_PATH/beerocks_agent@BEEROCKS_LOG_FILES_SUFFIX@"
-        # skip files that aren't symlinks (and skip the literal glob if there is no matching file):
+        # Skip files that aren't symlinks (and skip the literal glob if there is no matching file):
         [ -L "$main_agent_log" ] || return
 
         grep -q "[^[:print:]]" "$main_agent_log" && err "$main_agent_log contains non-printable characters!"
@@ -342,7 +355,6 @@ status_function() {
         for radio in $radios ; do
             report "$radio radio agent operational" radio_agent_operational "$LOGS_PATH" "$radio"
         done
-
         exit $error
     fi
 }
